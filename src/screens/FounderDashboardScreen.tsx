@@ -32,7 +32,10 @@ export function FounderDashboardScreen({ navigation }: Props) {
   } = useGhost();
   const [debugState, setDebugState] = useState(getAnalyticsDebugState());
   const recurringCount = reminders.filter(
-    (reminder) => reminder.recurrence === 'daily' || reminder.recurrence === 'weekly'
+    (reminder) =>
+      reminder.recurrence === 'daily' ||
+      reminder.recurrence === 'weekly' ||
+      reminder.recurrence === 'weekdays'
   ).length;
   const syncedCalendarCount = reminders.filter(
     (reminder) => reminder.calendarSyncStatus === 'synced'
@@ -149,6 +152,12 @@ export function FounderDashboardScreen({ navigation }: Props) {
           </Text>
           <Text style={styles.infoText}>
             Google Calendar connected: {settings.googleCalendar.connected ? 'Yes' : 'No'}
+          </Text>
+          <Text style={styles.infoText}>
+            Follow-up enabled: {settings.followUpEnabled ? 'Yes' : 'No'}
+          </Text>
+          <Text style={styles.infoText}>
+            Follow-up delay: {settings.followUpDelayMinutes} minutes
           </Text>
           <Text style={styles.infoText}>Recurring reminders: {recurringCount}</Text>
           <Text style={styles.infoText}>Calendar synced reminders: {syncedCalendarCount}</Text>

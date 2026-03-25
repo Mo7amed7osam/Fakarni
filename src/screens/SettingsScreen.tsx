@@ -27,6 +27,7 @@ import { RootStackParamList } from '../types';
 import { getGhostModeLabel } from '../utils/ghostPersonality';
 
 const ghostModes = ['sassy', 'coach', 'mom', 'calm'] as const;
+const followUpDelayOptions = [10, 20, 30, 60];
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
@@ -304,6 +305,55 @@ export function SettingsScreen({ navigation }: Props) {
             void handleNotificationAction();
           }}
         />
+      </SectionCard>
+
+      <SectionCard
+        title="متابعة ذكية"
+        subtitle="أرسل نغزة واحدة إضافية فقط إذا لم يتم إنهاء التذكير أو تأجيله."
+      >
+        <View style={styles.row}>
+          <Switch
+            value={settings.followUpEnabled}
+            onValueChange={(value) => updateSettings({ followUpEnabled: value })}
+            trackColor={{ false: '#D9D2C5', true: colors.primary }}
+          />
+          <View style={styles.rowText}>
+            <Text style={styles.rowTitle}>نغزة متابعة واحدة</Text>
+            <Text style={styles.rowSubtitle}>
+              لا توجد retries لا نهائية. مجرد تذكير إضافي واحد عند الحاجة.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.followUpCard}>
+          <Text style={styles.followUpCardTitle}>مدة التأخير قبل المتابعة</Text>
+          <Text style={styles.followUpCardText}>
+            الحالي: بعد {settings.followUpDelayMinutes} دقيقة من التذكير الأساسي.
+          </Text>
+        </View>
+
+        <View style={styles.followUpChipRow}>
+          {followUpDelayOptions.map((minutes) => (
+            <Pressable
+              key={minutes}
+              onPress={() => updateSettings({ followUpDelayMinutes: minutes })}
+              style={[
+                styles.followUpChip,
+                settings.followUpDelayMinutes === minutes && styles.followUpChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.followUpChipText,
+                  settings.followUpDelayMinutes === minutes &&
+                    styles.followUpChipTextActive,
+                ]}
+              >
+                {minutes === 60 ? 'ساعة' : `${minutes} د`}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </SectionCard>
 
       {Platform.OS === 'ios' ? (
@@ -590,6 +640,58 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 20,
     writingDirection: 'rtl',
+  },
+  followUpCard: {
+    backgroundColor: '#EEF7FF',
+    borderRadius: radii.md,
+    padding: spacing.md,
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#D3E9FF',
+  },
+  followUpCardTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 15,
+    color: colors.primaryDark,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  followUpCardText: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'right',
+    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+  followUpChipRow: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  followUpChip: {
+    minWidth: 76,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.cardMuted,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  followUpChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  followUpChipText: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    writingDirection: 'rtl',
+  },
+  followUpChipTextActive: {
+    color: colors.white,
   },
   analyticsCard: {
     backgroundColor: '#EEF4FF',

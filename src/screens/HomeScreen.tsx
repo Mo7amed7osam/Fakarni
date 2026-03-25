@@ -35,6 +35,11 @@ import {
   relativeReminderLabel,
   toArabicDateTimeLabel,
 } from '../utils/arabic';
+import {
+  getNextDueReminder,
+  getOverdueReminderCount,
+  getReminderTimelineSnapshot,
+} from '../utils/reminders';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 type PendingParse = {
@@ -399,7 +404,8 @@ export function HomeScreen({ navigation }: Props) {
     };
   }, [pendingParse, confirmOpacity, confirmProgress, confirmScale]);
 
-  const latestReminder = reminders[0];
+  const nextDueReminder = getNextDueReminder(reminders);
+  const overdueCount = getOverdueReminderCount(reminders);
   const transcriptPreview = pendingParse
     ? pendingParse.draft.title
     : processing
@@ -893,21 +899,30 @@ export function HomeScreen({ navigation }: Props) {
         >
           <View style={styles.latestReminderHeader}>
             <Text style={styles.latestReminderLink}>كل التذكيرات</Text>
-            <Text style={styles.latestReminderEyebrow}>آخر تذكير</Text>
+            <Text style={styles.latestReminderEyebrow}>الأقرب الآن</Text>
           </View>
 
-          {latestReminder ? (
+          {nextDueReminder ? (
             <View style={styles.latestReminderBody}>
-              <View style={styles.categoryPill}>
-                <Text style={styles.categoryPillText}>
-                  {getReminderCategoryLabel(latestReminder.category)}
-                </Text>
+              <View style={styles.latestReminderTopRow}>
+                <View style={styles.categoryPill}>
+                  <Text style={styles.categoryPillText}>
+                    {getReminderCategoryLabel(nextDueReminder.category)}
+                  </Text>
+                </View>
+                {overdueCount > 0 ? (
+                  <View style={styles.overduePill}>
+                    <Text style={styles.overduePillText}>{overdueCount} متأخر</Text>
+                  </View>
+                ) : null}
               </View>
               <Text numberOfLines={2} style={styles.latestReminderTitle}>
-                {latestReminder.title}
+                {nextDueReminder.title}
               </Text>
               <Text numberOfLines={1} style={styles.latestReminderMeta}>
-                {toArabicDateTimeLabel(latestReminder.remindAt)}
+                {toArabicDateTimeLabel(
+                  getReminderTimelineSnapshot(nextDueReminder).activeReminderAt
+                )}
               </Text>
             </View>
           ) : (
@@ -1331,6 +1346,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: spacing.xs,
   },
+  latestReminderTopRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    alignSelf: 'stretch',
+  },
   latestReminderTitle: {
     fontFamily: fonts.bold,
     fontSize: 16,
@@ -1355,6 +1377,18 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'flex-end',
     gap: 2,
+  },
+  overduePill: {
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: 'rgba(248,113,113,0.12)',
+  },
+  overduePillText: {
+    color: '#B91C1C',
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    writingDirection: 'rtl',
   },
   hero: {
     borderRadius: radii.lg,

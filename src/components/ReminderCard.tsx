@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import dayjs from 'dayjs';
 import { Reminder } from '../types';
 import { colors, fonts, radii, spacing } from '../theme';
 import {
@@ -6,6 +7,10 @@ import {
   toArabicDateTimeLabel,
 } from '../utils/arabic';
 import { getReminderCategoryLabel } from '../utils/categorization';
+import {
+  getRecurrenceLabel,
+  getReminderTimelineSnapshot,
+} from '../utils/reminders';
 
 interface ReminderCardProps {
   reminder: Reminder;
@@ -13,6 +18,9 @@ interface ReminderCardProps {
   onShare?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onComplete?: () => void;
+  onSnooze10m?: () => void;
+  onSnooze1h?: () => void;
 }
 
 function PencilGlyph() {
@@ -36,13 +44,46 @@ function TrashGlyph() {
   );
 }
 
+function getStateLabel(reminder: Reminder) {
+  const snapshot = getReminderTimelineSnapshot(reminder);
+
+  if (snapshot.bucket === 'done') {
+    return 'تم';
+  }
+
+  if (snapshot.isSnoozed) {
+    return 'مؤجل';
+  }
+
+  if (snapshot.bucket === 'overdue') {
+    return 'فات وقته';
+  }
+
+  if (snapshot.bucket === 'today') {
+    return 'اليوم';
+  }
+
+  return 'قادم';
+}
+
 export function ReminderCard({
   reminder,
   onPress,
   onShare,
   onEdit,
   onDelete,
+  onComplete,
+  onSnooze10m,
+  onSnooze1h,
 }: ReminderCardProps) {
+  const snapshot = getReminderTimelineSnapshot(reminder);
+  const canAct =
+    reminder.recurrence !== 'none' || snapshot.bucket !== 'done';
+  const reminderTimeLabel =
+    snapshot.source === 'snooze' ? 'الجرس المؤجل' : 'التذكير القادم';
+  const showTriggeredMeta =
+    reminder.lastTriggeredAt && dayjs(reminder.lastTriggeredAt).isValid();
+
   return (
     <Pressable onPress={onPress} style={styles.card}>
       <View style={styles.header}>
@@ -53,12 +94,29 @@ export function ReminderCard({
             </Text>
           </View>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {reminder.recurrence === 'daily'
-                ? 'يومي'
-                : reminder.recurrence === 'weekly'
-                  ? 'أسبوعي'
-                  : 'مرة واحدة'}
+            <Text style={styles.badgeText}>{getRecurrenceLabel(reminder.recurrence)}</Text>
+          </View>
+          <View
+            style={[
+              styles.stateBadge,
+              snapshot.bucket === 'overdue'
+                ? styles.stateBadgeOverdue
+                : snapshot.bucket === 'done'
+                  ? styles.stateBadgeDone
+                  : styles.stateBadgeToday,
+            ]}
+          >
+            <Text
+              style={[
+                styles.stateBadgeText,
+                snapshot.bucket === 'overdue'
+                  ? styles.stateBadgeTextOverdue
+                  : snapshot.bucket === 'done'
+                    ? styles.stateBadgeTextDone
+                    : styles.stateBadgeTextToday,
+              ]}
+            >
+              {getStateLabel(reminder)}
             </Text>
           </View>
           {reminder.notificationStatus === 'permission_required' ? (
@@ -85,18 +143,44 @@ export function ReminderCard({
           ) : null}
         </View>
       </View>
+
       <Text style={styles.title}>{reminder.title}</Text>
+      <Text style={styles.meta}>الموعد: {toArabicDateTimeLabel(reminder.eventAt)}</Text>
       <Text style={styles.meta}>
-        الموعد: {toArabicDateTimeLabel(reminder.eventAt)}
+        {reminderTimeLabel}: {toArabicDateTimeLabel(snapshot.activeReminderAt)}
       </Text>
-      <Text style={styles.meta}>
-        التذكير: {toArabicDateTimeLabel(reminder.remindAt)} ·{' '}
-        {relativeReminderLabel(reminder.offsetMinutes)}
-      </Text>
+      <Text style={styles.meta}>الفاصل: {relativeReminderLabel(reminder.offsetMinutes)}</Text>
+
+      {showTriggeredMeta ? (
+        <Text style={styles.helperMeta}>
+          آخر تنبيه: {toArabicDateTimeLabel(reminder.lastTriggeredAt!)}
+        </Text>
+      ) : null}
+
       {reminder.notificationStatus === 'permission_required' ? (
         <Text style={styles.warningMeta}>
           التذكير محفوظ، لكن الإشعار لن يصل قبل السماح بإشعارات التطبيق.
         </Text>
+      ) : null}
+
+      {canAct ? (
+        <View style={styles.quickActionsRow}>
+          {onSnooze1h ? (
+            <Pressable onPress={onSnooze1h} style={styles.quickGhostAction}>
+              <Text style={styles.quickGhostActionText}>ساعة</Text>
+            </Pressable>
+          ) : null}
+          {onSnooze10m ? (
+            <Pressable onPress={onSnooze10m} style={styles.quickGhostAction}>
+              <Text style={styles.quickGhostActionText}>10 د</Text>
+            </Pressable>
+          ) : null}
+          {onComplete ? (
+            <Pressable onPress={onComplete} style={styles.quickPrimaryAction}>
+              <Text style={styles.quickPrimaryActionText}>تم</Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </Pressable>
   );
@@ -119,12 +203,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
   },
   badgeRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: spacing.xs,
+    flexWrap: 'wrap',
+    flex: 1,
   },
   badge: {
     backgroundColor: colors.accentSoft,
@@ -149,6 +236,34 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 12,
     writingDirection: 'rtl',
+  },
+  stateBadge: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+  },
+  stateBadgeToday: {
+    backgroundColor: 'rgba(59,130,246,0.12)',
+  },
+  stateBadgeOverdue: {
+    backgroundColor: 'rgba(248,113,113,0.12)',
+  },
+  stateBadgeDone: {
+    backgroundColor: 'rgba(34,197,94,0.12)',
+  },
+  stateBadgeText: {
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    writingDirection: 'rtl',
+  },
+  stateBadgeTextToday: {
+    color: '#1D4ED8',
+  },
+  stateBadgeTextOverdue: {
+    color: '#B91C1C',
+  },
+  stateBadgeTextDone: {
+    color: '#15803D',
   },
   warningBadge: {
     backgroundColor: colors.warningSoft,
@@ -267,18 +382,60 @@ const styles = StyleSheet.create({
   },
   meta: {
     color: colors.textMuted,
-    fontFamily: fonts.regular,
+    fontFamily: fonts.medium,
     fontSize: 13,
     textAlign: 'right',
-    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+  helperMeta: {
+    color: colors.primaryDark,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    textAlign: 'right',
     writingDirection: 'rtl',
   },
   warningMeta: {
     color: colors.warning,
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 18,
     textAlign: 'right',
-    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+  quickActionsRow: {
+    flexDirection: 'row-reverse',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  quickPrimaryAction: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: radii.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickPrimaryActionText: {
+    color: colors.white,
+    fontFamily: fonts.bold,
+    fontSize: 14,
+    writingDirection: 'rtl',
+  },
+  quickGhostAction: {
+    minWidth: 72,
+    minHeight: 42,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.cardMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  quickGhostActionText: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
     writingDirection: 'rtl',
   },
 });

@@ -31,11 +31,12 @@ import {
   toArabicTimeLabel,
 } from '../utils/arabic';
 import { getReminderCategoryLabel } from '../utils/categorization';
+import { getRecurrenceLabel } from '../utils/reminders';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Confirmation'>;
 
 const offsetOptions = [0, 30, 60, 120];
-const recurrenceOptions: Recurrence[] = ['none', 'daily', 'weekly'];
+const recurrenceOptions: Recurrence[] = ['none', 'daily', 'weekly', 'weekdays'];
 const categoryOptions: ReminderCategory[] = [
   'study',
   'work',
@@ -431,11 +432,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                   value === recurrence && styles.choiceTextActive,
                 ]}
               >
-                {value === 'none'
-                  ? 'مرة واحدة'
-                  : value === 'daily'
-                    ? 'يومي'
-                    : 'أسبوعي'}
+                {getRecurrenceLabel(value)}
               </Text>
             </Pressable>
           ))}

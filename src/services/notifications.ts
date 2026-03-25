@@ -110,15 +110,15 @@ export async function configureNotifications() {
     [
       {
         identifier: REMINDER_NOTIFICATION_ACTION_DONE,
-        buttonTitle: 'Done',
+        buttonTitle: 'تم',
       },
       {
         identifier: REMINDER_NOTIFICATION_ACTION_SNOOZE_10M,
-        buttonTitle: 'Snooze 10m',
+        buttonTitle: '10 د',
       },
       {
         identifier: REMINDER_NOTIFICATION_ACTION_SNOOZE_1H,
-        buttonTitle: 'Snooze 1h',
+        buttonTitle: 'ساعة',
       },
     ],
     {

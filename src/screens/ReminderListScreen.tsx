@@ -1,4 +1,5 @@
-import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, Share, StyleSheet, Text, View, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GhostButton } from '../components/GhostButton';
@@ -8,15 +9,64 @@ import { useGhost } from '../context/GhostContext';
 import { colors, fonts, radii, spacing } from '../theme';
 import { RootStackParamList } from '../types';
 import { buildShareMessage } from '../utils/ghostPersonality';
-import { buildManualReminderDraft } from '../utils/reminders';
+import {
+  buildManualReminderDraft,
+  getReminderTimelineSnapshot,
+} from '../utils/reminders';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReminderList'>;
+type ReminderListFilter = 'today' | 'upcoming' | 'overdue';
+
+const filters: Array<{ id: ReminderListFilter; label: string }> = [
+  { id: 'today', label: 'اليوم' },
+  { id: 'upcoming', label: 'القادم' },
+  { id: 'overdue', label: 'المتأخر' },
+];
 
 export function ReminderListScreen({ navigation }: Props) {
-  const { reminders, removeReminder, settings } = useGhost();
-  const recurringCount = reminders.filter(
-    (reminder) => reminder.recurrence === 'daily' || reminder.recurrence === 'weekly'
-  ).length;
+  const {
+    reminders,
+    removeReminder,
+    completeReminder,
+    settings,
+    snoozeReminder,
+  } = useGhost();
+  const [activeFilter, setActiveFilter] = useState<ReminderListFilter>('today');
+
+  const counts = useMemo(
+    () => ({
+      today: reminders.filter(
+        (reminder) => getReminderTimelineSnapshot(reminder).bucket === 'today'
+      ).length,
+      upcoming: reminders.filter(
+        (reminder) => getReminderTimelineSnapshot(reminder).bucket === 'upcoming'
+      ).length,
+      overdue: reminders.filter(
+        (reminder) => getReminderTimelineSnapshot(reminder).bucket === 'overdue'
+      ).length,
+      done: reminders.filter(
+        (reminder) => getReminderTimelineSnapshot(reminder).bucket === 'done'
+      ).length,
+    }),
+    [reminders]
+  );
+
+  const visibleReminders = useMemo(
+    () =>
+      reminders.filter((reminder) => {
+        const bucket = getReminderTimelineSnapshot(reminder).bucket;
+        return bucket === activeFilter;
+      }),
+    [activeFilter, reminders]
+  );
+
+  const doneReminders = useMemo(
+    () =>
+      reminders.filter(
+        (reminder) => getReminderTimelineSnapshot(reminder).bucket === 'done'
+      ),
+    [reminders]
+  );
 
   function openManualCreate() {
     navigation.navigate('Confirmation', {
@@ -30,25 +80,25 @@ export function ReminderListScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>كل تذكيراتك في مكان واحد</Text>
+      <Text style={styles.title}>لوحة المتابعة اليومية</Text>
       <Text style={styles.subtitle}>
-        راقب يومك كله من شاشة واحدة، مع حذف أو مراجعة أي تذكير بسرعة.
+        ركّز على ما يحتاج فعلًا الآن: اليوم، القادم، وما فات وقته.
       </Text>
 
-      <GhostButton label="أضف تذكيرًا يدويًا" variant="secondary" onPress={openManualCreate} />
+      <GhostButton label="إضافة يدوية" variant="secondary" onPress={openManualCreate} />
 
       <LinearGradient colors={['#0D92BF', '#1ABAE9']} style={styles.heroCard}>
         <View style={styles.heroHeader}>
           <View style={styles.heroBadge}>
-            <Text style={styles.heroBadgeText}>ملخص سريع</Text>
+            <Text style={styles.heroBadgeText}>ملخص متابع</Text>
           </View>
-          <Text style={styles.heroCaption}>نظرة هادئة على التذكيرات المحفوظة</Text>
+          <Text style={styles.heroCaption}>أهم ما يحتاج المتابعة بدل قائمة طويلة بلا أولوية</Text>
         </View>
 
         <View style={styles.heroPrimaryRow}>
           <View style={styles.heroCountBlock}>
-            <Text style={styles.heroValue}>{reminders.length}</Text>
-            <Text style={styles.heroValueLabel}>إجمالي التذكيرات</Text>
+            <Text style={styles.heroValue}>{counts.today}</Text>
+            <Text style={styles.heroValueLabel}>تحتاج حركة اليوم</Text>
           </View>
           <View style={styles.heroCountAccent}>
             <View style={styles.heroCountAccentDot} />
@@ -57,15 +107,40 @@ export function ReminderListScreen({ navigation }: Props) {
 
         <View style={styles.heroStats}>
           <View style={styles.heroStatCard}>
-            <Text style={styles.heroStatNumber}>{recurringCount}</Text>
-            <Text style={styles.heroStatText}>متكرر</Text>
+            <Text style={styles.heroStatNumber}>{counts.overdue}</Text>
+            <Text style={styles.heroStatText}>متأخر</Text>
           </View>
           <View style={styles.heroStatCard}>
-            <Text style={styles.heroStatNumber}>{Math.max(reminders.length - recurringCount, 0)}</Text>
-            <Text style={styles.heroStatText}>مرة واحدة</Text>
+            <Text style={styles.heroStatNumber}>{counts.upcoming}</Text>
+            <Text style={styles.heroStatText}>قادم</Text>
+          </View>
+          <View style={styles.heroStatCard}>
+            <Text style={styles.heroStatNumber}>{counts.done}</Text>
+            <Text style={styles.heroStatText}>تم</Text>
           </View>
         </View>
       </LinearGradient>
+
+      <View style={styles.filterRow}>
+        {filters.map((filter) => {
+          const isActive = filter.id === activeFilter;
+          const count = counts[filter.id];
+          return (
+            <Pressable
+              key={filter.id}
+              onPress={() => setActiveFilter(filter.id)}
+              style={[styles.filterChip, isActive && styles.filterChipActive]}
+            >
+              <Text style={[styles.filterChipLabel, isActive && styles.filterChipLabelActive]}>
+                {filter.label}
+              </Text>
+              <Text style={[styles.filterChipCount, isActive && styles.filterChipCountActive]}>
+                {count}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       {reminders.length === 0 ? (
         <SectionCard title="لا يوجد شيء هنا بعد" subtitle="ابدأ يدويًا أو ارجع للتسجيل الصوتي.">
@@ -76,8 +151,33 @@ export function ReminderListScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('Home')}
           />
         </SectionCard>
+      ) : visibleReminders.length === 0 ? (
+        <SectionCard
+          title="الفلتر هادئ الآن"
+          subtitle={
+            activeFilter === 'today'
+              ? 'لا يوجد ما يحتاج تدخل اليوم.'
+              : activeFilter === 'upcoming'
+                ? 'لا يوجد شيء قادم قريبًا.'
+                : 'رائع، لا توجد عناصر متأخرة الآن.'
+          }
+        >
+          <GhostButton
+            label="بدّل الفلتر"
+            variant="secondary"
+            onPress={() =>
+              setActiveFilter(
+                activeFilter === 'today'
+                  ? 'upcoming'
+                  : activeFilter === 'upcoming'
+                    ? 'overdue'
+                    : 'today'
+              )
+            }
+          />
+        </SectionCard>
       ) : (
-        reminders.map((reminder) => (
+        visibleReminders.map((reminder) => (
           <ReminderCard
             key={reminder.id}
             reminder={reminder}
@@ -105,9 +205,29 @@ export function ReminderListScreen({ navigation }: Props) {
             onDelete={() => {
               void removeReminder(reminder.id);
             }}
+            onComplete={() => {
+              void completeReminder(reminder.id, 'list');
+            }}
+            onSnooze10m={() => {
+              void snoozeReminder(reminder.id, 10, 'list');
+            }}
+            onSnooze1h={() => {
+              void snoozeReminder(reminder.id, 60, 'list');
+            }}
           />
         ))
       )}
+
+      {doneReminders.length > 0 ? (
+        <SectionCard
+          title="تم إنهاؤها"
+          subtitle="تظهر هنا العناصر ذات المرة الواحدة التي انتهت بالفعل."
+        >
+          <Text style={styles.doneSummary}>
+            أنهيت {doneReminders.length} {doneReminders.length === 1 ? 'تذكيرًا' : 'تذكيرات'}.
+          </Text>
+        </SectionCard>
+      ) : null}
     </ScrollView>
   );
 }
@@ -166,7 +286,6 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.semibold,
     fontSize: 12,
-    writingDirection: 'rtl',
   },
   heroPrimaryRow: {
     flexDirection: 'row-reverse',
@@ -239,6 +358,48 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.82)',
     fontFamily: fonts.medium,
     fontSize: 12,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  filterRow: {
+    flexDirection: 'row-reverse',
+    gap: spacing.sm,
+  },
+  filterChip: {
+    flex: 1,
+    borderRadius: radii.md,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipLabel: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+  },
+  filterChipLabelActive: {
+    color: colors.white,
+  },
+  filterChipCount: {
+    color: colors.textMuted,
+    fontFamily: fonts.bold,
+    fontSize: 16,
+  },
+  filterChipCountActive: {
+    color: colors.white,
+  },
+  doneSummary: {
+    color: colors.textMuted,
+    fontFamily: fonts.medium,
+    fontSize: 14,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
