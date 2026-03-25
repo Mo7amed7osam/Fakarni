@@ -82,17 +82,17 @@ export function ReminderListScreen({ navigation }: Props) {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>لوحة المتابعة اليومية</Text>
       <Text style={styles.subtitle}>
-        ركّز على ما يحتاج فعلًا الآن: اليوم، القادم، وما فات وقته.
+        اعمل على ما يحتاج حركة الآن، واترك الأرشفة والضوضاء للخلف.
       </Text>
 
-      <GhostButton label="إضافة يدوية" variant="secondary" onPress={openManualCreate} />
+      <GhostButton label="إضافة يدوية كحل بديل" variant="secondary" onPress={openManualCreate} />
 
       <LinearGradient colors={['#0D92BF', '#1ABAE9']} style={styles.heroCard}>
         <View style={styles.heroHeader}>
           <View style={styles.heroBadge}>
             <Text style={styles.heroBadgeText}>ملخص متابع</Text>
           </View>
-          <Text style={styles.heroCaption}>أهم ما يحتاج المتابعة بدل قائمة طويلة بلا أولوية</Text>
+          <Text style={styles.heroCaption}>قائمة تشغيلية سريعة بدل شاشة مزدحمة بلا أولوية</Text>
         </View>
 
         <View style={styles.heroPrimaryRow}>

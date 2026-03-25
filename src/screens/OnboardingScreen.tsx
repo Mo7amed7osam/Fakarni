@@ -20,18 +20,18 @@ export function OnboardingScreen({ navigation }: Props) {
         <Text style={styles.eyebrow}>صوتك أولاً. والعربي أولاً.</Text>
         <Text style={styles.title}>قول المهمة وسيب VoiceGhost يجهزها</Text>
         <Text style={styles.description}>
-          اضغط على الميكروفون أو أضف التذكير يدويًا، واتكلم بالمصري ثم راجع قبل الحفظ.
+          لمسة واحدة على الميكروفون ثم اتكلم. المسار اليدوي موجود فقط كخطة بديلة عند الحاجة.
         </Text>
       </View>
 
       <View style={styles.featureRail}>
         <View style={styles.feature}>
-          <Text style={styles.featureTitle}>تذكير قبل الموعد</Text>
-          <Text style={styles.featureText}>زي: قبل ساعة أو قبل نص ساعة</Text>
+          <Text style={styles.featureTitle}>قلها وسيتم الاهتمام بها</Text>
+          <Text style={styles.featureText}>المهمة، الوقت، والتنبيه قبلها في خطوة واحدة</Text>
         </View>
         <View style={styles.feature}>
-          <Text style={styles.featureTitle}>يدوي أو بالصوت</Text>
-          <Text style={styles.featureText}>اختار أسرع طريقة تناسبك في اللحظة</Text>
+          <Text style={styles.featureTitle}>الصوت هو الأساس</Text>
+          <Text style={styles.featureText}>والإدخال اليدوي موجود فقط لو احتجته كحل بديل</Text>
         </View>
       </View>
 

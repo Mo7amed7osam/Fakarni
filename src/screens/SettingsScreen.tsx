@@ -251,7 +251,7 @@ export function SettingsScreen({ navigation }: Props) {
       <Pressable onPress={handleFounderTap} style={styles.titleWrap}>
         <Text style={styles.title}>إعدادات VoiceGhost</Text>
         <Text style={styles.subtitle}>
-          فعّل الأساسيات مرة واحدة وخلي التطبيق يشتغل بالصوت بأقل احتكاك ممكن.
+          فعّل الأساسيات مرة واحدة واترك التطبيق يتابع معك بدون احتكاك زائد.
         </Text>
       </Pressable>
 
@@ -269,6 +269,15 @@ export function SettingsScreen({ navigation }: Props) {
           </View>
         </View>
       </LinearGradient>
+
+      <SectionCard title="أساسيات الاستخدام" subtitle="أهم ما يضمن أن التذكير لن يضيع بعد إنشائه.">
+        <View style={styles.planCard}>
+          <Text style={styles.planValue}>قولها وسيتم الاهتمام بها</Text>
+          <Text style={styles.planText}>
+            الأولوية هنا للاعتمادية: الصوت، الإشعارات، المتابعة الذكية، ثم التقويم.
+          </Text>
+        </View>
+      </SectionCard>
 
       <SectionCard title="الصوت والتنبيهات">
         <View style={styles.row}>
@@ -440,8 +449,8 @@ export function SettingsScreen({ navigation }: Props) {
       )}
 
       <SectionCard
-        title="Anonymous product analytics"
-        subtitle="تحليلات استخدام مجهولة تساعدك تقرر بسرعة بدون إرسال الكلام أو أسماء التذكيرات."
+        title="تحليلات استخدام مجهولة"
+        subtitle="قسم داخلي يساعدك تفهم الاستخدام بدون إرسال الكلام أو أسماء التذكيرات."
       >
         <View style={styles.row}>
           <Switch
@@ -455,7 +464,7 @@ export function SettingsScreen({ navigation }: Props) {
           <View style={styles.rowText}>
             <Text style={styles.rowTitle}>تشغيل التحليلات المجهولة</Text>
             <Text style={styles.rowSubtitle}>
-              يتم إرسال metadata فقط مثل نجاح الفهم، الصلاحيات، ومسار الحفظ.
+              يتم إرسال بيانات وصفية فقط مثل نجاح الفهم، الصلاحيات، ومسار الحفظ.
             </Text>
           </View>
         </View>
@@ -465,17 +474,17 @@ export function SettingsScreen({ navigation }: Props) {
             {settings.analytics.enabled ? 'التحليلات مفعّلة' : 'التحليلات متوقفة'}
           </Text>
           <Text style={styles.analyticsCardText}>
-            لا يتم إرسال transcript الخام أو اسم التذكير. ويمكنك إيقاف التحليلات في أي وقت من هنا.
+            لا يتم إرسال النص الخام أو اسم التذكير. ويمكنك إيقاف التحليلات في أي وقت من هنا.
           </Text>
         </View>
       </SectionCard>
 
       <SectionCard
-        title="Founder Tools"
-        subtitle="لوحة داخلية لمراجعة الأحداث، حالة الربط مع PostHog، وأهم مؤشرات الجهاز الحالي."
+        title="أدوات داخلية"
+        subtitle="قسم منخفض الأولوية لمراجعة الأحداث، PostHog، ومؤشرات الجهاز الحالي."
       >
         <GhostButton
-          label="افتح Founder Dashboard"
+          label="افتح لوحة المؤسس"
           variant="secondary"
           onPress={() => navigation.navigate('FounderDashboard')}
         />
@@ -502,15 +511,6 @@ export function SettingsScreen({ navigation }: Props) {
               </Text>
             </Pressable>
           ))}
-        </View>
-      </SectionCard>
-
-      <SectionCard title="جاهزية النسخة">
-        <View style={styles.planCard}>
-          <Text style={styles.planValue}>Voice-first</Text>
-          <Text style={styles.planText}>
-            التجربة الأساسية الآن مبنية حول: دوس، اتكلم، راجع بسرعة، وخلاص.
-          </Text>
         </View>
       </SectionCard>
 

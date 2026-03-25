@@ -304,8 +304,8 @@ export function ConfirmationScreen({ navigation, route }: Props) {
         {isEdit
           ? 'غيّر اللي محتاجه واحفظ التعديل.'
           : isManualCreate
-            ? 'اكتب المهمة، حدّد الوقت، ثم احفظ التذكير.'
-            : 'عدّل اللي محتاجه بس واحفظ.'}
+            ? 'اكتب المهمة وحدّد الوقت ثم احفظها بدون خطوات زائدة.'
+            : 'عدّل الضروري فقط ثم احفظ.'}
       </Text>
 
       <LinearGradient colors={['#0D92BF', '#18B7E8']} style={styles.heroCard}>
@@ -317,10 +317,10 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           {isEdit
             ? 'حدّث الوقت أو الاسم أو التكرار.'
             : isManualCreate
-              ? 'الإشعار يتحدد حسب الوقت الذي ستختاره.'
+              ? 'سنرتب التوقيت والتنبيه بناءً على اختيارك هنا.'
             : missingFields.length
               ? `راجع: ${missingFields.join(' / ')}`
-              : 'محتاجة لمسة أخيرة وخلاص.'}
+              : 'لمسة أخيرة ثم تُحفظ وتُتابَع.'}
         </Text>
       </LinearGradient>
 
@@ -341,7 +341,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
         />
       </SectionCard>
 
-      <SectionCard title="تصنيف المهمة" subtitle="التطبيق اقترح تصنيف تلقائي، وتقدر تعدله لو حبيت">
+      <SectionCard title="تصنيف المهمة" subtitle="اقتراح سريع يساعد التنظيم، ويمكنك تغييره فورًا.">
         <View style={styles.choiceRow}>
           {categoryOptions.map((value) => (
             <Pressable
@@ -411,7 +411,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           ))}
         </View>
         <Text style={styles.bodyText}>
-          التذكير سيصل: {toArabicDateLabel(reminderAt)} - {toArabicTimeLabel(reminderAt)}
+          سيصل التنبيه في: {toArabicDateLabel(reminderAt)} - {toArabicTimeLabel(reminderAt)}
         </Text>
       </SectionCard>
 
@@ -464,7 +464,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
             <View style={styles.calendarText}>
               <Text style={styles.calendarTitle}>أضف إلى التقويم</Text>
               <Text style={styles.calendarHint}>
-                يحفظ الموعد مع تنبيه قبل الحدث حسب وقت التذكير.
+                يحفظ الموعد في التقويم مع نفس منطق التنبيه الذي اخترته هنا.
               </Text>
             </View>
           </View>

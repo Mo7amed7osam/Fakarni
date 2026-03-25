@@ -802,7 +802,7 @@ export function HomeScreen({ navigation }: Props) {
               ? 'قل المهمة والوقت فقط.'
               : pendingParse
                 ? 'راجعها بسرعة أو اتركها تتحفظ تلقائيًا.'
-                : 'قل ما تريد وسيحفظه VoiceGhost كتذكير خلال ثوانٍ.'}
+                : 'قل ما تريد وسيتم الاهتمام به كتذكير خلال ثوانٍ.'}
           </Text>
 
           <View style={[styles.voiceStatePill, busy && styles.voiceStatePillActive]}>
@@ -845,14 +845,14 @@ export function HomeScreen({ navigation }: Props) {
             </Animated.View>
 
             <Text style={[styles.micHint, compact && styles.micHintCompact]}>
-              {processing ? 'بنحفظه' : isListening ? 'كمّل' : 'Tap and speak'}
+              {processing ? 'بنحفظه' : isListening ? 'كمّل' : 'اضغط وتكلم'}
             </Text>
             <Text style={[styles.micSubhint, compact && styles.micSubhintCompact]}>
               {processing
                 ? 'لا تحتاج لأي خطوة إضافية.'
                 : isListening
                   ? 'قولها بطريقتك وسنتكفل بالباقي.'
-                  : 'لمسة واحدة ثم تكلم.'}
+                  : 'لمسة واحدة ثم تكلم، والباقي علينا.'}
             </Text>
             {isListening ? <Waveform pulse={pulse} /> : null}
             {processing ? (
@@ -923,6 +923,9 @@ export function HomeScreen({ navigation }: Props) {
                 {toArabicDateTimeLabel(
                   getReminderTimelineSnapshot(nextDueReminder).activeReminderAt
                 )}
+              </Text>
+              <Text numberOfLines={1} style={styles.latestReminderMeta}>
+                لن يضيع منك إذا بقيت الإشعارات مفعّلة.
               </Text>
             </View>
           ) : (
