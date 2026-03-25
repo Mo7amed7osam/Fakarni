@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GhostButton } from '../components/GhostButton';
+import { getAppCopy } from '../content/appCopy';
 import { useGhost } from '../context/GhostContext';
 import { RootStackParamList } from '../types';
 import { colors, fonts, radii, spacing } from '../theme';
@@ -9,7 +10,8 @@ import { colors, fonts, radii, spacing } from '../theme';
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
 export function OnboardingScreen({ navigation }: Props) {
-  const { completeOnboarding } = useGhost();
+  const { completeOnboarding, settings } = useGhost();
+  const copy = getAppCopy(settings.uiLanguage);
 
   return (
     <LinearGradient
@@ -17,26 +19,24 @@ export function OnboardingScreen({ navigation }: Props) {
       style={styles.container}
     >
       <View style={styles.heroCard}>
-        <Text style={styles.eyebrow}>صوتك أولاً. والعربي أولاً.</Text>
-        <Text style={styles.title}>قول المهمة وسيب VoiceGhost يجهزها</Text>
-        <Text style={styles.description}>
-          لمسة واحدة على الميكروفون ثم اتكلم. المسار اليدوي موجود فقط كخطة بديلة عند الحاجة.
-        </Text>
+        <Text style={styles.eyebrow}>{copy.onboarding.eyebrow}</Text>
+        <Text style={styles.title}>{copy.onboarding.title}</Text>
+        <Text style={styles.description}>{copy.onboarding.description}</Text>
       </View>
 
       <View style={styles.featureRail}>
         <View style={styles.feature}>
-          <Text style={styles.featureTitle}>قلها وسيتم الاهتمام بها</Text>
-          <Text style={styles.featureText}>المهمة، الوقت، والتنبيه قبلها في خطوة واحدة</Text>
+          <Text style={styles.featureTitle}>{copy.onboarding.featureOneTitle}</Text>
+          <Text style={styles.featureText}>{copy.onboarding.featureOneText}</Text>
         </View>
         <View style={styles.feature}>
-          <Text style={styles.featureTitle}>الصوت هو الأساس</Text>
-          <Text style={styles.featureText}>والإدخال اليدوي موجود فقط لو احتجته كحل بديل</Text>
+          <Text style={styles.featureTitle}>{copy.onboarding.featureTwoTitle}</Text>
+          <Text style={styles.featureText}>{copy.onboarding.featureTwoText}</Text>
         </View>
       </View>
 
       <GhostButton
-        label="ابدأ الآن"
+        label={copy.onboarding.cta}
         onPress={() => {
           completeOnboarding();
           navigation.replace('Home');

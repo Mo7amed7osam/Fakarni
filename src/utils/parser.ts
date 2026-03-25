@@ -7,6 +7,8 @@ import { normalizeArabicText } from './arabic';
 import { classifyReminderCategory } from './categorization';
 import { refineParseWithLLM } from '../services/llm';
 
+type RuleLanguage = 'ar' | 'en';
+
 const weekdayMap: Record<string, number> = {
   الاحد: 0,
   الاحدين: 0,
@@ -22,7 +24,47 @@ const weekdayMap: Record<string, number> = {
   السبت: 6,
 };
 
-function extractRecurrence(value: string): Recurrence {
+const englishWeekdayMap: Record<string, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+
+function detectRuleLanguage(value: string): RuleLanguage {
+  const englishMatches = value.match(/[A-Za-z]/g)?.length ?? 0;
+  const arabicMatches = value.match(/[ء-ي]/g)?.length ?? 0;
+  return englishMatches > arabicMatches ? 'en' : 'ar';
+}
+
+function normalizeTranscriptForRules(value: string) {
+  return normalizeArabicText(value).toLowerCase();
+}
+
+function extractRecurrence(value: string, language: RuleLanguage): Recurrence {
+  if (language === 'en') {
+    if (/weekdays|every workday|every working day|monday to friday/.test(value)) {
+      return 'weekdays';
+    }
+
+    if (/every day|daily/.test(value)) {
+      return 'daily';
+    }
+
+    if (
+      /every week|weekly|every sunday|every monday|every tuesday|every wednesday|every thursday|every friday|every saturday/.test(
+        value
+      )
+    ) {
+      return 'weekly';
+    }
+
+    return 'none';
+  }
+
   if (
     /ايام العمل|أيام العمل|كل يوم شغل|كل يوم من الاحد للخميس|كل يوم من الاثنين للجمعه|كل يوم من الاثنين للجمعة|كل يوم من الاتنين للجمعه|كل يوم من الاتنين للجمعة|كل يوم من الاثنين الى الجمعه|كل يوم من الاثنين الى الجمعة|كل يوم من الاتنين الى الجمعه|كل يوم من الاتنين الى الجمعة/.test(
       value
@@ -42,7 +84,34 @@ function extractRecurrence(value: string): Recurrence {
   return 'none';
 }
 
-function parseOffsetMinutes(value: string) {
+function parseOffsetMinutes(value: string, language: RuleLanguage) {
+  if (language === 'en') {
+    const directPatterns: Array<[RegExp, number]> = [
+      [/(?:half an hour|30 minutes)\s+before/, 30],
+      [/(?:quarter of an hour|15 minutes)\s+before/, 15],
+      [/(?:an hour|1 hour)\s+before/, 60],
+      [/(?:2 hours|two hours)\s+before/, 120],
+    ];
+
+    for (const [pattern, amount] of directPatterns) {
+      if (pattern.test(value)) {
+        return amount;
+      }
+    }
+
+    const minuteMatch = value.match(/(\d{1,3})\s*minutes?\s+before/);
+    if (minuteMatch) {
+      return Number(minuteMatch[1]);
+    }
+
+    const hourMatch = value.match(/(\d{1,2})\s*hours?\s+before/);
+    if (hourMatch) {
+      return Number(hourMatch[1]) * 60;
+    }
+
+    return 0;
+  }
+
   const directPatterns: Array<[RegExp, number]> = [
     [/(?:قبل|ب)\s*نص ساعه/, 30],
     [/(?:قبل|ب)\s*نصف ساعه/, 30],
@@ -70,8 +139,38 @@ function parseOffsetMinutes(value: string) {
   return 0;
 }
 
-function parseDayBase(value: string) {
+function parseDayBase(value: string, language: RuleLanguage) {
   const now = dayjs();
+
+  if (language === 'en') {
+    if (/day after tomorrow/.test(value)) {
+      return now.add(2, 'day').startOf('day');
+    }
+
+    if (/tomorrow/.test(value)) {
+      return now.add(1, 'day').startOf('day');
+    }
+
+    if (/today|now|tonight/.test(value)) {
+      return now.startOf('day');
+    }
+
+    const weekdayMatch = Object.keys(englishWeekdayMap).find((day) => value.includes(day));
+    if (weekdayMatch) {
+      const targetWeekday = englishWeekdayMap[weekdayMatch];
+      let candidate = now.day(targetWeekday).startOf('day');
+      if (
+        value.includes(`next ${weekdayMatch}`) ||
+        candidate.isBefore(now, 'day') ||
+        candidate.isSame(now, 'day')
+      ) {
+        candidate = candidate.add(7, 'day');
+      }
+      return candidate;
+    }
+
+    return null;
+  }
 
   if (/بعد بكره/.test(value)) {
     return now.add(2, 'day').startOf('day');
@@ -98,7 +197,57 @@ function parseDayBase(value: string) {
   return null;
 }
 
-function parseTimeParts(value: string) {
+function parseTimeParts(value: string, language: RuleLanguage) {
+  if (language === 'en') {
+    if (/\bnoon\b/.test(value)) {
+      return { hour: 12, minute: 0, inferred: false };
+    }
+
+    if (/\bmidnight\b/.test(value)) {
+      return { hour: 0, minute: 0, inferred: false };
+    }
+
+    const patterns = [
+      /at\s*(\d{1,2})(?::|\.|٫)?(\d{2})?\s*(am|pm)?/,
+      /(\d{1,2})(?::|\.|٫)?(\d{2})?\s*(am|pm)\b/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = value.match(pattern);
+      if (!match) {
+        continue;
+      }
+
+      let hour = Number(match[1]);
+      const minute = Number(match[2] ?? '0');
+      const meridiem = match[3] ?? '';
+
+      if (meridiem === 'pm' && hour < 12) {
+        hour += 12;
+      }
+
+      if (meridiem === 'am' && hour === 12) {
+        hour = 0;
+      }
+
+      return { hour, minute, inferred: !meridiem };
+    }
+
+    if (/\bmorning\b/.test(value)) {
+      return { hour: 9, minute: 0, inferred: true };
+    }
+
+    if (/\bafternoon\b/.test(value)) {
+      return { hour: 15, minute: 0, inferred: true };
+    }
+
+    if (/\bevening\b|\btonight\b/.test(value)) {
+      return { hour: 20, minute: 0, inferred: true };
+    }
+
+    return null;
+  }
+
   const patterns = [
     /الساعه\s*(\d{1,2})(?::|\.|٫)?(\d{2})?\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)?/,
     /(\d{1,2})(?::|\.|٫)?(\d{2})?\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)/,
@@ -130,7 +279,33 @@ function parseTimeParts(value: string) {
   return null;
 }
 
-function stripMetaFromTitle(value: string) {
+function stripMetaFromTitle(value: string, language: RuleLanguage) {
+  if (language === 'en') {
+    return value
+      .replace(
+        /remind me to|remind me|remember to|don't let me forget to|dont let me forget to|please remind me to|please remind me/g,
+        ''
+      )
+      .replace(/day after tomorrow|tomorrow|today|now|tonight/g, '')
+      .replace(
+        /next sunday|next monday|next tuesday|next wednesday|next thursday|next friday|next saturday|sunday|monday|tuesday|wednesday|thursday|friday|saturday/g,
+        ''
+      )
+      .replace(/at\s*\d{1,2}(?::|\.|٫)?\d{0,2}\s*(am|pm)?/g, '')
+      .replace(/\d{1,2}(?::|\.|٫)?\d{0,2}\s*(am|pm)\b/g, '')
+      .replace(
+        /(?:half an hour|30 minutes|quarter of an hour|15 minutes|an hour|1 hour|2 hours|two hours|\d{1,3}\s*minutes?|\d{1,2}\s*hours?)\s+before/g,
+        ''
+      )
+      .replace(
+        /weekdays|every workday|every working day|monday to friday|every day|daily|every week|weekly|every sunday|every monday|every tuesday|every wednesday|every thursday|every friday|every saturday/g,
+        ''
+      )
+      .replace(/[.,]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   return value
     .replace(/فكرني|ذكرني|افتكرني|عايزك تفكرني|من فضلك/g, '')
     .replace(/بعد بكره|بكره|غدا|النهارده|اليوم|دلوقتي/g, '')
@@ -146,18 +321,23 @@ function stripMetaFromTitle(value: string) {
 }
 
 export function parseReminderRules(transcript: string): ParseResult {
-  const normalized = normalizeArabicText(transcript);
-  const recurrenceSuggestion = extractRecurrence(normalized);
-  const offsetMinutes = parseOffsetMinutes(normalized);
-  const dayBase = parseDayBase(normalized);
-  const timeParts = parseTimeParts(normalized);
+  const normalized = normalizeTranscriptForRules(transcript);
+  const language = detectRuleLanguage(transcript);
+  const recurrenceSuggestion = extractRecurrence(normalized, language);
+  const offsetMinutes = parseOffsetMinutes(normalized, language);
+  const dayBase = parseDayBase(normalized, language);
+  const timeParts = parseTimeParts(normalized, language);
   const missingFields: string[] = [];
   let confidence = 0.45;
 
   let eventDate = dayBase;
   if (!eventDate) {
     eventDate = dayjs().startOf('day');
-    missingFields.push('date');
+    if (recurrenceSuggestion !== 'daily' && recurrenceSuggestion !== 'weekdays') {
+      missingFields.push('date');
+    } else {
+      confidence += 0.1;
+    }
   } else {
     confidence += 0.2;
   }
@@ -181,7 +361,7 @@ export function parseReminderRules(transcript: string): ParseResult {
     }
   }
 
-  const title = stripMetaFromTitle(normalized);
+  const title = stripMetaFromTitle(normalized, language);
   const categorySuggestion = classifyReminderCategory(title || normalized);
 
   if (!title) {
@@ -193,7 +373,7 @@ export function parseReminderRules(transcript: string): ParseResult {
   const remindAt = eventAt.subtract(offsetMinutes, 'minute');
 
   return {
-    title: title || 'تذكير جديد',
+    title: title || (language === 'en' ? 'New reminder' : 'تذكير جديد'),
     eventAt: eventAt.toISOString(),
     remindAt: remindAt.toISOString(),
     categorySuggestion,

@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { UiLanguage } from '../types';
 
 const ARABIC_DIGIT_MAP: Record<string, string> = {
   '٠': '0',
@@ -27,8 +28,12 @@ export function normalizeArabicText(value: string) {
     .trim();
 }
 
-export function toArabicDateTimeLabel(date: string | Date) {
-  return new Intl.DateTimeFormat('ar-EG', {
+function resolveLocale(language: UiLanguage = 'ar-EG') {
+  return language === 'en' ? 'en-US' : 'ar-EG';
+}
+
+export function toArabicDateTimeLabel(date: string | Date, language: UiLanguage = 'ar-EG') {
+  return new Intl.DateTimeFormat(resolveLocale(language), {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -37,8 +42,8 @@ export function toArabicDateTimeLabel(date: string | Date) {
   }).format(new Date(date));
 }
 
-export function toArabicDateLabel(date: string | Date) {
-  return new Intl.DateTimeFormat('ar-EG', {
+export function toArabicDateLabel(date: string | Date, language: UiLanguage = 'ar-EG') {
+  return new Intl.DateTimeFormat(resolveLocale(language), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -46,14 +51,37 @@ export function toArabicDateLabel(date: string | Date) {
   }).format(new Date(date));
 }
 
-export function toArabicTimeLabel(date: string | Date) {
-  return new Intl.DateTimeFormat('ar-EG', {
+export function toArabicTimeLabel(date: string | Date, language: UiLanguage = 'ar-EG') {
+  return new Intl.DateTimeFormat(resolveLocale(language), {
     hour: 'numeric',
     minute: '2-digit',
   }).format(new Date(date));
 }
 
-export function relativeReminderLabel(offsetMinutes: number) {
+export function relativeReminderLabel(
+  offsetMinutes: number,
+  language: UiLanguage = 'ar-EG'
+) {
+  if (language === 'en') {
+    if (offsetMinutes === 0) {
+      return 'At the same time';
+    }
+
+    if (offsetMinutes === 30) {
+      return '30 minutes before';
+    }
+
+    if (offsetMinutes === 60) {
+      return '1 hour before';
+    }
+
+    if (offsetMinutes === 120) {
+      return '2 hours before';
+    }
+
+    return `${offsetMinutes} minutes before`;
+  }
+
   if (offsetMinutes === 0) {
     return 'في نفس الوقت';
   }

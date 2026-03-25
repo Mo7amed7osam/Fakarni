@@ -9,6 +9,8 @@
     "run:android": "expo run:android",
     "ios": "expo run:ios",
     "run:ios": "expo run:ios",
+    "test:parser": "node -r ./tests/register-ts.cjs --test tests/parser.english.test.cjs",
+    "test:parser:english": "node -r ./tests/register-ts.cjs --test tests/parser.english.test.cjs",
     "typecheck": "tsc --noEmit",
     "web": "expo start --web"
   },

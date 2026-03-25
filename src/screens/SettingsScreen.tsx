@@ -13,6 +13,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as Application from 'expo-application';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GhostButton } from '../components/GhostButton';
+import { getAppCopy } from '../content/appCopy';
 import { SectionCard } from '../components/SectionCard';
 import { useGhost } from '../context/GhostContext';
 import {
@@ -23,11 +24,13 @@ import {
   isGoogleCalendarConfigured,
 } from '../services/calendar';
 import { colors, fonts, radii, spacing } from '../theme';
-import { RootStackParamList } from '../types';
+import { AdsProvider, RootStackParamList } from '../types';
 import { getGhostModeLabel } from '../utils/ghostPersonality';
 
 const ghostModes = ['sassy', 'coach', 'mom', 'calm'] as const;
 const followUpDelayOptions = [10, 20, 30, 60];
+const adsProviders: AdsProvider[] = ['none', 'admob'];
+const interstitialOptions = [0, 3, 5, 10];
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
@@ -45,9 +48,12 @@ export function SettingsScreen({ navigation }: Props) {
     connectGoogleCalendar,
     disconnectGoogleCalendar,
   } = useGhost();
+  const copy = getAppCopy(settings.uiLanguage);
   const notificationsReady = notificationPermission === 'granted';
   const notificationActionLabel =
-    notificationPermission === 'blocked' ? 'افتح إعدادات النظام' : 'فعّل الإشعارات';
+    notificationPermission === 'blocked'
+      ? copy.settings.notificationActionBlocked
+      : copy.settings.notificationActionAsk;
   const googleCalendarConfigured = isGoogleCalendarConfigured();
   const googleClientId =
     Platform.OS === 'ios'
@@ -146,23 +152,41 @@ export function SettingsScreen({ navigation }: Props) {
   const appleCalendarEnabled = settings.appleCalendar.autoSyncEnabled;
   const appleCalendarStatus = settings.appleCalendar.permissionStatus;
   const appleCalendarStatusTitle = appleCalendarEnabled
-    ? 'المزامنة شغالة'
+    ? settings.uiLanguage === 'en'
+      ? 'Sync is on'
+      : 'المزامنة شغالة'
     : appleCalendarStatus === 'write_only' ||
         appleCalendarStatus === 'full_access' ||
         appleCalendarStatus === 'authorized'
-      ? 'جاهزة للتفعيل'
+      ? settings.uiLanguage === 'en'
+        ? 'Ready to enable'
+        : 'جاهزة للتفعيل'
       : appleCalendarStatus === 'denied'
-        ? 'الوصول مرفوض'
+        ? settings.uiLanguage === 'en'
+          ? 'Access denied'
+          : 'الوصول مرفوض'
         : appleCalendarStatus === 'restricted'
-          ? 'الوصول مقيّد'
-          : 'غير مفعّلة';
+          ? settings.uiLanguage === 'en'
+            ? 'Access restricted'
+            : 'الوصول مقيّد'
+          : settings.uiLanguage === 'en'
+            ? 'Disabled'
+            : 'غير مفعّلة';
   const appleCalendarStatusText = appleCalendarEnabled
-    ? 'أي تذكير جديد سيتحفظ في Apple Calendar تلقائيًا في الخلفية.'
+    ? settings.uiLanguage === 'en'
+      ? 'Every new reminder will save to Apple Calendar automatically in the background.'
+      : 'أي تذكير جديد سيتحفظ في Apple Calendar تلقائيًا في الخلفية.'
     : appleCalendarStatus === 'denied'
-      ? 'يمكنك السماح للتطبيق من إعدادات النظام إذا أردت حفظ التذكيرات في التقويم.'
+      ? settings.uiLanguage === 'en'
+        ? 'You can allow calendar access from system settings if you want reminders saved there.'
+        : 'يمكنك السماح للتطبيق من إعدادات النظام إذا أردت حفظ التذكيرات في التقويم.'
       : appleCalendarStatus === 'restricted'
-        ? 'هذا الجهاز لا يسمح للتطبيق باستخدام التقويم حاليًا.'
-        : 'فعّلها مرة واحدة وسيتم حفظ التذكيرات القادمة تلقائيًا بدون فتح شاشة الحدث.';
+        ? settings.uiLanguage === 'en'
+          ? 'This device currently does not allow calendar access for the app.'
+          : 'هذا الجهاز لا يسمح للتطبيق باستخدام التقويم حاليًا.'
+        : settings.uiLanguage === 'en'
+          ? 'Enable it once and future reminders will save automatically without opening event UI.'
+          : 'فعّلها مرة واحدة وسيتم حفظ التذكيرات القادمة تلقائيًا بدون فتح شاشة الحدث.';
 
   useEffect(() => {
     if (
@@ -249,37 +273,72 @@ export function SettingsScreen({ navigation }: Props) {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Pressable onPress={handleFounderTap} style={styles.titleWrap}>
-        <Text style={styles.title}>إعدادات VoiceGhost</Text>
-        <Text style={styles.subtitle}>
-          فعّل الأساسيات مرة واحدة واترك التطبيق يتابع معك بدون احتكاك زائد.
-        </Text>
+        <Text style={styles.title}>{copy.settings.title}</Text>
+        <Text style={styles.subtitle}>{copy.settings.subtitle}</Text>
       </Pressable>
 
       <LinearGradient colors={['#0D92BF', '#18B7E8']} style={styles.heroCard}>
-        <Text style={styles.heroLabel}>حالة التطبيق</Text>
-        <Text style={styles.heroValue}>{notificationsReady ? 'جاهز' : 'يحتاج خطوة'}</Text>
+        <Text style={styles.heroLabel}>{copy.settings.appStatus}</Text>
+        <Text style={styles.heroValue}>
+          {notificationsReady ? copy.settings.ready : copy.settings.needsStep}
+        </Text>
         <View style={styles.heroRow}>
           <View style={styles.heroPill}>
-            <Text style={styles.heroPillText}>صوت عربي</Text>
+            <Text style={styles.heroPillText}>{copy.settings.egyptianVoice}</Text>
           </View>
           <View style={styles.heroPill}>
             <Text style={styles.heroPillText}>
-              {notificationsReady ? 'إشعارات مفعّلة' : 'الإشعارات غير مكتملة'}
+              {notificationsReady
+                ? copy.settings.notificationsOn
+                : copy.settings.notificationsOff}
             </Text>
           </View>
         </View>
       </LinearGradient>
 
-      <SectionCard title="أساسيات الاستخدام" subtitle="أهم ما يضمن أن التذكير لن يضيع بعد إنشائه.">
+      <SectionCard
+        title={copy.settings.essentialsTitle}
+        subtitle={copy.settings.essentialsSubtitle}
+      >
         <View style={styles.planCard}>
-          <Text style={styles.planValue}>قولها وسيتم الاهتمام بها</Text>
-          <Text style={styles.planText}>
-            الأولوية هنا للاعتمادية: الصوت، الإشعارات، المتابعة الذكية، ثم التقويم.
-          </Text>
+          <Text style={styles.planValue}>{copy.settings.promiseTitle}</Text>
+          <Text style={styles.planText}>{copy.settings.promiseText}</Text>
         </View>
       </SectionCard>
 
-      <SectionCard title="الصوت والتنبيهات">
+      <SectionCard title={copy.settings.languageTitle} subtitle={copy.settings.languageSubtitle}>
+        <View style={styles.followUpCard}>
+          <Text style={styles.followUpCardTitle}>{copy.settings.languageRowTitle}</Text>
+          <Text style={styles.followUpCardText}>{copy.settings.languageRowSubtitle}</Text>
+        </View>
+
+        <View style={styles.followUpChipRow}>
+          {[
+            { id: 'ar-EG', label: copy.settings.egyptianArabic },
+            { id: 'en', label: copy.settings.english },
+          ].map((option) => (
+            <Pressable
+              key={option.id}
+              onPress={() => updateSettings({ uiLanguage: option.id as 'ar-EG' | 'en' })}
+              style={[
+                styles.followUpChip,
+                settings.uiLanguage === option.id && styles.followUpChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.followUpChipText,
+                  settings.uiLanguage === option.id && styles.followUpChipTextActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </SectionCard>
+
+      <SectionCard title={copy.settings.soundAlertsTitle}>
         <View style={styles.row}>
           <Switch
             value={settings.ttsEnabled}
@@ -287,23 +346,23 @@ export function SettingsScreen({ navigation }: Props) {
             trackColor={{ false: '#D9D2C5', true: colors.primary }}
           />
           <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>تشغيل التذكير بصوت عربي</Text>
-            <Text style={styles.rowSubtitle}>
-              يعمل أثناء فتح التطبيق أو عند الدخول من الإشعار.
-            </Text>
+            <Text style={styles.rowTitle}>{copy.settings.ttsTitle}</Text>
+            <Text style={styles.rowSubtitle}>{copy.settings.ttsSubtitle}</Text>
           </View>
         </View>
 
         <View style={styles.notificationStatusCard}>
           <Text style={styles.notificationStatusTitle}>
-            {notificationsReady ? 'الإشعارات شغالة' : 'الإشعارات تحتاج تفعيل'}
+            {notificationsReady
+              ? copy.settings.notificationReady
+              : copy.settings.notificationNeedEnable}
           </Text>
           <Text style={styles.notificationStatusText}>
             {notificationsReady
-              ? 'أي تذكير جديد سيتم ربطه بالإشعار تلقائيًا.'
+              ? copy.settings.notificationsOn
               : pendingPermissionReminders > 0
-                ? `يوجد ${pendingPermissionReminders} تذكيرات محفوظة بانتظار الإذن ليتم جدولة إشعاراتها.`
-                : 'فعّل الإشعارات حتى تصل التذكيرات في وقتها.'}
+                ? copy.settings.notificationWaitingMany(pendingPermissionReminders)
+                : copy.settings.notificationNeedText}
           </Text>
         </View>
 
@@ -317,8 +376,8 @@ export function SettingsScreen({ navigation }: Props) {
       </SectionCard>
 
       <SectionCard
-        title="متابعة ذكية"
-        subtitle="أرسل نغزة واحدة إضافية فقط إذا لم يتم إنهاء التذكير أو تأجيله."
+        title={copy.settings.smartFollowTitle}
+        subtitle={copy.settings.smartFollowSubtitle}
       >
         <View style={styles.row}>
           <Switch
@@ -327,17 +386,15 @@ export function SettingsScreen({ navigation }: Props) {
             trackColor={{ false: '#D9D2C5', true: colors.primary }}
           />
           <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>نغزة متابعة واحدة</Text>
-            <Text style={styles.rowSubtitle}>
-              لا توجد retries لا نهائية. مجرد تذكير إضافي واحد عند الحاجة.
-            </Text>
+            <Text style={styles.rowTitle}>{copy.settings.oneNudge}</Text>
+            <Text style={styles.rowSubtitle}>{copy.settings.oneNudgeSubtitle}</Text>
           </View>
         </View>
 
         <View style={styles.followUpCard}>
-          <Text style={styles.followUpCardTitle}>مدة التأخير قبل المتابعة</Text>
+          <Text style={styles.followUpCardTitle}>{copy.settings.followDelayTitle}</Text>
           <Text style={styles.followUpCardText}>
-            الحالي: بعد {settings.followUpDelayMinutes} دقيقة من التذكير الأساسي.
+            {copy.settings.followDelayText(settings.followUpDelayMinutes)}
           </Text>
         </View>
 
@@ -358,7 +415,13 @@ export function SettingsScreen({ navigation }: Props) {
                     styles.followUpChipTextActive,
                 ]}
               >
-                {minutes === 60 ? 'ساعة' : `${minutes} د`}
+                {minutes === 60
+                  ? settings.uiLanguage === 'en'
+                    ? '1h'
+                    : 'ساعة'
+                  : settings.uiLanguage === 'en'
+                    ? `${minutes}m`
+                    : `${minutes} د`}
               </Text>
             </Pressable>
           ))}
@@ -368,7 +431,7 @@ export function SettingsScreen({ navigation }: Props) {
       {Platform.OS === 'ios' ? (
         <SectionCard
           title="Apple Calendar"
-          subtitle="اختياري. فعّلها من هنا مرة واحدة وسيتم حفظ التذكيرات الجديدة تلقائيًا."
+          subtitle={copy.settings.appleCalendarSubtitle}
         >
           <View style={styles.row}>
             <Switch
@@ -380,10 +443,8 @@ export function SettingsScreen({ navigation }: Props) {
               trackColor={{ false: '#D9D2C5', true: colors.primary }}
             />
             <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>أضف التذكيرات إلى Apple Calendar</Text>
-              <Text style={styles.rowSubtitle}>
-                يتم الحفظ في الخلفية بدون فتح شاشة إنشاء حدث.
-              </Text>
+              <Text style={styles.rowTitle}>{copy.settings.appleCalendarTitle}</Text>
+              <Text style={styles.rowSubtitle}>{copy.settings.appleCalendarHint}</Text>
             </View>
           </View>
 
@@ -400,7 +461,7 @@ export function SettingsScreen({ navigation }: Props) {
 
           {appleCalendarStatus === 'denied' ? (
             <GhostButton
-              label="افتح إعدادات النظام"
+              label={copy.common.openSystemSettings}
               variant="secondary"
               onPress={() => {
                 void openNotificationSettings();
@@ -411,24 +472,37 @@ export function SettingsScreen({ navigation }: Props) {
       ) : (
         <SectionCard
           title="Google Calendar"
-          subtitle="اختياري. على Android سيُستخدم Google Calendar بدل تقويم الجهاز إذا كان متصلًا."
+          subtitle={copy.settings.googleCalendarSubtitle}
         >
           <View style={styles.googleStatusCard}>
             <Text style={styles.googleStatusTitle}>
-              {settings.googleCalendar.connected ? 'الحساب متصل' : 'الحساب غير متصل'}
+              {settings.googleCalendar.connected
+                ? settings.uiLanguage === 'en'
+                  ? 'Account connected'
+                  : 'الحساب متصل'
+                : settings.uiLanguage === 'en'
+                  ? 'Account not connected'
+                  : 'الحساب غير متصل'}
             </Text>
             <Text style={styles.googleStatusText}>
               {settings.googleCalendar.connected
-                ? settings.googleCalendar.email ?? 'تم حفظ صلاحية Google Calendar على هذا الجهاز.'
+                ? settings.googleCalendar.email ??
+                  (settings.uiLanguage === 'en'
+                    ? 'Google Calendar access is saved on this device.'
+                    : 'تم حفظ صلاحية Google Calendar على هذا الجهاز.')
                 : googleCalendarConfigured
-                  ? 'اربط حساب Google مرة واحدة ليتم إنشاء الأحداث في الخلفية.'
-                  : 'ربط Google Calendar غير متاح في هذا البناء بعد.'}
+                  ? settings.uiLanguage === 'en'
+                    ? 'Connect Google once and events will be created in the background.'
+                    : 'اربط حساب Google مرة واحدة ليتم إنشاء الأحداث في الخلفية.'
+                  : settings.uiLanguage === 'en'
+                    ? 'Google Calendar connection is not configured in this build yet.'
+                    : 'ربط Google Calendar غير متاح في هذا البناء بعد.'}
             </Text>
           </View>
 
           {settings.googleCalendar.connected ? (
             <GhostButton
-              label={googleBusy ? 'جارِ الفصل...' : 'افصل Google Calendar'}
+              label={googleBusy ? copy.settings.disconnecting : copy.settings.disconnectGoogle}
               variant="secondary"
               disabled={googleBusy}
               onPress={() => {
@@ -437,7 +511,7 @@ export function SettingsScreen({ navigation }: Props) {
             />
           ) : (
             <GhostButton
-              label={googleBusy ? 'جارِ الربط...' : 'اربط Google Calendar'}
+              label={googleBusy ? copy.settings.connecting : copy.settings.connectGoogle}
               variant="secondary"
               disabled={googleBusy || !googleCalendarConfigured || !googleRequest}
               onPress={() => {
@@ -449,8 +523,8 @@ export function SettingsScreen({ navigation }: Props) {
       )}
 
       <SectionCard
-        title="تحليلات استخدام مجهولة"
-        subtitle="قسم داخلي يساعدك تفهم الاستخدام بدون إرسال الكلام أو أسماء التذكيرات."
+        title={copy.settings.analyticsTitle}
+        subtitle={copy.settings.analyticsSubtitle}
       >
         <View style={styles.row}>
           <Switch
@@ -462,35 +536,44 @@ export function SettingsScreen({ navigation }: Props) {
             trackColor={{ false: '#D9D2C5', true: colors.primary }}
           />
           <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>تشغيل التحليلات المجهولة</Text>
-            <Text style={styles.rowSubtitle}>
-              يتم إرسال بيانات وصفية فقط مثل نجاح الفهم، الصلاحيات، ومسار الحفظ.
-            </Text>
+            <Text style={styles.rowTitle}>{copy.settings.analyticsToggleTitle}</Text>
+            <Text style={styles.rowSubtitle}>{copy.settings.analyticsToggleSubtitle}</Text>
           </View>
         </View>
 
         <View style={styles.analyticsCard}>
           <Text style={styles.analyticsCardTitle}>
-            {settings.analytics.enabled ? 'التحليلات مفعّلة' : 'التحليلات متوقفة'}
+            {settings.analytics.enabled
+              ? settings.uiLanguage === 'en'
+                ? 'Analytics enabled'
+                : 'التحليلات مفعّلة'
+              : settings.uiLanguage === 'en'
+                ? 'Analytics disabled'
+                : 'التحليلات متوقفة'}
           </Text>
           <Text style={styles.analyticsCardText}>
-            لا يتم إرسال النص الخام أو اسم التذكير. ويمكنك إيقاف التحليلات في أي وقت من هنا.
+            {settings.uiLanguage === 'en'
+              ? 'Raw speech text and reminder titles are not sent. You can turn analytics off here at any time.'
+              : 'لا يتم إرسال النص الخام أو اسم التذكير. ويمكنك إيقاف التحليلات في أي وقت من هنا.'}
           </Text>
         </View>
       </SectionCard>
 
       <SectionCard
-        title="أدوات داخلية"
-        subtitle="قسم منخفض الأولوية لمراجعة الأحداث، PostHog، ومؤشرات الجهاز الحالي."
+        title={copy.settings.internalToolsTitle}
+        subtitle={copy.settings.internalToolsSubtitle}
       >
         <GhostButton
-          label="افتح لوحة المؤسس"
+          label={copy.settings.openFounderDashboard}
           variant="secondary"
           onPress={() => navigation.navigate('FounderDashboard')}
         />
       </SectionCard>
 
-      <SectionCard title="شخصية الجوست" subtitle="اختار الردود اللي تناسبك أكتر">
+      <SectionCard
+        title={copy.settings.ghostPersonalityTitle}
+        subtitle={copy.settings.ghostPersonalitySubtitle}
+      >
         <View style={styles.modeRow}>
           {ghostModes.map((mode) => (
             <Pressable
@@ -507,17 +590,141 @@ export function SettingsScreen({ navigation }: Props) {
                   settings.ghostMode === mode && styles.modeChipTextActive,
                 ]}
               >
-                {getGhostModeLabel(mode)}
+                {getGhostModeLabel(mode, settings.uiLanguage)}
               </Text>
             </Pressable>
           ))}
         </View>
       </SectionCard>
 
-      <SectionCard title="المساعدة والخصوصية">
+      <SectionCard title={copy.settings.helpPrivacyTitle}>
         <Pressable onPress={() => navigation.navigate('HelpFaq')} style={styles.linkCard}>
-          <Text style={styles.linkLabel}>الأسئلة الشائعة، الخصوصية، والدعم</Text>
+          <Text style={styles.linkLabel}>{copy.settings.helpPrivacyLink}</Text>
         </Pressable>
+      </SectionCard>
+
+      <SectionCard title={copy.settings.adsTitle} subtitle={copy.settings.adsSubtitle}>
+        <View style={styles.row}>
+          <Switch
+            value={settings.ads.enabled}
+            onValueChange={(value) =>
+              updateSettings({
+                ads: {
+                  ...settings.ads,
+                  enabled: value,
+                },
+              })
+            }
+            trackColor={{ false: '#D9D2C5', true: colors.primary }}
+          />
+          <View style={styles.rowText}>
+            <Text style={styles.rowTitle}>{copy.settings.adsEnabled}</Text>
+            <Text style={styles.rowSubtitle}>{copy.settings.adsEnabledSubtitle}</Text>
+          </View>
+        </View>
+
+        <View style={styles.followUpCard}>
+          <Text style={styles.followUpCardTitle}>{copy.settings.adsProvider}</Text>
+        </View>
+        <View style={styles.followUpChipRow}>
+          {adsProviders.map((provider) => (
+            <Pressable
+              key={provider}
+              onPress={() =>
+                updateSettings({
+                  ads: {
+                    ...settings.ads,
+                    provider,
+                  },
+                })
+              }
+              style={[
+                styles.followUpChip,
+                settings.ads.provider === provider && styles.followUpChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.followUpChipText,
+                  settings.ads.provider === provider && styles.followUpChipTextActive,
+                ]}
+              >
+                {provider === 'none' ? 'None' : 'AdMob'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={styles.row}>
+          <Switch
+            value={settings.ads.homeBannerEnabled}
+            onValueChange={(value) =>
+              updateSettings({
+                ads: {
+                  ...settings.ads,
+                  homeBannerEnabled: value,
+                },
+              })
+            }
+            trackColor={{ false: '#D9D2C5', true: colors.primary }}
+          />
+          <View style={styles.rowText}>
+            <Text style={styles.rowTitle}>{copy.settings.homeBanner}</Text>
+            <Text style={styles.rowSubtitle}>{copy.settings.homeBannerSubtitle}</Text>
+          </View>
+        </View>
+
+        <View style={styles.followUpCard}>
+          <Text style={styles.followUpCardTitle}>{copy.settings.interstitialEvery}</Text>
+        </View>
+        <View style={styles.followUpChipRow}>
+          {interstitialOptions.map((value) => (
+            <Pressable
+              key={value}
+              onPress={() =>
+                updateSettings({
+                  ads: {
+                    ...settings.ads,
+                    interstitialEveryActions: value,
+                  },
+                })
+              }
+              style={[
+                styles.followUpChip,
+                settings.ads.interstitialEveryActions === value && styles.followUpChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.followUpChipText,
+                  settings.ads.interstitialEveryActions === value &&
+                    styles.followUpChipTextActive,
+                ]}
+              >
+                {value === 0 ? copy.settings.noInterstitial : value}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={styles.row}>
+          <Switch
+            value={settings.ads.hideAdsForFutureSubscribers}
+            onValueChange={(value) =>
+              updateSettings({
+                ads: {
+                  ...settings.ads,
+                  hideAdsForFutureSubscribers: value,
+                },
+              })
+            }
+            trackColor={{ false: '#D9D2C5', true: colors.primary }}
+          />
+          <View style={styles.rowText}>
+            <Text style={styles.rowTitle}>{copy.settings.hideForSubscribers}</Text>
+            <Text style={styles.rowSubtitle}>{copy.settings.hideForSubscribersSubtitle}</Text>
+          </View>
+        </View>
       </SectionCard>
 
       <Pressable onPress={handleFounderTap} style={styles.versionChip}>

@@ -1,6 +1,7 @@
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { GhostButton } from '../components/GhostButton';
+import { getAppCopy } from '../content/appCopy';
 import { SectionCard } from '../components/SectionCard';
 import { useGhost } from '../context/GhostContext';
 import { openSystemSettings } from '../services/notifications';
@@ -10,7 +11,7 @@ import { RootStackParamList } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HelpFaq'>;
 
-const faq = [
+const faqArabic = [
   {
     question: 'أقول الجملة إزاي؟',
     answer: 'ابدأ بفعل بسيط زي: فكرني، وبعدها المهمة والوقت. مثال: فكرني أسلّم المشروع بكرة الساعة 5.',
@@ -29,6 +30,29 @@ const faq = [
   },
 ];
 
+const faqEnglish = [
+  {
+    question: 'How should I say it?',
+    answer:
+      'Start with a simple action like remind me, then say the task and time. Example: remind me to submit the project tomorrow at 5.',
+  },
+  {
+    question: 'What does one hour before mean?',
+    answer:
+      'The app calculates the event time, subtracts one hour, and schedules the reminder before the event.',
+  },
+  {
+    question: 'Do I have to type?',
+    answer:
+      'No. The confirmation screen lets you adjust the title or time only if the voice result was unclear.',
+  },
+  {
+    question: 'Will it speak out loud when the reminder fires?',
+    answer:
+      'Voice playback works while the app is open or when you come back from the notification, depending on your sound settings.',
+  },
+];
+
 export function HelpFaqScreen({ navigation }: Props) {
   const {
     settings,
@@ -38,21 +62,25 @@ export function HelpFaqScreen({ navigation }: Props) {
     openNotificationSettings,
     resetAppData,
   } = useGhost();
+  const copy = getAppCopy(settings.uiLanguage);
+  const faq = settings.uiLanguage === 'en' ? faqEnglish : faqArabic;
   const llmEnabled = isLLMConfigured();
   const notificationActionLabel =
-    notificationPermission === 'blocked' ? 'افتح إعدادات النظام' : 'فعّل الإشعارات';
+    notificationPermission === 'blocked'
+      ? copy.settings.notificationActionBlocked
+      : copy.settings.notificationActionAsk;
 
   function handleResetData() {
     Alert.alert(
-      'مسح البيانات المحلية',
-      'سيتم حذف كل التذكيرات والإعدادات المخزنة على هذا الجهاز فقط.',
+      copy.help.resetTitle,
+      copy.help.resetBody,
       [
         {
-          text: 'إلغاء',
+          text: copy.help.cancel,
           style: 'cancel',
         },
         {
-          text: 'مسح',
+          text: copy.help.reset,
           style: 'destructive',
           onPress: () => {
             void resetAppData().then(() => {
@@ -78,44 +106,64 @@ export function HelpFaqScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>المساعدة والخصوصية</Text>
+      <Text style={styles.title}>{copy.help.title}</Text>
 
       <SectionCard
-        title="ملخص الخصوصية"
-        subtitle="مهم قبل النشر: هذا النص يشرح سلوك التطبيق الحالي للمستخدم داخل الواجهة."
+        title={copy.help.privacyTitle}
+        subtitle={copy.help.privacySubtitle}
       >
         <View style={styles.copyBlock}>
           <Text style={styles.answer}>
-            بيانات التذكيرات تُحفظ محليًا على الجهاز. الميكروفون لا يعمل إلا بعد ضغطك على زر التسجيل.
+            {settings.uiLanguage === 'en'
+              ? 'Reminder data is stored locally on the device. The microphone only starts after you tap the record button.'
+              : 'بيانات التذكيرات تُحفظ محليًا على الجهاز. الميكروفون لا يعمل إلا بعد ضغطك على زر التسجيل.'}
           </Text>
           <Text style={styles.answer}>
-            التعرف على الكلام يعتمد على خدمات النظام في الجهاز، وليس على تسجيل صوت دائم داخل التطبيق.
+            {settings.uiLanguage === 'en'
+              ? 'Speech recognition depends on system services on the device, not on always-on recording inside the app.'
+              : 'التعرف على الكلام يعتمد على خدمات النظام في الجهاز، وليس على تسجيل صوت دائم داخل التطبيق.'}
           </Text>
           <Text style={styles.answer}>
-            التحليل الذكي الخارجي: {llmEnabled ? 'مفعّل في هذه النسخة.' : 'غير مفعّل في هذه النسخة.'}
+            {settings.uiLanguage === 'en'
+              ? `External smart parsing: ${llmEnabled ? 'enabled in this build.' : 'not enabled in this build.'}`
+              : `التحليل الذكي الخارجي: ${llmEnabled ? 'مفعّل في هذه النسخة.' : 'غير مفعّل في هذه النسخة.'}`}
           </Text>
           <Text style={styles.answer}>
-            وإذا فعّلت إضافة التذكير للتقويم، قد يُنشئ التطبيق حدثًا في تقويم الجهاز أو Google Calendar حسب إعداداتك.
+            {settings.uiLanguage === 'en'
+              ? 'If you enable calendar saving, the app may create an event in the device calendar or Google Calendar based on your setup.'
+              : 'وإذا فعّلت إضافة التذكير للتقويم، قد يُنشئ التطبيق حدثًا في تقويم الجهاز أو Google Calendar حسب إعداداتك.'}
           </Text>
           <Text style={styles.answer}>
-            التحليلات المجهولة: {settings.analytics.enabled ? 'مفعّلة' : 'متوقفة'}، ولا ترسل transcript الخام أو أسماء التذكيرات.
+            {settings.uiLanguage === 'en'
+              ? `Anonymous analytics: ${settings.analytics.enabled ? 'enabled' : 'disabled'}, and raw transcripts or reminder titles are not sent.`
+              : `التحليلات المجهولة: ${settings.analytics.enabled ? 'مفعّلة' : 'متوقفة'}، ولا ترسل transcript الخام أو أسماء التذكيرات.`}
           </Text>
         </View>
       </SectionCard>
 
-      <SectionCard title="الإشعارات والصلاحيات">
+      <SectionCard title={copy.help.permissionsTitle}>
         <View style={styles.permissionCard}>
           <Text style={styles.permissionTitle}>
             {notificationPermission === 'granted'
-              ? 'الإشعارات مفعّلة'
+              ? settings.uiLanguage === 'en'
+                ? 'Notifications enabled'
+                : 'الإشعارات مفعّلة'
               : notificationPermission === 'blocked'
-                ? 'الإشعارات مرفوضة من النظام'
-                : 'الإشعارات غير مكتملة'}
+                ? settings.uiLanguage === 'en'
+                  ? 'Notifications blocked by the system'
+                  : 'الإشعارات مرفوضة من النظام'
+                : settings.uiLanguage === 'en'
+                  ? 'Notifications are incomplete'
+                  : 'الإشعارات غير مكتملة'}
           </Text>
           <Text style={styles.answer}>
             {pendingPermissionReminders > 0
-              ? `يوجد ${pendingPermissionReminders} تذكيرات محفوظة ستُربط بالإشعارات بعد السماح بها.`
-              : 'فعّل الإشعارات لضمان وصول التذكيرات في وقتها.'}
+              ? settings.uiLanguage === 'en'
+                ? `${pendingPermissionReminders} saved reminders will be linked to notifications after permission is granted.`
+                : `يوجد ${pendingPermissionReminders} تذكيرات محفوظة ستُربط بالإشعارات بعد السماح بها.`
+              : settings.uiLanguage === 'en'
+                ? 'Enable notifications to make sure reminders arrive on time.'
+                : 'فعّل الإشعارات لضمان وصول التذكيرات في وقتها.'}
           </Text>
         </View>
         <GhostButton
@@ -126,7 +174,7 @@ export function HelpFaqScreen({ navigation }: Props) {
           }}
         />
         <GhostButton
-          label="فتح إعدادات النظام"
+          label={copy.common.openSystemSettings}
           variant="ghost"
           onPress={() => {
             void openSystemSettings();
@@ -134,12 +182,14 @@ export function HelpFaqScreen({ navigation }: Props) {
         />
       </SectionCard>
 
-      <SectionCard title="البيانات على جهازك">
+      <SectionCard title={copy.help.deviceDataTitle}>
         <Text style={styles.answer}>
-          يمكنك حذف كل التذكيرات والإعدادات المحلية من داخل التطبيق في أي وقت.
+          {settings.uiLanguage === 'en'
+            ? 'You can delete all local reminders and settings from inside the app at any time.'
+            : 'يمكنك حذف كل التذكيرات والإعدادات المحلية من داخل التطبيق في أي وقت.'}
         </Text>
         <Pressable onPress={handleResetData} style={styles.dangerCard}>
-          <Text style={styles.dangerLabel}>مسح كل البيانات المحلية</Text>
+          <Text style={styles.dangerLabel}>{copy.help.resetAllData}</Text>
         </Pressable>
       </SectionCard>
 

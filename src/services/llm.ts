@@ -28,6 +28,12 @@ interface LLMParsePayload {
   missingFields?: unknown;
 }
 
+function detectPromptLocale(transcript: string) {
+  const englishMatches = transcript.match(/[A-Za-z]/g)?.length ?? 0;
+  const arabicMatches = transcript.match(/[ء-ي]/g)?.length ?? 0;
+  return englishMatches > arabicMatches ? 'en-US' : 'ar-EG';
+}
+
 export function isLLMConfigured() {
   return Boolean(
     process.env.EXPO_PUBLIC_LLM_API_KEY &&
@@ -94,6 +100,7 @@ export async function refineParseWithLLM(
   const baseUrl = process.env.EXPO_PUBLIC_LLM_BASE_URL!;
   const apiKey = process.env.EXPO_PUBLIC_LLM_API_KEY!;
   const model = process.env.EXPO_PUBLIC_LLM_MODEL!;
+  const locale = detectPromptLocale(transcript);
 
   const response = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
     method: 'POST',
@@ -108,12 +115,12 @@ export async function refineParseWithLLM(
         {
           role: 'system',
           content:
-            'You parse Egyptian Arabic reminder requests into reminder data. Return JSON only with keys: title, category, eventAt, offsetMinutes, recurrence, confidence, missingFields. category must be one of study|work|meeting|health|shopping|finance|personal|other. recurrence must be none|daily|weekly|weekdays. Use weekdays only for workdays style phrases such as weekdays, every work day, or from Monday to Friday. eventAt must be full ISO 8601 with a concrete date and time. Use the provided now and timezone as ground truth for phrases like today, tomorrow, next Thursday, and relative offsets like before one hour. Do not invent recurrence unless the user explicitly asks for repetition. If any field is ambiguous, keep the safest best guess, reduce confidence, and include that field in missingFields.',
+            'You parse reminder requests spoken in either Egyptian Arabic or English into reminder data. Return JSON only with keys: title, category, eventAt, offsetMinutes, recurrence, confidence, missingFields. category must be one of study|work|meeting|health|shopping|finance|personal|other. recurrence must be none|daily|weekly|weekdays. Use weekdays only for phrases such as weekdays, every work day, every working day, or from Monday to Friday. eventAt must be full ISO 8601 with a concrete date and time. Use the provided now, locale, and timezone as ground truth for phrases like today, tomorrow, next Thursday, after tomorrow, at 5 pm, or one hour before. Do not invent recurrence unless the user explicitly asks for repetition. If any field is ambiguous, keep the safest best guess, reduce confidence, and include that field in missingFields. Preserve the user language in the title when possible.',
         },
         {
           role: 'user',
           content: JSON.stringify({
-            locale: 'ar-EG',
+            locale,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             now: new Date().toISOString(),
             nowLocal: dayjs().format('YYYY-MM-DD HH:mm:ss'),

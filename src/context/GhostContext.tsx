@@ -29,6 +29,7 @@ import {
   cancelReminderNotification,
   cancelReminderNotifications,
   clearLastNotificationResponse,
+  configureNotifications,
   getLastNotificationResponse,
   getNotificationPermissionState,
   getReminderNotificationResponseDetails,
@@ -111,6 +112,7 @@ const defaultUsageState: UsageState = {
 };
 
 const defaultSettings: SettingsState = {
+  uiLanguage: 'ar-EG',
   ttsEnabled: true,
   hasSeenOnboarding: false,
   ghostMode: 'sassy',
@@ -126,6 +128,13 @@ const defaultSettings: SettingsState = {
   analytics: {
     enabled: true,
     consentShown: false,
+  },
+  ads: {
+    enabled: false,
+    provider: 'none',
+    homeBannerEnabled: false,
+    interstitialEveryActions: 0,
+    hideAdsForFutureSubscribers: true,
   },
 };
 
@@ -177,6 +186,7 @@ function normalizeSettings(
   return {
     ...defaultSettings,
     ...settings,
+    uiLanguage: settings.uiLanguage ?? defaultSettings.uiLanguage,
     ghostMode: settings.ghostMode ?? defaultSettings.ghostMode,
     followUpEnabled: settings.followUpEnabled ?? defaultSettings.followUpEnabled,
     followUpDelayMinutes:
@@ -184,6 +194,7 @@ function normalizeSettings(
     appleCalendar: settings.appleCalendar ?? defaultSettings.appleCalendar,
     googleCalendar: settings.googleCalendar ?? defaultSettings.googleCalendar,
     analytics: settings.analytics ?? defaultSettings.analytics,
+    ads: settings.ads ?? defaultSettings.ads,
   };
 }
 
@@ -315,7 +326,10 @@ export function GhostProvider({ children }: PropsWithChildren) {
     let scheduledAnything = false;
 
     if (needsBaseNotification) {
-      const scheduledBase = await scheduleReminderNotification(nextReminder);
+      const scheduledBase = await scheduleReminderNotification(
+        nextReminder,
+        settingsRef.current.uiLanguage
+      );
       nextReminder = {
         ...nextReminder,
         notificationId: scheduledBase.notificationId,
@@ -334,7 +348,8 @@ export function GhostProvider({ children }: PropsWithChildren) {
         ...nextReminder,
         snoozedNotificationId: await scheduleSnoozedReminderNotification(
           nextReminder,
-          nextReminder.snoozedUntil
+          nextReminder.snoozedUntil,
+          settingsRef.current.uiLanguage
         ),
         notificationStatus: 'scheduled',
       };
@@ -358,7 +373,8 @@ export function GhostProvider({ children }: PropsWithChildren) {
             ...nextReminder,
             followUpNotificationId: await scheduleFollowUpReminderNotification(
               nextReminder,
-              followUpAt.toISOString()
+              followUpAt.toISOString(),
+              settingsRef.current.uiLanguage
             ),
             followUpForAt: nextOccurrence.toISOString(),
             followUpCount: 1,
@@ -541,7 +557,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
     } else if (response.actionIdentifier === REMINDER_NOTIFICATION_ACTION_SNOOZE_1H) {
       await snoozeReminderInternal(details.reminderId, 60, 'notification');
     } else if (settingsRef.current.ttsEnabled) {
-      speakReminder(existing.title);
+      speakReminder(existing.title, settingsRef.current.uiLanguage);
     }
 
     if (shouldClearLastResponse) {
@@ -574,6 +590,10 @@ export function GhostProvider({ children }: PropsWithChildren) {
 
     void initAnalytics(settings.analytics.enabled);
   }, [hydrated, settings.analytics.enabled]);
+
+  useEffect(() => {
+    void configureNotifications(settings.uiLanguage);
+  }, [settings.uiLanguage]);
 
   useEffect(() => {
     if (!hydrated) {
@@ -618,6 +638,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
     notificationPermission,
     settings.followUpEnabled,
     settings.followUpDelayMinutes,
+    settings.uiLanguage,
   ]);
 
   useEffect(() => {
@@ -682,7 +703,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
 
       const reminder = remindersRef.current.find((item) => item.id === reminderId);
       if (reminder) {
-        speakReminder(reminder.title);
+        speakReminder(reminder.title, settingsRef.current.uiLanguage);
       }
     });
 
@@ -732,10 +753,13 @@ export function GhostProvider({ children }: PropsWithChildren) {
       updateSettings: (patch) => {
         track('settings changed', {
           setting_keys: Object.keys(patch).join(','),
+          ui_language: patch.uiLanguage,
           ghost_mode: patch.ghostMode,
           tts_enabled: patch.ttsEnabled,
           follow_up_enabled: patch.followUpEnabled,
           follow_up_delay_minutes: patch.followUpDelayMinutes,
+          ads_enabled: patch.ads?.enabled,
+          ads_provider: patch.ads?.provider,
         });
         setSettings((current) => normalizeSettings({ ...current, ...patch }));
       },
@@ -778,7 +802,10 @@ export function GhostProvider({ children }: PropsWithChildren) {
           );
           return {
             enabled: false,
-            message: 'Apple Calendar متاح على iPhone فقط.',
+            message:
+              settings.uiLanguage === 'en'
+                ? 'Apple Calendar is available on iPhone only.'
+                : 'Apple Calendar متاح على iPhone فقط.',
           };
         }
 
@@ -850,10 +877,16 @@ export function GhostProvider({ children }: PropsWithChildren) {
 
         const message =
           accessResult.status === 'restricted'
-            ? 'الوصول إلى التقويم مقيّد على هذا الجهاز.'
+            ? settings.uiLanguage === 'en'
+              ? 'Calendar access is restricted on this device.'
+              : 'الوصول إلى التقويم مقيّد على هذا الجهاز.'
             : accessResult.status === 'denied'
-              ? 'تم إيقاف الوصول إلى التقويم. اسمح به من إعدادات النظام إذا أردت المزامنة.'
-              : 'لم نتمكن من تفعيل مزامنة Apple Calendar الآن.';
+              ? settings.uiLanguage === 'en'
+                ? 'Calendar access is disabled. Allow it in system settings if you want sync.'
+                : 'تم إيقاف الوصول إلى التقويم. اسمح به من إعدادات النظام إذا أردت المزامنة.'
+              : settings.uiLanguage === 'en'
+                ? 'We could not enable Apple Calendar sync right now.'
+                : 'لم نتمكن من تفعيل مزامنة Apple Calendar الآن.';
 
         return {
           enabled: false,
@@ -900,7 +933,13 @@ export function GhostProvider({ children }: PropsWithChildren) {
         const title = draft.title.trim();
 
         if (!title) {
-          return { ok: false, reason: 'لازم اسم المهمة يبقى واضح.' };
+          return {
+            ok: false,
+            reason:
+              settings.uiLanguage === 'en'
+                ? 'The task name needs to be clear.'
+                : 'لازم اسم المهمة يبقى واضح.',
+          };
         }
 
         const eventAt = dayjs(draft.eventAt).second(0).millisecond(0).toISOString();
@@ -912,7 +951,13 @@ export function GhostProvider({ children }: PropsWithChildren) {
           draft.recurrence === 'none' &&
           dayjs(remindAt).isBefore(dayjs().add(1, 'minute'))
         ) {
-          return { ok: false, reason: 'وقت التذكير لازم يكون قدام شوية.' };
+          return {
+            ok: false,
+            reason:
+              settings.uiLanguage === 'en'
+                ? 'The reminder time must still be in the future.'
+                : 'وقت التذكير لازم يكون قدام شوية.',
+          };
         }
 
         const shouldSyncCalendar =
@@ -1022,19 +1067,34 @@ export function GhostProvider({ children }: PropsWithChildren) {
           reminderCanScheduleNotification(reminder)
           ? {
               ok: true,
-              warning: 'التذكير اتحفظ، لكن لازم تفعّل الإشعارات علشان يوصلك في وقته.',
+              warning:
+                settings.uiLanguage === 'en'
+                  ? 'The reminder was saved, but you need to enable notifications so it arrives on time.'
+                  : 'التذكير اتحفظ، لكن لازم تفعّل الإشعارات علشان يوصلك في وقته.',
             }
           : { ok: true };
       },
       updateReminder: async (id, draft, originalTranscript) => {
         const existing = remindersRef.current.find((item) => item.id === id);
         if (!existing) {
-          return { ok: false, reason: 'التذكير ده مش موجود.' };
+          return {
+            ok: false,
+            reason:
+              settings.uiLanguage === 'en'
+                ? 'This reminder no longer exists.'
+                : 'التذكير ده مش موجود.',
+          };
         }
 
         const title = draft.title.trim();
         if (!title) {
-          return { ok: false, reason: 'لازم اسم المهمة يبقى واضح.' };
+          return {
+            ok: false,
+            reason:
+              settings.uiLanguage === 'en'
+                ? 'The task name needs to be clear.'
+                : 'لازم اسم المهمة يبقى واضح.',
+          };
         }
 
         const eventAt = dayjs(draft.eventAt).second(0).millisecond(0).toISOString();
@@ -1046,7 +1106,13 @@ export function GhostProvider({ children }: PropsWithChildren) {
           draft.recurrence === 'none' &&
           dayjs(remindAt).isBefore(dayjs().add(1, 'minute'))
         ) {
-          return { ok: false, reason: 'وقت التذكير لازم يكون قدام شوية.' };
+          return {
+            ok: false,
+            reason:
+              settings.uiLanguage === 'en'
+                ? 'The reminder time must still be in the future.'
+                : 'وقت التذكير لازم يكون قدام شوية.',
+          };
         }
 
         const reopened = Boolean(
@@ -1098,7 +1164,10 @@ export function GhostProvider({ children }: PropsWithChildren) {
           reminderCanScheduleNotification(nextReminder)
           ? {
               ok: true,
-              warning: 'التعديل اتحفظ، لكن الإشعارات ما زالت غير مفعّلة لهذا التذكير.',
+              warning:
+                settings.uiLanguage === 'en'
+                  ? 'Changes were saved, but notifications are still disabled for this reminder.'
+                  : 'التعديل اتحفظ، لكن الإشعارات ما زالت غير مفعّلة لهذا التذكير.',
             }
           : { ok: true };
       },

@@ -1,5 +1,5 @@
 import dayjs, { Dayjs } from 'dayjs';
-import { Recurrence, Reminder, ReminderDraft } from '../types';
+import { Recurrence, Reminder, ReminderDraft, UiLanguage } from '../types';
 
 export type ReminderTimelineBucket = 'today' | 'upcoming' | 'overdue' | 'done';
 
@@ -26,7 +26,23 @@ export function buildManualReminderDraft(now = new Date()): ReminderDraft {
   };
 }
 
-export function getRecurrenceLabel(recurrence: Recurrence) {
+export function getRecurrenceLabel(
+  recurrence: Recurrence,
+  language: UiLanguage = 'ar-EG'
+) {
+  if (language === 'en') {
+    switch (recurrence) {
+      case 'daily':
+        return 'Daily';
+      case 'weekly':
+        return 'Weekly';
+      case 'weekdays':
+        return 'Weekdays';
+      default:
+        return 'One time';
+    }
+  }
+
   switch (recurrence) {
     case 'daily':
       return 'يومي';

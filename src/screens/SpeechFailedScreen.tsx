@@ -1,28 +1,33 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { GhostButton } from '../components/GhostButton';
+import { getAppCopy } from '../content/appCopy';
+import { useGhost } from '../context/GhostContext';
 import { colors, fonts, radii, spacing } from '../theme';
 import { RootStackParamList } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SpeechFailed'>;
 
 export function SpeechFailedScreen({ navigation, route }: Props) {
+  const { settings } = useGhost();
+  const copy = getAppCopy(settings.uiLanguage);
+
   return (
     <View style={styles.container}>
       <View style={styles.errorOrb}>
         <Text style={styles.errorOrbText}>!</Text>
       </View>
-      <Text style={styles.title}>التسجيل ما كملش بالشكل المطلوب</Text>
+      <Text style={styles.title}>{copy.speechFailed.title}</Text>
       <Text style={styles.text}>{route.params.reason}</Text>
       {route.params.transcript ? (
         <View style={styles.transcriptCard}>
-          <Text style={styles.transcriptLabel}>النص الملتقط</Text>
+          <Text style={styles.transcriptLabel}>{copy.speechFailed.transcriptLabel}</Text>
           <Text style={styles.transcriptText}>{route.params.transcript}</Text>
         </View>
       ) : null}
-      <GhostButton label="حاول مرة تانية" onPress={() => navigation.replace('Home')} />
+      <GhostButton label={copy.common.tryAgain} onPress={() => navigation.replace('Home')} />
       <GhostButton
-        label="افتح المساعدة"
+        label={copy.common.openHelp}
         variant="secondary"
         onPress={() => navigation.navigate('HelpFaq')}
       />

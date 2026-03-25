@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import dayjs from 'dayjs';
+import { getAppCopy } from '../content/appCopy';
+import { useGhost } from '../context/GhostContext';
 import { Reminder } from '../types';
 import { colors, fonts, radii, spacing } from '../theme';
 import {
@@ -45,7 +47,31 @@ function TrashGlyph() {
 }
 
 function getStateLabel(reminder: Reminder) {
+  return getStateLabelForLanguage(reminder, 'ar-EG');
+}
+
+function getStateLabelForLanguage(reminder: Reminder, language: 'ar-EG' | 'en') {
   const snapshot = getReminderTimelineSnapshot(reminder);
+
+  if (language === 'en') {
+    if (snapshot.bucket === 'done') {
+      return 'Done';
+    }
+
+    if (snapshot.isSnoozed) {
+      return 'Snoozed';
+    }
+
+    if (snapshot.bucket === 'overdue') {
+      return 'Overdue';
+    }
+
+    if (snapshot.bucket === 'today') {
+      return 'Today';
+    }
+
+    return 'Upcoming';
+  }
 
   if (snapshot.bucket === 'done') {
     return 'تم';
@@ -76,11 +102,19 @@ export function ReminderCard({
   onSnooze10m,
   onSnooze1h,
 }: ReminderCardProps) {
+  const { settings } = useGhost();
+  const copy = getAppCopy(settings.uiLanguage);
   const snapshot = getReminderTimelineSnapshot(reminder);
   const canAct =
     reminder.recurrence !== 'none' || snapshot.bucket !== 'done';
   const reminderTimeLabel =
-    snapshot.source === 'snooze' ? 'الجرس المؤجل' : 'التذكير القادم';
+    snapshot.source === 'snooze'
+      ? settings.uiLanguage === 'en'
+        ? 'Snoozed reminder'
+        : 'الجرس المؤجل'
+      : settings.uiLanguage === 'en'
+        ? 'Next reminder'
+        : 'التذكير القادم';
   const showTriggeredMeta =
     reminder.lastTriggeredAt && dayjs(reminder.lastTriggeredAt).isValid();
 
@@ -89,12 +123,14 @@ export function ReminderCard({
       <View style={styles.header}>
         <View style={styles.badgeRow}>
           <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText}>
-              {getReminderCategoryLabel(reminder.category)}
-            </Text>
-          </View>
+              <Text style={styles.categoryBadgeText}>
+              {getReminderCategoryLabel(reminder.category, settings.uiLanguage)}
+              </Text>
+            </View>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{getRecurrenceLabel(reminder.recurrence)}</Text>
+            <Text style={styles.badgeText}>
+              {getRecurrenceLabel(reminder.recurrence, settings.uiLanguage)}
+            </Text>
           </View>
           <View
             style={[
@@ -116,19 +152,21 @@ export function ReminderCard({
                     : styles.stateBadgeTextToday,
               ]}
             >
-              {getStateLabel(reminder)}
+              {getStateLabelForLanguage(reminder, settings.uiLanguage)}
             </Text>
           </View>
           {reminder.notificationStatus === 'permission_required' ? (
             <View style={styles.warningBadge}>
-              <Text style={styles.warningBadgeText}>بانتظار الإشعارات</Text>
+              <Text style={styles.warningBadgeText}>
+                {settings.uiLanguage === 'en' ? 'Waiting for notifications' : 'بانتظار الإشعارات'}
+              </Text>
             </View>
           ) : null}
         </View>
         <View style={styles.actionsRow}>
           {onShare ? (
             <Pressable onPress={onShare} style={styles.shareChip}>
-              <Text style={styles.shareText}>شارك</Text>
+              <Text style={styles.shareText}>{copy.common.share}</Text>
             </Pressable>
           ) : null}
           {onEdit ? (
@@ -145,21 +183,30 @@ export function ReminderCard({
       </View>
 
       <Text style={styles.title}>{reminder.title}</Text>
-      <Text style={styles.meta}>الموعد: {toArabicDateTimeLabel(reminder.eventAt)}</Text>
       <Text style={styles.meta}>
-        {reminderTimeLabel}: {toArabicDateTimeLabel(snapshot.activeReminderAt)}
+        {settings.uiLanguage === 'en' ? 'Event:' : 'الموعد:'}{' '}
+        {toArabicDateTimeLabel(reminder.eventAt, settings.uiLanguage)}
       </Text>
-      <Text style={styles.meta}>الفاصل: {relativeReminderLabel(reminder.offsetMinutes)}</Text>
+      <Text style={styles.meta}>
+        {reminderTimeLabel}: {toArabicDateTimeLabel(snapshot.activeReminderAt, settings.uiLanguage)}
+      </Text>
+      <Text style={styles.meta}>
+        {settings.uiLanguage === 'en' ? 'Offset:' : 'الفاصل:'}{' '}
+        {relativeReminderLabel(reminder.offsetMinutes, settings.uiLanguage)}
+      </Text>
 
       {showTriggeredMeta ? (
         <Text style={styles.helperMeta}>
-          آخر تنبيه: {toArabicDateTimeLabel(reminder.lastTriggeredAt!)}
+          {settings.uiLanguage === 'en' ? 'Last alert:' : 'آخر تنبيه:'}{' '}
+          {toArabicDateTimeLabel(reminder.lastTriggeredAt!, settings.uiLanguage)}
         </Text>
       ) : null}
 
       {reminder.notificationStatus === 'permission_required' ? (
         <Text style={styles.warningMeta}>
-          التذكير محفوظ، لكن الإشعار لن يصل قبل السماح بإشعارات التطبيق.
+          {settings.uiLanguage === 'en'
+            ? 'The reminder is saved, but notifications will not arrive until app notifications are enabled.'
+            : 'التذكير محفوظ، لكن الإشعار مش هيوصل قبل ما تفعّل إشعارات التطبيق.'}
         </Text>
       ) : null}
 
@@ -167,17 +214,21 @@ export function ReminderCard({
         <View style={styles.quickActionsRow}>
           {onSnooze1h ? (
             <Pressable onPress={onSnooze1h} style={styles.quickGhostAction}>
-              <Text style={styles.quickGhostActionText}>ساعة</Text>
+              <Text style={styles.quickGhostActionText}>
+                {settings.uiLanguage === 'en' ? '1h' : 'ساعة'}
+              </Text>
             </Pressable>
           ) : null}
           {onSnooze10m ? (
             <Pressable onPress={onSnooze10m} style={styles.quickGhostAction}>
-              <Text style={styles.quickGhostActionText}>10 د</Text>
+              <Text style={styles.quickGhostActionText}>
+                {settings.uiLanguage === 'en' ? '10m' : '10 د'}
+              </Text>
             </Pressable>
           ) : null}
           {onComplete ? (
             <Pressable onPress={onComplete} style={styles.quickPrimaryAction}>
-              <Text style={styles.quickPrimaryActionText}>تم</Text>
+              <Text style={styles.quickPrimaryActionText}>{copy.common.save}</Text>
             </Pressable>
           ) : null}
         </View>

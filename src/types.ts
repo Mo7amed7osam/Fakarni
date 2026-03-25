@@ -2,13 +2,23 @@ export type Recurrence = 'none' | 'daily' | 'weekly' | 'weekdays';
 export type ReminderStatus = 'scheduled' | 'done' | 'missed';
 export type ParseSource = 'rules' | 'hybrid' | 'llm';
 export type GhostMode = 'sassy' | 'coach' | 'mom' | 'calm';
+export type UiLanguage = 'ar-EG' | 'en';
 export type ReminderNotificationStatus = 'scheduled' | 'permission_required';
 export type NotificationPermissionState = 'granted' | 'undetermined' | 'blocked';
 export type CalendarProvider = 'apple' | 'google' | 'device';
 export type CalendarSyncStatus = 'none' | 'pending' | 'synced' | 'failed' | 'skipped';
+export type AdsProvider = 'none' | 'admob';
 export interface AnalyticsSettingsState {
   enabled: boolean;
   consentShown: boolean;
+}
+
+export interface AdsSettingsState {
+  enabled: boolean;
+  provider: AdsProvider;
+  homeBannerEnabled: boolean;
+  interstitialEveryActions: number;
+  hideAdsForFutureSubscribers: boolean;
 }
 
 export type AppleCalendarPermissionStatus =
@@ -100,6 +110,7 @@ export interface AppleCalendarConnection {
 }
 
 export interface SettingsState {
+  uiLanguage: UiLanguage;
   ttsEnabled: boolean;
   hasSeenOnboarding: boolean;
   ghostMode: GhostMode;
@@ -108,6 +119,7 @@ export interface SettingsState {
   appleCalendar: AppleCalendarConnection;
   googleCalendar: GoogleCalendarConnection;
   analytics: AnalyticsSettingsState;
+  ads: AdsSettingsState;
 }
 
 export interface PersistedState {

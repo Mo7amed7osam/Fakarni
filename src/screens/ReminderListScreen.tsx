@@ -3,6 +3,7 @@ import { ScrollView, Share, StyleSheet, Text, View, Pressable } from 'react-nati
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GhostButton } from '../components/GhostButton';
+import { getAppCopy } from '../content/appCopy';
 import { ReminderCard } from '../components/ReminderCard';
 import { SectionCard } from '../components/SectionCard';
 import { useGhost } from '../context/GhostContext';
@@ -17,12 +18,6 @@ import {
 type Props = NativeStackScreenProps<RootStackParamList, 'ReminderList'>;
 type ReminderListFilter = 'today' | 'upcoming' | 'overdue';
 
-const filters: Array<{ id: ReminderListFilter; label: string }> = [
-  { id: 'today', label: 'اليوم' },
-  { id: 'upcoming', label: 'القادم' },
-  { id: 'overdue', label: 'المتأخر' },
-];
-
 export function ReminderListScreen({ navigation }: Props) {
   const {
     reminders,
@@ -31,6 +26,7 @@ export function ReminderListScreen({ navigation }: Props) {
     settings,
     snoozeReminder,
   } = useGhost();
+  const copy = getAppCopy(settings.uiLanguage);
   const [activeFilter, setActiveFilter] = useState<ReminderListFilter>('today');
 
   const counts = useMemo(
@@ -78,27 +74,31 @@ export function ReminderListScreen({ navigation }: Props) {
     });
   }
 
+  const filters: Array<{ id: ReminderListFilter; label: string }> = [
+    { id: 'today', label: copy.common.today },
+    { id: 'upcoming', label: copy.common.upcoming },
+    { id: 'overdue', label: copy.common.overdue },
+  ];
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>لوحة المتابعة اليومية</Text>
-      <Text style={styles.subtitle}>
-        اعمل على ما يحتاج حركة الآن، واترك الأرشفة والضوضاء للخلف.
-      </Text>
+      <Text style={styles.title}>{copy.reminderList.title}</Text>
+      <Text style={styles.subtitle}>{copy.reminderList.subtitle}</Text>
 
-      <GhostButton label="إضافة يدوية كحل بديل" variant="secondary" onPress={openManualCreate} />
+      <GhostButton label={copy.reminderList.manualCta} variant="secondary" onPress={openManualCreate} />
 
       <LinearGradient colors={['#0D92BF', '#1ABAE9']} style={styles.heroCard}>
         <View style={styles.heroHeader}>
           <View style={styles.heroBadge}>
-            <Text style={styles.heroBadgeText}>ملخص متابع</Text>
+            <Text style={styles.heroBadgeText}>{copy.reminderList.heroBadge}</Text>
           </View>
-          <Text style={styles.heroCaption}>قائمة تشغيلية سريعة بدل شاشة مزدحمة بلا أولوية</Text>
+          <Text style={styles.heroCaption}>{copy.reminderList.heroCaption}</Text>
         </View>
 
         <View style={styles.heroPrimaryRow}>
           <View style={styles.heroCountBlock}>
             <Text style={styles.heroValue}>{counts.today}</Text>
-            <Text style={styles.heroValueLabel}>تحتاج حركة اليوم</Text>
+            <Text style={styles.heroValueLabel}>{copy.reminderList.needsActionToday}</Text>
           </View>
           <View style={styles.heroCountAccent}>
             <View style={styles.heroCountAccentDot} />
@@ -108,15 +108,15 @@ export function ReminderListScreen({ navigation }: Props) {
         <View style={styles.heroStats}>
           <View style={styles.heroStatCard}>
             <Text style={styles.heroStatNumber}>{counts.overdue}</Text>
-            <Text style={styles.heroStatText}>متأخر</Text>
+            <Text style={styles.heroStatText}>{copy.common.overdue}</Text>
           </View>
           <View style={styles.heroStatCard}>
             <Text style={styles.heroStatNumber}>{counts.upcoming}</Text>
-            <Text style={styles.heroStatText}>قادم</Text>
+            <Text style={styles.heroStatText}>{copy.common.upcoming}</Text>
           </View>
           <View style={styles.heroStatCard}>
             <Text style={styles.heroStatNumber}>{counts.done}</Text>
-            <Text style={styles.heroStatText}>تم</Text>
+            <Text style={styles.heroStatText}>{copy.common.done}</Text>
           </View>
         </View>
       </LinearGradient>
@@ -143,27 +143,27 @@ export function ReminderListScreen({ navigation }: Props) {
       </View>
 
       {reminders.length === 0 ? (
-        <SectionCard title="لا يوجد شيء هنا بعد" subtitle="ابدأ يدويًا أو ارجع للتسجيل الصوتي.">
-          <GhostButton label="أضف أول تذكير يدويًا" onPress={openManualCreate} />
+        <SectionCard title={copy.reminderList.emptyTitle} subtitle={copy.reminderList.emptySubtitle}>
+          <GhostButton label={copy.reminderList.addFirstManual} onPress={openManualCreate} />
           <GhostButton
-            label="ارجع وسجّل بالصوت"
+            label={copy.reminderList.backToVoice}
             variant="secondary"
             onPress={() => navigation.navigate('Home')}
           />
         </SectionCard>
       ) : visibleReminders.length === 0 ? (
         <SectionCard
-          title="الفلتر هادئ الآن"
+          title={copy.reminderList.filterQuietTitle}
           subtitle={
             activeFilter === 'today'
-              ? 'لا يوجد ما يحتاج تدخل اليوم.'
+              ? copy.reminderList.filterQuietToday
               : activeFilter === 'upcoming'
-                ? 'لا يوجد شيء قادم قريبًا.'
-                : 'رائع، لا توجد عناصر متأخرة الآن.'
+                ? copy.reminderList.filterQuietUpcoming
+                : copy.reminderList.filterQuietOverdue
           }
         >
           <GhostButton
-            label="بدّل الفلتر"
+            label={copy.reminderList.switchFilter}
             variant="secondary"
             onPress={() =>
               setActiveFilter(
@@ -183,7 +183,7 @@ export function ReminderListScreen({ navigation }: Props) {
             reminder={reminder}
             onShare={() => {
               void Share.share({
-                message: buildShareMessage(reminder, settings.ghostMode),
+                message: buildShareMessage(reminder, settings.ghostMode, settings.uiLanguage),
               });
             }}
             onEdit={() =>
@@ -220,12 +220,10 @@ export function ReminderListScreen({ navigation }: Props) {
 
       {doneReminders.length > 0 ? (
         <SectionCard
-          title="تم إنهاؤها"
-          subtitle="تظهر هنا العناصر ذات المرة الواحدة التي انتهت بالفعل."
+          title={copy.reminderList.doneTitle}
+          subtitle={copy.reminderList.doneSubtitle}
         >
-          <Text style={styles.doneSummary}>
-            أنهيت {doneReminders.length} {doneReminders.length === 1 ? 'تذكيرًا' : 'تذكيرات'}.
-          </Text>
+          <Text style={styles.doneSummary}>{copy.reminderList.doneSummary(doneReminders.length)}</Text>
         </SectionCard>
       ) : null}
     </ScrollView>

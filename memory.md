@@ -16,8 +16,8 @@ VoiceGhost هو تطبيق تذكيرات voice-first مبني للعربية، 
 ### Core voice flow
 - onboarding موجّه للصوت
 - التقاط الكلام العربي وتحويله إلى draft
-- inline confirmation سريع
-- full confirmation عند الحاجة أو الغموض
+- inline confirmation card دائم بعد كل parse ناجح
+- full confirmation كشاشة تعديل ثانوية عند الضغط على `تعديل`
 
 ### Reminder management
 - إنشاء وتعديل وحذف التذكيرات
@@ -43,6 +43,13 @@ VoiceGhost هو تطبيق تذكيرات voice-first مبني للعربية، 
 
 ## Current State
 - تجربة home أصبحت voice-first وواضحة بصريًا.
+- أي voice parse ناجح يمر الآن على confirmation card أولًا، حتى عند انخفاض الثقة أو غياب اليوم/الوقت.
+- إذا كان اليوم أو الوقت ناقصًا، يمكن إكماله الآن مباشرة من confirmation card عبر date/time pickers بدون فتح الشاشة الكاملة.
+- يوجد الآن `uiLanguage` داخل الإعدادات مع أساس جاهز للتبديل بين المصري والإنجليزي، مع توحيد جزء كبير من الشاشات الأساسية على نبرة مصرية أو English copy من مصدر واحد.
+- اللغة المختارة أصبحت تؤثر أيضًا على أجزاء تشغيلية مثل share message، ghost replies، وعناوين/أزرار الإشعارات الجديدة.
+- parsing لم يعد عربي-first فقط: قواعد parser وspeech locale وLLM prompt صاروا يدعمون الإنجليزي بشكل أفضل، خصوصًا اليوم/الوقت/offset/recurrence.
+- يوجد الآن English parser test harness خفيف داخل المشروع للتحقق السريع من جودة parsing بدون إضافة test stack ثقيل.
+- يوجد `ads config` محلي داخل الإعدادات لتجهيز منطق التحكم في الإعلانات قبل تركيب أي ad SDK فعلي.
 - onboarding، home، settings، reminder list، وconfirmation متقاربين أكثر في النبرة والهدف.
 - retention loop مطبق حاليًا: Done / Snooze / Today-Upcoming-Overdue / weekdays / follow-up واحد.
 - Apple Calendar auto-save موجود على iOS.
@@ -51,6 +58,13 @@ VoiceGhost هو تطبيق تذكيرات voice-first مبني للعربية، 
 - ما زالت بعض الأسطح الداخلية تحمل نبرة developer-first أكثر من اللازم، لكنها ليست ضمن المسار الأساسي للمستخدم.
 
 ## Recent Decisions
+- 2026-03-26: إضافة language setting وبداية طبقة copy موحدة للمصري والإنجليزي، لتجنب خلط الفصحى بالمصري وتجهيز تحويل الواجهة للإنجليزي عند الحاجة.
+- 2026-03-26: توسيع طبقة اللغة لتشمل الإشعارات والرسائل والردود الجاهزة، حتى لا يظل التبديل للإنجليزي جزئيًا أو سطحيًا.
+- 2026-03-26: تحسين English parsing في القواعد المحلية والـ LLM prompt وربط speech recognition locale بلغة التطبيق، لأن التبديل للإنجليزي كان ضعيفًا وظيفيًا وليس بصريًا فقط.
+- 2026-03-26: إضافة parser tests إنجليزي مباشر بـ Node test runner وTypeScript hook بسيط، حتى يبقى أي regression ظاهر بسرعة.
+- 2026-03-26: إضافة ads config داخل settings بدل ربط الإعلانات مباشرة في الشاشات، حتى يظل التحكم في monetization behavior من عند المؤسس.
+- 2026-03-26: إضافة date/time pickers داخل confirmation card لإكمال اليوم أو الوقت الناقصين، حتى تبقى التجربة خفيفة ومألوفة مثل بقية التطبيقات بدون فرض الشاشة الكاملة.
+- 2026-03-25: اعتماد card-first confirmation دائم بعد الصوت بدل فتح الفورم تلقائيًا، حتى تبقى التجربة سريعة وغير مزعجة مع الحفاظ على طريق تعديل واضح.
 - 2026-03-25: اعتماد `Founder memory` كملف مرجعي دائم في الجذر بدل changelog طويل، حتى يبقى أي handoff سريع وواضح.
 - 2026-03-25: إبقاء الاشتراكات خارج الواجهة الحالية، لأن أولوية النسخة هي الاعتمادية والوضوح قبل monetization UI.
 - 2026-03-25: جعل الإعدادات تبدأ بالأساسيات التي تمنع ضياع التذكير: الصوت، الإشعارات، المتابعة الذكية، ثم التقويم.

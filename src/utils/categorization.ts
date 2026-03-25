@@ -1,4 +1,4 @@
-import { ReminderCategory } from '../types';
+import { ReminderCategory, UiLanguage } from '../types';
 import { normalizeArabicText } from './arabic';
 
 const categoryRules: Array<{
@@ -24,6 +24,16 @@ const categoryRules: Array<{
       'كورس',
       'دراسه',
       'دراسة',
+      'study',
+      'course',
+      'class',
+      'lecture',
+      'homework',
+      'assignment',
+      'exam',
+      'quiz',
+      'submit',
+      'project',
     ],
   },
   {
@@ -46,6 +56,18 @@ const categoryRules: Array<{
       'مكتب',
       'شركه',
       'شركة',
+      'work',
+      'client',
+      'brief',
+      'design',
+      'code',
+      'coding',
+      'email',
+      'shift',
+      'office',
+      'company',
+      'team',
+      'report',
     ],
   },
   {
@@ -64,6 +86,11 @@ const categoryRules: Array<{
       'مقابله',
       'مقابلة',
       'انترفيو',
+      'meeting',
+      'call',
+      'zoom',
+      'appointment',
+      'interview',
     ],
   },
   {
@@ -87,6 +114,17 @@ const categoryRules: Array<{
       'غدا',
       'عشا',
       'نوم',
+      'doctor',
+      'medicine',
+      'medication',
+      'clinic',
+      'analysis',
+      'workout',
+      'gym',
+      'walk',
+      'water',
+      'sleep',
+      'health',
     ],
   },
   {
@@ -106,6 +144,14 @@ const categoryRules: Array<{
       'لبس',
       'هديه',
       'هدية',
+      'buy',
+      'shopping',
+      'groceries',
+      'market',
+      'pharmacy',
+      'food',
+      'clothes',
+      'gift',
     ],
   },
   {
@@ -126,6 +172,16 @@ const categoryRules: Array<{
       'ميزانية',
       'محفظه',
       'محفظة',
+      'pay',
+      'bill',
+      'rent',
+      'installment',
+      'salary',
+      'money',
+      'budget',
+      'wallet',
+      'transfer',
+      'finance',
     ],
   },
   {
@@ -144,6 +200,15 @@ const categoryRules: Array<{
       'نادي',
       'بيت',
       'مذاكره نفسي',
+      'call mom',
+      'call dad',
+      'mom',
+      'dad',
+      'friend',
+      'birthday',
+      'hangout',
+      'personal',
+      'home',
     ],
   },
 ];
@@ -159,16 +224,37 @@ export const reminderCategoryLabels: Record<ReminderCategory, string> = {
   other: 'عام',
 };
 
-export function getReminderCategoryLabel(category: ReminderCategory) {
-  return reminderCategoryLabels[category];
+const reminderCategoryLabelsEnglish: Record<ReminderCategory, string> = {
+  study: 'Study',
+  work: 'Work',
+  meeting: 'Meetings',
+  health: 'Health',
+  shopping: 'Shopping',
+  finance: 'Finance',
+  personal: 'Personal',
+  other: 'General',
+};
+
+export function getReminderCategoryLabel(
+  category: ReminderCategory,
+  language: UiLanguage = 'ar-EG'
+) {
+  return language === 'en'
+    ? reminderCategoryLabelsEnglish[category]
+    : reminderCategoryLabels[category];
 }
 
 export function classifyReminderCategory(input: string): ReminderCategory {
-  const normalized = normalizeArabicText(input);
+  const normalized = normalizeArabicText(input).toLowerCase();
+
+  if (/\bcall mom\b|\bcall dad\b|\bmom\b|\bdad\b|\bbirthday\b|\bhangout\b/.test(normalized)) {
+    return 'personal';
+  }
+
   const scored = categoryRules.map((rule) => ({
     category: rule.category,
     score: rule.keywords.reduce((sum, keyword) => {
-      return normalized.includes(normalizeArabicText(keyword)) ? sum + 1 : sum;
+      return normalized.includes(normalizeArabicText(keyword).toLowerCase()) ? sum + 1 : sum;
     }, 0),
   }));
 

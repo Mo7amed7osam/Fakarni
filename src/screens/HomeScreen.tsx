@@ -8,18 +8,21 @@ import {
   Share,
   StyleSheet,
   Text,
-  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import dayjs from 'dayjs';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
 } from 'expo-speech-recognition';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getAppCopy } from '../content/appCopy';
 import { useGhost } from '../context/GhostContext';
 import {
   buildReminderAnalyticsProperties,
@@ -32,6 +35,8 @@ import { parseReminderText } from '../utils/parser';
 import { getReminderCategoryLabel } from '../utils/categorization';
 import { buildGhostReply } from '../utils/ghostPersonality';
 import {
+  toArabicDateLabel,
+  toArabicTimeLabel,
   relativeReminderLabel,
   toArabicDateTimeLabel,
 } from '../utils/arabic';
@@ -47,6 +52,8 @@ type PendingParse = {
   transcript: string;
   confidence: number;
   missingFields: string[];
+  parseSource?: string;
+  requiresManualConfirmation: boolean;
 };
 
 function RemindersGlyph() {
@@ -164,11 +171,11 @@ function GhostIllustration() {
 }
 
 const preferredArabicLocales = ['ar-EG', 'ar'];
-const quickOffsetOptions = [0, 30, 60, 120];
+const preferredEnglishLocales = ['en-US', 'en-GB', 'en'];
 
-function getSpeechLocaleLabel(locale: string) {
+function getSpeechLocaleLabel(locale: string, language: 'ar-EG' | 'en' = 'ar-EG') {
   if (locale.toLowerCase().startsWith('ar')) {
-    return 'مصري';
+    return language === 'en' ? 'Arabic' : 'مصري';
   }
 
   return locale;
@@ -189,6 +196,21 @@ function pickArabicLocale(locales: string[]) {
   return uniqueLocales.find((locale) => locale.toLowerCase().startsWith('ar'));
 }
 
+function pickEnglishLocale(locales: string[]) {
+  const uniqueLocales = Array.from(new Set(locales));
+
+  for (const preferred of preferredEnglishLocales) {
+    const directMatch = uniqueLocales.find(
+      (locale) => locale.toLowerCase() === preferred.toLowerCase()
+    );
+    if (directMatch) {
+      return directMatch;
+    }
+  }
+
+  return uniqueLocales.find((locale) => locale.toLowerCase().startsWith('en'));
+}
+
 export function HomeScreen({ navigation }: Props) {
   const {
     reminders,
@@ -199,6 +221,7 @@ export function HomeScreen({ navigation }: Props) {
     requestNotificationAccess,
     openNotificationSettings,
   } = useGhost();
+  const copy = getAppCopy(settings.uiLanguage);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -207,7 +230,7 @@ export function HomeScreen({ navigation }: Props) {
   const [speechLocale, setSpeechLocale] = useState('ar-EG');
   const [pendingParse, setPendingParse] = useState<PendingParse | null>(null);
   const [confirmPaused, setConfirmPaused] = useState(false);
-  const [confirmEditing, setConfirmEditing] = useState(false);
+  const [showPickerMode, setShowPickerMode] = useState<'date' | 'time' | null>(null);
   const [toastMessage, setToastMessage] = useState('');
   const [toastShareText, setToastShareText] = useState('');
   const pulse = useRef(new Animated.Value(1)).current;
@@ -221,7 +244,15 @@ export function HomeScreen({ navigation }: Props) {
   const { height } = useWindowDimensions();
   const compact = height < 780;
   const notificationActionLabel =
-    notificationPermission === 'blocked' ? 'افتح الإعدادات' : 'فعّل الإشعارات';
+    notificationPermission === 'blocked'
+      ? copy.settings.notificationActionBlocked
+      : copy.settings.notificationActionAsk;
+  const isHighConfidenceCard = Boolean(
+    pendingParse &&
+      pendingParse.confidence >= 0.9 &&
+      pendingParse.missingFields.length === 0 &&
+      !pendingParse.requiresManualConfirmation
+  );
 
   useSpeechRecognitionEvent('start', () => {
     setIsListening(true);
@@ -250,7 +281,7 @@ export function HomeScreen({ navigation }: Props) {
       had_transcript: Boolean(sourceTranscript),
     });
     if (!sourceTranscript) {
-      setErrorMessage('لسه ما قولتش حاجة 👻');
+      setErrorMessage(copy.home.voiceEmpty);
       return;
     }
 
@@ -337,7 +368,7 @@ export function HomeScreen({ navigation }: Props) {
       confirmScale.setValue(0.95);
       confirmProgress.setValue(1);
       setConfirmPaused(false);
-      setConfirmEditing(false);
+      setShowPickerMode(null);
       if (autoConfirmTimeoutRef.current) {
         clearTimeout(autoConfirmTimeoutRef.current);
         autoConfirmTimeoutRef.current = null;
@@ -346,23 +377,29 @@ export function HomeScreen({ navigation }: Props) {
     }
 
     setConfirmPaused(false);
-    setConfirmEditing(false);
     confirmOpacity.setValue(0);
     confirmScale.setValue(0.95);
     confirmProgress.setValue(1);
     track('reminder confirmation shown', {
       entry_point: 'voice_home',
       confirmation_mode: 'inline',
-      ...buildReminderAnalyticsProperties({
-        draft: pendingParse.draft,
-        entryPoint: 'voice_home',
-        isVoiceFlow: true,
-        notificationPermissionState: notificationPermission,
-        calendarMode: getCalendarMode({ settings }),
-        parseConfidence: pendingParse.confidence,
-        missingFields: pendingParse.missingFields,
-        confirmationMode: 'inline',
-      }),
+      confidence_state:
+        pendingParse.confidence >= 0.9 &&
+        pendingParse.missingFields.length === 0 &&
+        !pendingParse.requiresManualConfirmation
+          ? 'high'
+          : 'low',
+        ...buildReminderAnalyticsProperties({
+          draft: pendingParse.draft,
+          entryPoint: 'voice_home',
+          isVoiceFlow: true,
+          notificationPermissionState: notificationPermission,
+          calendarMode: getCalendarMode({ settings }),
+          parseConfidence: pendingParse.confidence,
+          parseSource: pendingParse.parseSource,
+          missingFields: pendingParse.missingFields,
+          confirmationMode: 'inline',
+        }),
     });
 
     Animated.parallel([
@@ -378,22 +415,46 @@ export function HomeScreen({ navigation }: Props) {
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
+    ]).start();
+
+    if (
+      pendingParse.confidence >= 0.9 &&
+      pendingParse.missingFields.length === 0 &&
+      !pendingParse.requiresManualConfirmation
+    ) {
+      track('reminder inline auto-save triggered', {
+        entry_point: 'voice_home',
+        confirmation_mode: 'auto',
+        confidence_state: 'high',
+        ...buildReminderAnalyticsProperties({
+          draft: pendingParse.draft,
+          entryPoint: 'voice_home',
+          isVoiceFlow: true,
+          notificationPermissionState: notificationPermission,
+          calendarMode: getCalendarMode({ settings }),
+          parseConfidence: pendingParse.confidence,
+          parseSource: pendingParse.parseSource,
+          missingFields: pendingParse.missingFields,
+          confirmationMode: 'auto',
+        }),
+      });
+
       Animated.timing(confirmProgress, {
         toValue: 0,
         duration: 3000,
         easing: Easing.linear,
         useNativeDriver: false,
-      }),
-    ]).start();
+      }).start();
 
-    autoConfirmTimeoutRef.current = setTimeout(() => {
-      const current = latestPendingParseRef.current;
-      if (!current) {
-        return;
-      }
+      autoConfirmTimeoutRef.current = setTimeout(() => {
+        const current = latestPendingParseRef.current;
+        if (!current) {
+          return;
+        }
 
-      void confirmPendingParse(current);
-    }, 3000);
+        void confirmPendingParse(current);
+      }, 3000);
+    }
 
     return () => {
       if (autoConfirmTimeoutRef.current) {
@@ -402,26 +463,48 @@ export function HomeScreen({ navigation }: Props) {
       }
       confirmProgress.stopAnimation();
     };
-  }, [pendingParse, confirmOpacity, confirmProgress, confirmScale]);
+  }, [
+    pendingParse,
+    confirmOpacity,
+    confirmProgress,
+    confirmScale,
+    notificationPermission,
+    settings,
+  ]);
 
   const nextDueReminder = getNextDueReminder(reminders);
   const overdueCount = getOverdueReminderCount(reminders);
   const transcriptPreview = pendingParse
     ? pendingParse.draft.title
     : processing
-      ? 'بنحوّل كلامك إلى تذكير واضح...'
+      ? settings.uiLanguage === 'en'
+        ? 'Turning your words into a clear reminder...'
+        : 'بنحوّل كلامك إلى تذكير واضح...'
       : transcript.trim();
   const voiceStateLabel = processing
-    ? 'بنفهمها'
+    ? settings.uiLanguage === 'en'
+      ? 'Parsing'
+      : 'بنفهمها'
     : isListening
-      ? 'سامعك'
+      ? settings.uiLanguage === 'en'
+        ? 'Listening'
+        : 'سامعك'
       : pendingParse
-        ? 'راجع بسرعة'
-        : 'جاهز';
+        ? settings.uiLanguage === 'en'
+          ? 'Review'
+          : 'راجع بسرعة'
+        : settings.uiLanguage === 'en'
+          ? 'Ready'
+          : 'جاهز';
 
   function buildDraftFromParse(parsed: Awaited<ReturnType<typeof parseReminderText>>) {
+    const normalizedTitle =
+      settings.uiLanguage === 'en' && parsed.title === 'تذكير جديد'
+        ? 'New reminder'
+        : parsed.title;
+
     return {
-      title: parsed.title,
+      title: normalizedTitle,
       category: parsed.categorySuggestion,
       eventAt: parsed.eventAt ?? new Date().toISOString(),
       offsetMinutes: parsed.offsetMinutes,
@@ -447,19 +530,72 @@ export function HomeScreen({ navigation }: Props) {
 
   function validateDraft(draft: ReminderDraft) {
     if (!draft.title.trim()) {
-      return 'اسم المهمة محتاج يتظبط.';
+      return settings.uiLanguage === 'en'
+        ? 'The task name still needs a clearer title.'
+        : 'اسم المهمة محتاج يتظبط.';
     }
 
     const remindAt = dayjs(draft.eventAt).subtract(draft.offsetMinutes, 'minute');
     if (draft.recurrence === 'none' && remindAt.isBefore(dayjs().add(1, 'minute'))) {
-      return 'راجع الوقت بس.';
+      return settings.uiLanguage === 'en' ? 'Please review the time.' : 'راجع الوقت بس.';
     }
 
     return '';
   }
 
+  function openInlinePicker(mode: 'date' | 'time') {
+    pauseAutoConfirm();
+    setShowPickerMode(mode);
+  }
+
+  function handleInlineDateTimeChange(
+    event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) {
+    if (Platform.OS !== 'ios') {
+      setShowPickerMode(null);
+    }
+
+    if (event.type === 'dismissed' || !selectedDate) {
+      return;
+    }
+
+    setPendingParse((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const currentEventAt = dayjs(current.draft.eventAt);
+      const nextEventAt =
+        showPickerMode === 'date'
+          ? currentEventAt
+              .year(selectedDate.getFullYear())
+              .month(selectedDate.getMonth())
+              .date(selectedDate.getDate())
+              .second(0)
+              .millisecond(0)
+          : currentEventAt
+              .hour(selectedDate.getHours())
+              .minute(selectedDate.getMinutes())
+              .second(0)
+              .millisecond(0);
+
+      return {
+        ...current,
+        draft: {
+          ...current.draft,
+          eventAt: nextEventAt.toISOString(),
+        },
+        missingFields: current.missingFields.filter((field) =>
+          field !== (showPickerMode === 'date' ? 'date' : 'time')
+        ),
+        requiresManualConfirmation: true,
+      };
+    });
+  }
+
   function pauseAutoConfirm() {
-    if (!pendingParse || confirmPaused) {
+    if (!pendingParse || confirmPaused || !isHighConfidenceCard) {
       return;
     }
 
@@ -472,37 +608,16 @@ export function HomeScreen({ navigation }: Props) {
     setConfirmPaused(true);
   }
 
-  function enableInlineEdit() {
-    pauseAutoConfirm();
-    setConfirmEditing(true);
-  }
-
   async function confirmPendingParse(target: PendingParse) {
     if (autoConfirmTimeoutRef.current) {
       clearTimeout(autoConfirmTimeoutRef.current);
       autoConfirmTimeoutRef.current = null;
     }
 
-    await new Promise<void>((resolve) => {
-      Animated.parallel([
-        Animated.timing(confirmOpacity, {
-          toValue: 0,
-          duration: 180,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(confirmScale, {
-          toValue: 0.97,
-          duration: 180,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start(() => resolve());
-    });
-
     await saveDraft(target.draft, target.transcript, {
       confirmationMode: 'inline',
       parseConfidence: target.confidence,
+      parseSource: target.parseSource,
       missingFields: target.missingFields,
     });
   }
@@ -512,7 +627,6 @@ export function HomeScreen({ navigation }: Props) {
       setProcessing(true);
       const parsed = await parseReminderText(sourceTranscript);
       const draft = buildDraftFromParse(parsed);
-      const validationIssue = validateDraft(draft);
       track('reminder parse succeeded', {
         entry_point: 'voice_home',
         ...buildReminderAnalyticsProperties({
@@ -527,47 +641,15 @@ export function HomeScreen({ navigation }: Props) {
         }),
       });
 
-      if (!validationIssue && parsed.confidence >= 0.9 && parsed.missingFields.length === 0) {
-        track('reminder inline auto-save triggered', {
-          entry_point: 'voice_home',
-          confirmation_mode: 'auto',
-          ...buildReminderAnalyticsProperties({
-            draft,
-            entryPoint: 'voice_home',
-            isVoiceFlow: true,
-            notificationPermissionState: notificationPermission,
-            calendarMode: getCalendarMode({ settings }),
-            parseConfidence: parsed.confidence,
-            parseSource: parsed.source,
-            missingFields: parsed.missingFields,
-            confirmationMode: 'auto',
-          }),
-        });
-        await saveDraft(draft, sourceTranscript, {
-          confirmationMode: 'auto',
-          parseConfidence: parsed.confidence,
-          parseSource: parsed.source,
-          missingFields: parsed.missingFields,
-        });
-        return;
-      }
-
       const nextPending = {
         draft,
         transcript: sourceTranscript,
         confidence: parsed.confidence,
         missingFields: parsed.missingFields,
+        parseSource: parsed.source,
+        requiresManualConfirmation:
+          parsed.confidence < 0.9 || parsed.missingFields.length > 0,
       } satisfies PendingParse;
-
-      if (
-        validationIssue ||
-        parsed.confidence < 0.62 ||
-        parsed.missingFields.includes('time') ||
-        parsed.missingFields.includes('date')
-      ) {
-        openFullConfirmation(nextPending);
-        return;
-      }
 
       setPendingParse(nextPending);
       setErrorMessage('');
@@ -577,7 +659,7 @@ export function HomeScreen({ navigation }: Props) {
         is_voice_flow: true,
         reason: 'parser_exception',
       });
-      setErrorMessage('حصلت لخبطة صغيرة. قولها تاني.');
+      setErrorMessage(copy.home.parseFailure);
     } finally {
       setProcessing(false);
     }
@@ -631,7 +713,7 @@ export function HomeScreen({ navigation }: Props) {
           resultReason: result.reason,
         }),
       });
-      setErrorMessage(result.reason ?? 'فيه مشكلة في الحفظ. جرّب تاني.');
+      setErrorMessage(result.reason ?? copy.home.saveFailure);
       return;
     }
 
@@ -659,12 +741,17 @@ export function HomeScreen({ navigation }: Props) {
       title: draft.title,
       category: draft.category,
       recurrence: draft.recurrence,
+      language: settings.uiLanguage,
     });
     setToastMessage(result.warning ?? reply);
     setToastShareText(
       result.warning
         ? ''
-        : ['VoiceGhost 👻', '', `قلت: ${sourceTranscript}`, `الجوست رد: ${reply}`].join('\n')
+        : settings.uiLanguage === 'en'
+          ? ['VoiceGhost 👻', '', `You said: ${sourceTranscript}`, `Ghost reply: ${reply}`].join(
+              '\n'
+            )
+          : ['VoiceGhost 👻', '', `قلت: ${sourceTranscript}`, `الجوست رد: ${reply}`].join('\n')
     );
   }
 
@@ -683,17 +770,29 @@ export function HomeScreen({ navigation }: Props) {
       const availableLocales = [...supported.installedLocales, ...supported.locales];
 
       if (!availableLocales.length) {
-        return 'ar-EG';
+        return settings.uiLanguage === 'en' ? 'en-US' : 'ar-EG';
       }
 
-      const arabicLocale = pickArabicLocale(availableLocales);
-      if (arabicLocale) {
-        return arabicLocale;
+      if (settings.uiLanguage === 'en') {
+        const englishLocale = pickEnglishLocale(availableLocales);
+        if (englishLocale) {
+          return englishLocale;
+        }
+      } else {
+        const arabicLocale = pickArabicLocale(availableLocales);
+        if (arabicLocale) {
+          return arabicLocale;
+        }
       }
 
-      return null;
+      const fallbackLocale =
+        settings.uiLanguage === 'en'
+          ? pickEnglishLocale(availableLocales)
+          : pickArabicLocale(availableLocales);
+
+      return fallbackLocale ?? null;
     } catch {
-      return 'ar-EG';
+      return settings.uiLanguage === 'en' ? 'en-US' : 'ar-EG';
     }
   }
 
@@ -727,7 +826,7 @@ export function HomeScreen({ navigation }: Props) {
       setBusy(false);
       setProcessing(false);
       shouldProcessOnEndRef.current = false;
-      setErrorMessage('لازم تسمح بالمايك الأول.');
+      setErrorMessage(copy.home.speechPermissionNeeded);
       return;
     }
 
@@ -738,8 +837,8 @@ export function HomeScreen({ navigation }: Props) {
       shouldProcessOnEndRef.current = false;
       setErrorMessage(
         Platform.OS === 'ios'
-          ? 'فعّل العربي في النظام الأول.'
-          : 'خدمة العربي مش متاحة على الجهاز.'
+          ? copy.home.enableArabicIos
+          : copy.home.arabicUnavailable
       );
       return;
     }
@@ -762,17 +861,17 @@ export function HomeScreen({ navigation }: Props) {
       <View style={styles.content}>
         <View style={styles.voiceTopBar}>
           <NavIconButton
-            label="الإعدادات"
+            label={copy.common.settings}
             onPress={() => navigation.navigate('Settings')}
             variant="settings"
             showLabel={false}
           />
           <View style={styles.voiceBrand}>
             <Text style={styles.voiceBrandTitle}>VoiceGhost</Text>
-            <Text style={styles.voiceBrandSubtitle}>صوت أولًا</Text>
+            <Text style={styles.voiceBrandSubtitle}>{copy.home.brandSubtitle}</Text>
           </View>
           <NavIconButton
-            label="تذكيراتك"
+            label={copy.common.reminders}
             onPress={() => navigation.navigate('ReminderList')}
             variant="reminders"
             showLabel={false}
@@ -783,8 +882,8 @@ export function HomeScreen({ navigation }: Props) {
           <View style={styles.statusBanner}>
             <Text style={styles.statusBannerText}>
               {pendingPermissionReminders === 1
-                ? 'يوجد تذكير محفوظ ينتظر تفعيل الإشعارات.'
-                : `يوجد ${pendingPermissionReminders} تذكيرات محفوظة تنتظر تفعيل الإشعارات.`}
+                ? copy.home.pendingOne
+                : copy.home.pendingMany(pendingPermissionReminders)}
             </Text>
             <Pressable
               onPress={() => void handleNotificationAction()}
@@ -796,13 +895,15 @@ export function HomeScreen({ navigation }: Props) {
         ) : null}
 
         <View style={styles.voiceCenter}>
-          <Text style={styles.voiceTitle}>{processing ? 'ثانية ونرتبها' : 'دوس واتكلم'}</Text>
+          <Text style={styles.voiceTitle}>
+            {processing ? copy.home.voiceTitleProcessing : copy.home.voiceTitleIdle}
+          </Text>
           <Text style={styles.voiceSubtitle}>
             {isListening
-              ? 'قل المهمة والوقت فقط.'
+              ? copy.home.voiceSubtitleListening
               : pendingParse
-                ? 'راجعها بسرعة أو اتركها تتحفظ تلقائيًا.'
-                : 'قل ما تريد وسيتم الاهتمام به كتذكير خلال ثوانٍ.'}
+                ? copy.home.voiceSubtitlePending
+                : copy.home.voiceSubtitleIdle}
           </Text>
 
           <View style={[styles.voiceStatePill, busy && styles.voiceStatePillActive]}>
@@ -845,14 +946,18 @@ export function HomeScreen({ navigation }: Props) {
             </Animated.View>
 
             <Text style={[styles.micHint, compact && styles.micHintCompact]}>
-              {processing ? 'بنحفظه' : isListening ? 'كمّل' : 'اضغط وتكلم'}
+              {processing
+                ? copy.home.hintProcessing
+                : isListening
+                  ? copy.home.hintListening
+                  : copy.home.hintIdle}
             </Text>
             <Text style={[styles.micSubhint, compact && styles.micSubhintCompact]}>
               {processing
-                ? 'لا تحتاج لأي خطوة إضافية.'
+                ? copy.home.subhintProcessing
                 : isListening
-                  ? 'قولها بطريقتك وسنتكفل بالباقي.'
-                  : 'لمسة واحدة ثم تكلم، والباقي علينا.'}
+                  ? copy.home.subhintListening
+                  : copy.home.subhintIdle}
             </Text>
             {isListening ? <Waveform pulse={pulse} /> : null}
             {processing ? (
@@ -867,10 +972,12 @@ export function HomeScreen({ navigation }: Props) {
               </Text>
             ) : (
               <Text style={styles.voiceTranscriptPlaceholder}>
-                مثال: فكرني بميعاد الدكتور بكرة الساعة ٦
+                {copy.home.transcriptPlaceholder}
               </Text>
             )}
-            <Text style={styles.voiceTranscriptMeta}>{getSpeechLocaleLabel(speechLocale)}</Text>
+            <Text style={styles.voiceTranscriptMeta}>
+              {getSpeechLocaleLabel(speechLocale, settings.uiLanguage)}
+            </Text>
           </View>
 
           {errorMessage ? (
@@ -886,7 +993,7 @@ export function HomeScreen({ navigation }: Props) {
                   }}
                   style={styles.inlineErrorAction}
                 >
-                  <Text style={styles.inlineErrorActionText}>قولها تاني</Text>
+                  <Text style={styles.inlineErrorActionText}>{copy.home.retryVoice}</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -898,8 +1005,8 @@ export function HomeScreen({ navigation }: Props) {
           style={styles.latestReminderCard}
         >
           <View style={styles.latestReminderHeader}>
-            <Text style={styles.latestReminderLink}>كل التذكيرات</Text>
-            <Text style={styles.latestReminderEyebrow}>الأقرب الآن</Text>
+            <Text style={styles.latestReminderLink}>{copy.common.allReminders}</Text>
+            <Text style={styles.latestReminderEyebrow}>{copy.home.nearestNow}</Text>
           </View>
 
           {nextDueReminder ? (
@@ -907,12 +1014,14 @@ export function HomeScreen({ navigation }: Props) {
               <View style={styles.latestReminderTopRow}>
                 <View style={styles.categoryPill}>
                   <Text style={styles.categoryPillText}>
-                    {getReminderCategoryLabel(nextDueReminder.category)}
+                    {getReminderCategoryLabel(nextDueReminder.category, settings.uiLanguage)}
                   </Text>
                 </View>
                 {overdueCount > 0 ? (
                   <View style={styles.overduePill}>
-                    <Text style={styles.overduePillText}>{overdueCount} متأخر</Text>
+                    <Text style={styles.overduePillText}>
+                      {overdueCount} {copy.common.overdue}
+                    </Text>
                   </View>
                 ) : null}
               </View>
@@ -921,20 +1030,21 @@ export function HomeScreen({ navigation }: Props) {
               </Text>
               <Text numberOfLines={1} style={styles.latestReminderMeta}>
                 {toArabicDateTimeLabel(
-                  getReminderTimelineSnapshot(nextDueReminder).activeReminderAt
+                  getReminderTimelineSnapshot(nextDueReminder).activeReminderAt,
+                  settings.uiLanguage
                 )}
               </Text>
               <Text numberOfLines={1} style={styles.latestReminderMeta}>
-                لن يضيع منك إذا بقيت الإشعارات مفعّلة.
+                {copy.home.latestPinnedText}
               </Text>
             </View>
           ) : (
             <View style={styles.latestReminderEmpty}>
               <GhostIllustration />
               <View style={styles.latestReminderEmptyCopy}>
-                <Text style={styles.latestReminderTitle}>لا يوجد شيء محفوظ بعد</Text>
+                <Text style={styles.latestReminderTitle}>{copy.home.latestEmptyTitle}</Text>
                 <Text style={styles.latestReminderMeta}>
-                  الإضافة اليدوية موجودة داخل شاشة التذكيرات كمسار ثانوي.
+                  {copy.home.latestEmptyText}
                 </Text>
               </View>
             </View>
@@ -947,6 +1057,7 @@ export function HomeScreen({ navigation }: Props) {
             <Animated.View
               style={[
                 styles.confirmCard,
+                !isHighConfidenceCard && styles.confirmCardWarning,
                 {
                   opacity: confirmOpacity,
                   transform: [{ scale: confirmScale }],
@@ -954,130 +1065,186 @@ export function HomeScreen({ navigation }: Props) {
               ]}
             >
               <Pressable onPress={pauseAutoConfirm} style={styles.confirmCardInner}>
-                <Text style={styles.confirmTitle}>تمام كده؟ 👻</Text>
-                {confirmEditing ? (
-                  <>
-                    <TextInput
-                      value={pendingParse.draft.title}
-                      onChangeText={(value) =>
-                        setPendingParse((current) =>
-                          current
-                            ? {
-                                ...current,
-                                draft: {
-                                  ...current.draft,
-                                  title: value,
-                                },
-                              }
-                            : current
-                        )
-                      }
-                      onFocus={pauseAutoConfirm}
-                      placeholder="اسم المهمة"
-                      placeholderTextColor={colors.textMuted}
-                      style={styles.confirmInput}
-                      textAlign="right"
-                    />
+                <View
+                  style={[
+                    styles.confirmStateBadge,
+                    !isHighConfidenceCard && styles.confirmStateBadgeWarning,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.confirmStateBadgeText,
+                      !isHighConfidenceCard && styles.confirmStateBadgeTextWarning,
+                    ]}
+                  >
+                    {isHighConfidenceCard ? copy.home.confirmReady : copy.home.confirmReview}
+                  </Text>
+                </View>
+                <Text style={styles.confirmTitle}>{copy.home.confirmTitle}</Text>
+                <Text style={styles.confirmValue}>{pendingParse.draft.title}</Text>
 
-                    <Text style={styles.confirmMeta}>
-                      {toArabicDateTimeLabel(pendingParse.draft.eventAt)}
-                    </Text>
+                {!isHighConfidenceCard ? (
+                  <Text style={styles.confirmWarningText}>
+                    {copy.home.confirmWarning}
+                  </Text>
+                ) : null}
 
-                    <View style={styles.confirmOffsetRow}>
-                      {quickOffsetOptions.map((value) => (
-                        <Pressable
-                          key={value}
-                          onPress={() => {
-                            pauseAutoConfirm();
-                            setPendingParse((current) =>
-                              current
-                                ? {
-                                    ...current,
-                                    draft: {
-                                      ...current.draft,
-                                      offsetMinutes: value,
-                                    },
-                                  }
-                                : current
-                            );
-                          }}
-                          style={[
-                            styles.confirmOffsetChip,
-                            value === pendingParse.draft.offsetMinutes &&
-                              styles.confirmOffsetChipActive,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.confirmOffsetText,
-                              value === pendingParse.draft.offsetMinutes &&
-                                styles.confirmOffsetTextActive,
-                            ]}
-                          >
-                            {relativeReminderLabel(value)}
-                          </Text>
-                        </Pressable>
-                      ))}
+                <View style={styles.confirmDetailGrid}>
+                  <Pressable
+                    onPress={() => openInlinePicker('date')}
+                    style={[
+                      styles.confirmDetailCard,
+                      showPickerMode === 'date' && styles.confirmDetailCardActive,
+                      pendingParse.missingFields.includes('date') &&
+                        styles.confirmDetailCardWarning,
+                    ]}
+                  >
+                    <View style={styles.confirmDetailText}>
+                      <Text style={styles.confirmDetailLabel}>{copy.home.dateLabel}</Text>
+                      <Text
+                        style={[
+                          styles.confirmDetailValue,
+                          pendingParse.missingFields.includes('date') &&
+                            styles.confirmDetailValueWarning,
+                        ]}
+                      >
+                        {pendingParse.missingFields.includes('date')
+                          ? copy.home.setDate
+                          : toArabicDateLabel(pendingParse.draft.eventAt, settings.uiLanguage)}
+                      </Text>
                     </View>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.confirmValue}>{pendingParse.draft.title}</Text>
-                    <Text style={styles.confirmMeta}>
-                      {toArabicDateTimeLabel(pendingParse.draft.eventAt)}
+                    <Text style={styles.confirmDetailAction}>
+                      {pendingParse.missingFields.includes('date')
+                        ? copy.home.pickDate
+                        : copy.common.change}
                     </Text>
-                    <Text style={styles.confirmMeta}>
-                      {relativeReminderLabel(pendingParse.draft.offsetMinutes)}
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => openInlinePicker('time')}
+                    style={[
+                      styles.confirmDetailCard,
+                      showPickerMode === 'time' && styles.confirmDetailCardActive,
+                      pendingParse.missingFields.includes('time') &&
+                        styles.confirmDetailCardWarning,
+                    ]}
+                  >
+                    <View style={styles.confirmDetailText}>
+                      <Text style={styles.confirmDetailLabel}>{copy.home.timeLabel}</Text>
+                      <Text
+                        style={[
+                          styles.confirmDetailValue,
+                          pendingParse.missingFields.includes('time') &&
+                            styles.confirmDetailValueWarning,
+                        ]}
+                      >
+                        {pendingParse.missingFields.includes('time')
+                          ? copy.home.setTime
+                          : toArabicTimeLabel(pendingParse.draft.eventAt, settings.uiLanguage)}
+                      </Text>
+                    </View>
+                    <Text style={styles.confirmDetailAction}>
+                      {pendingParse.missingFields.includes('time')
+                        ? copy.home.pickTime
+                        : copy.common.change}
                     </Text>
-                  </>
-                )}
+                  </Pressable>
+                </View>
+
+                {showPickerMode ? (
+                  <View style={styles.confirmPickerWrap}>
+                    <Text
+                      style={[
+                        styles.confirmPickerLabel,
+                        showPickerMode === 'date' && styles.confirmPickerLabelDate,
+                      ]}
+                    >
+                      {showPickerMode === 'date'
+                        ? copy.home.pickerDateTitle
+                        : copy.home.pickerTimeTitle}
+                    </Text>
+
+                    <DateTimePicker
+                      mode={showPickerMode}
+                      value={new Date(pendingParse.draft.eventAt)}
+                      is24Hour={false}
+                      display={
+                        Platform.OS === 'ios'
+                          ? showPickerMode === 'date'
+                            ? 'inline'
+                            : 'spinner'
+                          : 'default'
+                      }
+                      onChange={handleInlineDateTimeChange}
+                    />
+                  </View>
+                ) : null}
+
+                <Text style={styles.confirmMeta}>
+                  {relativeReminderLabel(pendingParse.draft.offsetMinutes, settings.uiLanguage)}
+                </Text>
+
+                {pendingParse.missingFields.length > 0 ? (
+                  <View style={styles.confirmWarningRow}>
+                    {pendingParse.missingFields.map((field) => (
+                      <View key={field} style={styles.confirmWarningChip}>
+                        <Text style={styles.confirmWarningChipText}>
+                          {field === 'time'
+                            ? copy.home.unclearTime
+                            : field === 'date'
+                              ? copy.home.unclearDate
+                              : field === 'title'
+                                ? copy.home.unclearTitle
+                                : field}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
 
                 <View style={styles.confirmActions}>
                   <Pressable
                     onPress={() => {
-                      if (confirmEditing) {
-                        openFullConfirmation(pendingParse);
-                        return;
-                      }
-
-                      enableInlineEdit();
+                      pauseAutoConfirm();
+                      openFullConfirmation(pendingParse);
                     }}
                     style={styles.confirmAction}
                   >
-                    <Text style={styles.confirmActionSecondaryText}>
-                      {confirmEditing ? 'تعديل أكتر' : 'تعديل'}
-                    </Text>
+                    <Text style={styles.confirmActionSecondaryText}>{copy.common.edit}</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => {
+                      pauseAutoConfirm();
                       void confirmPendingParse(pendingParse);
                     }}
                     style={[styles.confirmAction, styles.confirmActionPrimary]}
                   >
-                    <Text style={styles.confirmActionPrimaryText}>تم</Text>
+                    <Text style={styles.confirmActionPrimaryText}>{copy.common.save}</Text>
                   </Pressable>
                 </View>
 
-                <View style={styles.confirmProgressTrack}>
-                  <Animated.View
-                    style={[
-                      styles.confirmProgressBar,
-                      {
-                        width: confirmProgress.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['0%', '100%'],
-                        }),
-                      },
-                    ]}
-                  />
-                </View>
+                {isHighConfidenceCard ? (
+                  <View style={styles.confirmProgressTrack}>
+                    <Animated.View
+                      style={[
+                        styles.confirmProgressBar,
+                        {
+                          width: confirmProgress.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0%', '100%'],
+                          }),
+                        },
+                      ]}
+                    />
+                  </View>
+                ) : null}
 
                 <Text style={styles.confirmHint}>
-                  {confirmEditing
-                    ? 'عدّل بسرعة واضغط تم.'
+                  {!isHighConfidenceCard
+                    ? copy.home.lowHint
                     : confirmPaused
-                      ? 'العد التلقائي وقف. راجع براحتك.'
-                      : 'هيتحفظ تلقائيًا خلال ٣ ثواني'}
+                      ? copy.home.highHintPaused
+                      : copy.home.highHintRunning}
                 </Text>
               </Pressable>
             </Animated.View>
@@ -1094,7 +1261,7 @@ export function HomeScreen({ navigation }: Props) {
                 }}
                 style={styles.toastShare}
               >
-                <Text style={styles.toastShareText}>شارك</Text>
+                <Text style={styles.toastShareText}>{copy.common.share}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -1550,7 +1717,7 @@ const styles = StyleSheet.create({
     marginTop: -42,
     alignItems: 'center',
     gap: 4,
-    zIndex: 2,
+    zIndex: 1,
   },
   micStageCompact: {
     marginTop: -36,
@@ -1893,52 +2060,127 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(23,19,41,0.16)',
+    backgroundColor: 'rgba(23,19,41,0.34)',
     padding: spacing.lg,
+    zIndex: 40,
+    elevation: 20,
   },
   confirmCard: {
-    width: '88%',
-    maxWidth: 360,
+    width: '90%',
+    maxWidth: 372,
     borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.98)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.7)',
+    borderColor: 'rgba(228,226,244,0.92)',
     shadowColor: colors.shadow,
     shadowOpacity: 1,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 18 },
-    elevation: 6,
+    shadowRadius: 34,
+    shadowOffset: { width: 0, height: 22 },
+    elevation: 16,
+    overflow: 'hidden',
+    zIndex: 41,
+  },
+  confirmCardWarning: {
+    backgroundColor: '#FFFCF4',
+    borderColor: '#F2D58C',
   },
   confirmCardInner: {
-    padding: spacing.lg,
-    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    gap: spacing.md,
+  },
+  confirmStateBadge: {
+    alignSelf: 'flex-end',
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: 'rgba(108,92,231,0.08)',
+  },
+  confirmStateBadgeWarning: {
+    backgroundColor: '#FFF2C7',
+  },
+  confirmStateBadgeText: {
+    color: colors.primary,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    writingDirection: 'rtl',
+  },
+  confirmStateBadgeTextWarning: {
+    color: '#9A6700',
   },
   confirmTitle: {
     fontFamily: fonts.bold,
-    fontSize: 22,
+    fontSize: 20,
     color: colors.text,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   confirmValue: {
     fontFamily: fonts.bold,
-    fontSize: 20,
+    fontSize: 18,
     color: colors.text,
     textAlign: 'right',
     writingDirection: 'rtl',
-    lineHeight: 28,
+    lineHeight: 26,
   },
-  confirmInput: {
-    minHeight: 46,
+  confirmWarningText: {
+    color: '#9A6700',
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    textAlign: 'right',
+    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+  confirmDetailGrid: {
+    gap: spacing.sm,
+  },
+  confirmDetailCard: {
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: 'rgba(247,247,251,0.9)',
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: 'rgba(108,92,231,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(108,92,231,0.08)',
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  confirmDetailCardActive: {
+    borderColor: 'rgba(108,92,231,0.26)',
+    backgroundColor: 'rgba(108,92,231,0.08)',
+  },
+  confirmDetailCardWarning: {
+    backgroundColor: '#FFF6DA',
+    borderColor: '#F6D88A',
+  },
+  confirmDetailText: {
+    flex: 1,
+    gap: 2,
+    alignItems: 'flex-end',
+  },
+  confirmDetailLabel: {
+    color: colors.textMuted,
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  confirmDetailValue: {
     color: colors.text,
     fontFamily: fonts.bold,
-    fontSize: 18,
+    fontSize: 16,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    flexShrink: 1,
+  },
+  confirmDetailValueWarning: {
+    color: '#9A6700',
+  },
+  confirmDetailAction: {
+    color: colors.primary,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
     writingDirection: 'rtl',
   },
   confirmMeta: {
@@ -1949,31 +2191,44 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     writingDirection: 'rtl',
   },
-  confirmOffsetRow: {
+  confirmPickerWrap: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+  },
+  confirmPickerLabel: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  confirmPickerLabelDate: {
+    paddingBottom: spacing.xs,
+  },
+  confirmWarningRow: {
     flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: spacing.xs,
+    marginTop: -2,
   },
-  confirmOffsetChip: {
+  confirmWarningChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(108,92,231,0.08)',
+    backgroundColor: '#FFF2C7',
     borderWidth: 1,
-    borderColor: 'rgba(108,92,231,0.08)',
+    borderColor: '#F6D88A',
   },
-  confirmOffsetChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  confirmOffsetText: {
-    color: colors.text,
+  confirmWarningChipText: {
+    color: '#9A6700',
     fontFamily: fonts.semibold,
     fontSize: 12,
     writingDirection: 'rtl',
-  },
-  confirmOffsetTextActive: {
-    color: colors.white,
   },
   confirmActions: {
     flexDirection: 'row-reverse',
@@ -1982,7 +2237,7 @@ const styles = StyleSheet.create({
   },
   confirmAction: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 48,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',

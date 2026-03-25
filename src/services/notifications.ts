@@ -6,6 +6,7 @@ import {
   NotificationPermissionState,
   Reminder,
   ReminderNotificationStatus,
+  UiLanguage,
 } from '../types';
 
 export const REMINDER_NOTIFICATION_CATEGORY_ID = 'voiceghost-reminder-actions';
@@ -76,15 +77,28 @@ function buildBaseTriggers(reminder: Reminder): Notifications.NotificationTrigge
 
 function buildNotificationContent(
   reminder: Reminder,
-  kind: ReminderNotificationKind
+  kind: ReminderNotificationKind,
+  language: UiLanguage = 'ar-EG'
 ): Notifications.NotificationContentInput {
+  const isEnglish = language === 'en';
   return {
-    title: kind === 'follow_up' ? 'متابعة من VoiceGhost' : 'تذكير من VoiceGhost',
+    title:
+      kind === 'follow_up'
+        ? isEnglish
+          ? 'VoiceGhost follow-up'
+          : 'متابعة من VoiceGhost'
+        : isEnglish
+          ? 'VoiceGhost reminder'
+          : 'تذكير من VoiceGhost',
     body:
       kind === 'follow_up'
-        ? `لسه موجودة: ${reminder.title}`
+        ? isEnglish
+          ? `Still pending: ${reminder.title}`
+          : `لسه موجودة: ${reminder.title}`
         : kind === 'snooze'
-          ? `رجعنا نفتكرك: ${reminder.title}`
+          ? isEnglish
+            ? `Back to remind you: ${reminder.title}`
+            : `رجعنا نفتكرك: ${reminder.title}`
           : reminder.title,
     data: {
       reminderId: reminder.id,
@@ -95,7 +109,8 @@ function buildNotificationContent(
   };
 }
 
-export async function configureNotifications() {
+export async function configureNotifications(language: UiLanguage = 'ar-EG') {
+  const isEnglish = language === 'en';
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldPlaySound: true,
@@ -110,21 +125,21 @@ export async function configureNotifications() {
     [
       {
         identifier: REMINDER_NOTIFICATION_ACTION_DONE,
-        buttonTitle: 'تم',
+        buttonTitle: isEnglish ? 'Done' : 'تم',
       },
       {
         identifier: REMINDER_NOTIFICATION_ACTION_SNOOZE_10M,
-        buttonTitle: '10 د',
+        buttonTitle: isEnglish ? '10m' : '10 د',
       },
       {
         identifier: REMINDER_NOTIFICATION_ACTION_SNOOZE_1H,
-        buttonTitle: 'ساعة',
+        buttonTitle: isEnglish ? '1h' : 'ساعة',
       },
     ],
     {
-      previewPlaceholder: 'تذكير من VoiceGhost',
+      previewPlaceholder: isEnglish ? 'VoiceGhost reminder' : 'تذكير من VoiceGhost',
       intentIdentifiers: [],
-      categorySummaryFormat: 'تذكير',
+      categorySummaryFormat: isEnglish ? 'Reminder' : 'تذكير',
     }
   );
 
@@ -186,7 +201,8 @@ export async function configureAndroidChannel() {
 }
 
 export async function scheduleReminderNotification(
-  reminder: Reminder
+  reminder: Reminder,
+  language: UiLanguage = 'ar-EG'
 ): Promise<ReminderNotificationScheduleResult> {
   const permissionState = await requestNotificationPermission();
   if (permissionState !== 'granted') {
@@ -201,7 +217,7 @@ export async function scheduleReminderNotification(
   const notificationIds = await Promise.all(
     triggers.map((trigger) =>
       Notifications.scheduleNotificationAsync({
-        content: buildNotificationContent(reminder, 'primary'),
+        content: buildNotificationContent(reminder, 'primary', language),
         trigger,
       })
     )
@@ -216,10 +232,11 @@ export async function scheduleReminderNotification(
 
 export async function scheduleSnoozedReminderNotification(
   reminder: Reminder,
-  date: string
+  date: string,
+  language: UiLanguage = 'ar-EG'
 ) {
   return Notifications.scheduleNotificationAsync({
-    content: buildNotificationContent(reminder, 'snooze'),
+    content: buildNotificationContent(reminder, 'snooze', language),
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(date),
@@ -229,10 +246,11 @@ export async function scheduleSnoozedReminderNotification(
 
 export async function scheduleFollowUpReminderNotification(
   reminder: Reminder,
-  date: string
+  date: string,
+  language: UiLanguage = 'ar-EG'
 ) {
   return Notifications.scheduleNotificationAsync({
-    content: buildNotificationContent(reminder, 'follow_up'),
+    content: buildNotificationContent(reminder, 'follow_up', language),
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(date),
@@ -288,10 +306,10 @@ export async function clearLastNotificationResponse() {
   await Notifications.clearLastNotificationResponseAsync();
 }
 
-export function speakReminder(title: string) {
+export function speakReminder(title: string, language: UiLanguage = 'ar-EG') {
   Speech.stop();
-  Speech.speak(`تذكير: ${title}`, {
-    language: 'ar',
+  Speech.speak(language === 'en' ? `Reminder: ${title}` : `تذكير: ${title}`, {
+    language: language === 'en' ? 'en-US' : 'ar',
     rate: 0.9,
     pitch: 1.0,
   });

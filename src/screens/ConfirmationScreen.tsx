@@ -16,6 +16,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import dayjs from 'dayjs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GhostButton } from '../components/GhostButton';
+import { getAppCopy } from '../content/appCopy';
 import { SectionCard } from '../components/SectionCard';
 import { useGhost } from '../context/GhostContext';
 import {
@@ -50,6 +51,7 @@ const categoryOptions: ReminderCategory[] = [
 
 export function ConfirmationScreen({ navigation, route }: Props) {
   const { createReminder, updateReminder, settings, notificationPermission } = useGhost();
+  const copy = getAppCopy(settings.uiLanguage);
   const { draft, transcript, confidence, missingFields, mode, reminderId } = route.params;
   const isEdit = mode === 'edit';
   const isManualCreate = !isEdit && !transcript.trim();
@@ -72,8 +74,12 @@ export function ConfirmationScreen({ navigation, route }: Props) {
   const showAppleCalendarSyncHint =
     !isEdit && Platform.OS === 'ios' && settings.appleCalendar.autoSyncEnabled;
   const calendarSubtitle = settings.googleCalendar.connected
-    ? 'سيُضاف إلى Google Calendar في الخلفية.'
-    : 'سيُضاف إلى تقويم الجهاز إذا كانت الصلاحية متاحة.';
+    ? settings.uiLanguage === 'en'
+      ? 'It will be added to Google Calendar in the background.'
+      : 'هيتضاف لـ Google Calendar في الخلفية.'
+    : settings.uiLanguage === 'en'
+      ? 'It will be added to the device calendar if permission is available.'
+      : 'هيتضاف لتقويم الجهاز لو الصلاحية متاحة.';
   const calendarMode = getCalendarMode({
     settings,
     addToCalendar,
@@ -85,7 +91,11 @@ export function ConfirmationScreen({ navigation, route }: Props) {
   );
 
   const confidenceLabel =
-    confidence >= 0.8 ? 'واضح' : confidence >= 0.6 ? 'متوسط' : 'يحتاج مراجعة';
+    confidence >= 0.8
+      ? copy.confirmation.confidenceHigh
+      : confidence >= 0.6
+        ? copy.confirmation.confidenceMedium
+        : copy.confirmation.confidenceLow;
 
   useEffect(() => {
     track('reminder confirmation shown', {
@@ -185,7 +195,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           }),
         });
       }
-      setValidationError('لازم يكون فيه اسم للمهمة.');
+      setValidationError(copy.confirmation.clearName);
       return;
     }
 
@@ -207,7 +217,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           }),
         });
       }
-      setValidationError('وقت التذكير لازم يكون في المستقبل.');
+      setValidationError(copy.confirmation.futureTime);
       return;
     }
 
@@ -236,7 +246,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           }),
         });
       }
-      setValidationError(result.reason ?? 'فيه حاجة محتاجة تتراجع.');
+      setValidationError(result.reason ?? copy.confirmation.needsReview);
       return;
     }
 
@@ -275,9 +285,9 @@ export function ConfirmationScreen({ navigation, route }: Props) {
     }
 
     if (result.warning) {
-      Alert.alert('التذكير اتحفظ', result.warning, [
+      Alert.alert(copy.confirmation.savedTitle, result.warning, [
         {
-          text: 'تمام',
+          text: copy.common.save,
           onPress: () => {
             navigation.reset({
               index: 0,
@@ -298,50 +308,65 @@ export function ConfirmationScreen({ navigation, route }: Props) {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>
-        {isEdit ? 'عدّل التذكير' : isManualCreate ? 'أضف تذكيرًا يدويًا' : 'ظبطها بسرعة'}
+        {isEdit
+          ? copy.confirmation.titleEdit
+          : isManualCreate
+            ? copy.confirmation.titleManual
+            : copy.confirmation.titleVoice}
       </Text>
       <Text style={styles.subtitle}>
         {isEdit
-          ? 'غيّر اللي محتاجه واحفظ التعديل.'
+          ? copy.confirmation.subtitleEdit
           : isManualCreate
-            ? 'اكتب المهمة وحدّد الوقت ثم احفظها بدون خطوات زائدة.'
-            : 'عدّل الضروري فقط ثم احفظ.'}
+            ? copy.confirmation.subtitleManual
+            : copy.confirmation.subtitleVoice}
       </Text>
 
       <LinearGradient colors={['#0D92BF', '#18B7E8']} style={styles.heroCard}>
         <Text style={styles.heroLabel}>
-          {isEdit ? 'التعديل' : isManualCreate ? 'إضافة يدوية' : 'فهمناها'}
+          {isEdit
+            ? copy.confirmation.heroEdit
+            : isManualCreate
+              ? copy.confirmation.heroManual
+              : copy.confirmation.heroVoice}
         </Text>
         <Text style={styles.heroValue}>{confidenceLabel}</Text>
         <Text style={styles.heroCaption}>
           {isEdit
-            ? 'حدّث الوقت أو الاسم أو التكرار.'
+            ? copy.confirmation.heroEditCaption
             : isManualCreate
-              ? 'سنرتب التوقيت والتنبيه بناءً على اختيارك هنا.'
+              ? copy.confirmation.heroManualCaption
             : missingFields.length
-              ? `راجع: ${missingFields.join(' / ')}`
-              : 'لمسة أخيرة ثم تُحفظ وتُتابَع.'}
+              ? settings.uiLanguage === 'en'
+                ? `Review: ${missingFields.join(' / ')}`
+                : `راجع: ${missingFields.join(' / ')}`
+              : copy.confirmation.heroVoiceCaptionNoMissing}
         </Text>
       </LinearGradient>
 
       {transcript.trim() ? (
-        <SectionCard title={isEdit ? 'النص الأصلي' : 'النص المسموع'}>
+        <SectionCard title={isEdit ? copy.confirmation.originalText : copy.confirmation.heardText}>
           <Text style={styles.bodyText}>{transcript}</Text>
         </SectionCard>
       ) : null}
 
-      <SectionCard title="اسم المهمة">
+      <SectionCard title={copy.confirmation.taskName}>
         <TextInput
           value={title}
           onChangeText={setTitle}
-          placeholder="مثال: ميعاد الدكتور"
+          placeholder={
+            settings.uiLanguage === 'en' ? 'Example: Doctor appointment' : 'مثال: ميعاد الدكتور'
+          }
           placeholderTextColor={colors.textMuted}
           style={styles.input}
           textAlign="right"
         />
       </SectionCard>
 
-      <SectionCard title="تصنيف المهمة" subtitle="اقتراح سريع يساعد التنظيم، ويمكنك تغييره فورًا.">
+      <SectionCard
+        title={copy.confirmation.taskCategory}
+        subtitle={copy.confirmation.taskCategorySubtitle}
+      >
         <View style={styles.choiceRow}>
           {categoryOptions.map((value) => (
             <Pressable
@@ -358,22 +383,26 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                   value === category && styles.choiceTextActive,
                 ]}
               >
-                {getReminderCategoryLabel(value)}
+                {getReminderCategoryLabel(value, settings.uiLanguage)}
               </Text>
             </Pressable>
           ))}
         </View>
       </SectionCard>
 
-      <SectionCard title="الموعد">
+      <SectionCard title={copy.confirmation.schedule}>
         <View style={styles.row}>
           <Pressable onPress={() => setShowMode('time')} style={styles.fieldChip}>
-            <Text style={styles.fieldChipLabel}>الوقت</Text>
-            <Text style={styles.fieldChipValue}>{toArabicTimeLabel(eventDate)}</Text>
+            <Text style={styles.fieldChipLabel}>{copy.confirmation.time}</Text>
+            <Text style={styles.fieldChipValue}>
+              {toArabicTimeLabel(eventDate, settings.uiLanguage)}
+            </Text>
           </Pressable>
           <Pressable onPress={() => setShowMode('date')} style={styles.fieldChip}>
-            <Text style={styles.fieldChipLabel}>اليوم</Text>
-            <Text style={styles.fieldChipValue}>{toArabicDateLabel(eventDate)}</Text>
+            <Text style={styles.fieldChipLabel}>{copy.confirmation.day}</Text>
+            <Text style={styles.fieldChipValue}>
+              {toArabicDateLabel(eventDate, settings.uiLanguage)}
+            </Text>
           </Pressable>
         </View>
 
@@ -388,7 +417,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
         ) : null}
       </SectionCard>
 
-      <SectionCard title="وقت التذكير">
+      <SectionCard title={copy.confirmation.reminderTime}>
         <View style={styles.choiceRow}>
           {offsetOptions.map((value) => (
             <Pressable
@@ -405,17 +434,20 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                   value === offsetMinutes && styles.choiceTextActive,
                 ]}
               >
-                {relativeReminderLabel(value)}
+                {relativeReminderLabel(value, settings.uiLanguage)}
               </Text>
             </Pressable>
           ))}
         </View>
         <Text style={styles.bodyText}>
-          سيصل التنبيه في: {toArabicDateLabel(reminderAt)} - {toArabicTimeLabel(reminderAt)}
+          {copy.confirmation.reminderWillArriveAt(
+            toArabicDateLabel(reminderAt, settings.uiLanguage),
+            toArabicTimeLabel(reminderAt, settings.uiLanguage)
+          )}
         </Text>
       </SectionCard>
 
-      <SectionCard title="التكرار">
+      <SectionCard title={copy.confirmation.recurrence}>
         <View style={styles.choiceRow}>
           {recurrenceOptions.map((value) => (
             <Pressable
@@ -432,7 +464,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                   value === recurrence && styles.choiceTextActive,
                 ]}
               >
-                {getRecurrenceLabel(value)}
+                {getRecurrenceLabel(value, settings.uiLanguage)}
               </Text>
             </Pressable>
           ))}
@@ -442,13 +474,13 @@ export function ConfirmationScreen({ navigation, route }: Props) {
       {showAppleCalendarSyncHint ? (
         <View style={styles.inlineCalendarHint}>
           <Text style={styles.inlineCalendarHintText}>
-            سيُحفظ هذا التذكير أيضًا في Apple Calendar تلقائيًا.
+            {copy.confirmation.iosCalendarHint}
           </Text>
         </View>
       ) : null}
 
       {showAndroidCalendarToggle ? (
-        <SectionCard title="التقويم" subtitle={calendarSubtitle}>
+        <SectionCard title={copy.confirmation.calendar} subtitle={calendarSubtitle}>
           <View style={styles.calendarRow}>
             <Pressable
               onPress={() => setAddToCalendar((current) => !current)}
@@ -462,10 +494,8 @@ export function ConfirmationScreen({ navigation, route }: Props) {
               />
             </Pressable>
             <View style={styles.calendarText}>
-              <Text style={styles.calendarTitle}>أضف إلى التقويم</Text>
-              <Text style={styles.calendarHint}>
-                يحفظ الموعد في التقويم مع نفس منطق التنبيه الذي اخترته هنا.
-              </Text>
+              <Text style={styles.calendarTitle}>{copy.confirmation.addToCalendar}</Text>
+              <Text style={styles.calendarHint}>{copy.confirmation.calendarHint}</Text>
             </View>
           </View>
         </SectionCard>
@@ -475,12 +505,18 @@ export function ConfirmationScreen({ navigation, route }: Props) {
 
       <View style={styles.footer}>
         <GhostButton
-          label={saving ? 'جارِ الحفظ...' : isEdit ? 'احفظ التعديل' : 'احفظ التذكير'}
+          label={
+            saving
+              ? copy.confirmation.saving
+              : isEdit
+                ? copy.confirmation.saveEdit
+                : copy.confirmation.saveReminder
+          }
           onPress={handleSave}
           disabled={saving}
         />
         <GhostButton
-          label="رجوع"
+          label={copy.common.back}
           variant="secondary"
           onPress={() => navigation.goBack()}
         />
