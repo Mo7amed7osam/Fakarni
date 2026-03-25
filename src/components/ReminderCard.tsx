@@ -1,0 +1,284 @@
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Reminder } from '../types';
+import { colors, fonts, radii, spacing } from '../theme';
+import {
+  relativeReminderLabel,
+  toArabicDateTimeLabel,
+} from '../utils/arabic';
+import { getReminderCategoryLabel } from '../utils/categorization';
+
+interface ReminderCardProps {
+  reminder: Reminder;
+  onPress?: () => void;
+  onShare?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}
+
+function PencilGlyph() {
+  return (
+    <View style={styles.pencilWrap}>
+      <View style={styles.pencilBody} />
+      <View style={styles.pencilTip} />
+    </View>
+  );
+}
+
+function TrashGlyph() {
+  return (
+    <View style={styles.trashWrap}>
+      <View style={styles.trashLid} />
+      <View style={styles.trashBody}>
+        <View style={styles.trashLine} />
+        <View style={styles.trashLine} />
+      </View>
+    </View>
+  );
+}
+
+export function ReminderCard({
+  reminder,
+  onPress,
+  onShare,
+  onEdit,
+  onDelete,
+}: ReminderCardProps) {
+  return (
+    <Pressable onPress={onPress} style={styles.card}>
+      <View style={styles.header}>
+        <View style={styles.badgeRow}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>
+              {getReminderCategoryLabel(reminder.category)}
+            </Text>
+          </View>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
+              {reminder.recurrence === 'daily'
+                ? 'يومي'
+                : reminder.recurrence === 'weekly'
+                  ? 'أسبوعي'
+                  : 'مرة واحدة'}
+            </Text>
+          </View>
+          {reminder.notificationStatus === 'permission_required' ? (
+            <View style={styles.warningBadge}>
+              <Text style={styles.warningBadgeText}>بانتظار الإشعارات</Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.actionsRow}>
+          {onShare ? (
+            <Pressable onPress={onShare} style={styles.shareChip}>
+              <Text style={styles.shareText}>شارك</Text>
+            </Pressable>
+          ) : null}
+          {onEdit ? (
+            <Pressable onPress={onEdit} style={styles.editChip}>
+              <PencilGlyph />
+            </Pressable>
+          ) : null}
+          {onDelete ? (
+            <Pressable onPress={onDelete} style={styles.deleteChip}>
+              <TrashGlyph />
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+      <Text style={styles.title}>{reminder.title}</Text>
+      <Text style={styles.meta}>
+        الموعد: {toArabicDateTimeLabel(reminder.eventAt)}
+      </Text>
+      <Text style={styles.meta}>
+        التذكير: {toArabicDateTimeLabel(reminder.remindAt)} ·{' '}
+        {relativeReminderLabel(reminder.offsetMinutes)}
+      </Text>
+      {reminder.notificationStatus === 'permission_required' ? (
+        <Text style={styles.warningMeta}>
+          التذكير محفوظ، لكن الإشعار لن يصل قبل السماح بإشعارات التطبيق.
+        </Text>
+      ) : null}
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    gap: spacing.sm,
+    shadowColor: colors.shadow,
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 2,
+  },
+  header: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  badgeRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  badge: {
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+  },
+  categoryBadge: {
+    backgroundColor: 'rgba(15,118,110,0.12)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+  },
+  categoryBadgeText: {
+    color: colors.primaryDark,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    writingDirection: 'rtl',
+  },
+  badgeText: {
+    color: colors.accent,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    writingDirection: 'rtl',
+  },
+  warningBadge: {
+    backgroundColor: colors.warningSoft,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+  },
+  warningBadgeText: {
+    color: colors.warning,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    writingDirection: 'rtl',
+  },
+  actionsRow: {
+    flexDirection: 'row-reverse',
+    gap: spacing.xs,
+    alignItems: 'center',
+  },
+  editChip: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.cardMuted,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareChip: {
+    minWidth: 56,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.accentSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(0,229,168,0.24)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  shareText: {
+    color: '#0F766E',
+    fontFamily: fonts.bold,
+    fontSize: 12,
+    writingDirection: 'rtl',
+  },
+  pencilWrap: {
+    width: 14,
+    height: 14,
+    transform: [{ rotate: '-35deg' }],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pencilBody: {
+    width: 11,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
+  },
+  pencilTip: {
+    position: 'absolute',
+    right: -1,
+    width: 0,
+    height: 0,
+    borderTopWidth: 3,
+    borderBottomWidth: 3,
+    borderLeftWidth: 4,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: colors.primaryDark,
+  },
+  deleteChip: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trashWrap: {
+    width: 14,
+    height: 15,
+    alignItems: 'center',
+  },
+  trashLid: {
+    width: 12,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.danger,
+    marginBottom: 1,
+  },
+  trashBody: {
+    width: 10,
+    height: 10,
+    borderWidth: 2,
+    borderTopWidth: 1.5,
+    borderColor: colors.danger,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 1,
+  },
+  trashLine: {
+    width: 1.5,
+    height: 5,
+    borderRadius: 1,
+    backgroundColor: colors.danger,
+  },
+  title: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  meta: {
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    textAlign: 'right',
+    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+  warningMeta: {
+    color: colors.warning,
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    textAlign: 'right',
+    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+});

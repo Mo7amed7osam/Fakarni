@@ -1,0 +1,432 @@
+import { useMemo, useState } from 'react';
+import {
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import dayjs from 'dayjs';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GhostButton } from '../components/GhostButton';
+import { SectionCard } from '../components/SectionCard';
+import { useGhost } from '../context/GhostContext';
+import { colors, fonts, radii, spacing } from '../theme';
+import { Recurrence, ReminderCategory, RootStackParamList } from '../types';
+import {
+  relativeReminderLabel,
+  toArabicDateLabel,
+  toArabicTimeLabel,
+} from '../utils/arabic';
+import { getReminderCategoryLabel } from '../utils/categorization';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Confirmation'>;
+
+const offsetOptions = [0, 30, 60, 120];
+const recurrenceOptions: Recurrence[] = ['none', 'daily', 'weekly'];
+const categoryOptions: ReminderCategory[] = [
+  'study',
+  'work',
+  'meeting',
+  'health',
+  'shopping',
+  'finance',
+  'personal',
+  'other',
+];
+
+export function ConfirmationScreen({ navigation, route }: Props) {
+  const { createReminder, updateReminder } = useGhost();
+  const { draft, transcript, confidence, missingFields, mode, reminderId } = route.params;
+  const isEdit = mode === 'edit';
+  const isManualCreate = !isEdit && !transcript.trim();
+  const [title, setTitle] = useState(draft.title);
+  const [category, setCategory] = useState<ReminderCategory>(draft.category);
+  const [eventDate, setEventDate] = useState(new Date(draft.eventAt));
+  const [offsetMinutes, setOffsetMinutes] = useState(draft.offsetMinutes);
+  const [recurrence, setRecurrence] = useState<Recurrence>(draft.recurrence);
+  const [showMode, setShowMode] = useState<'date' | 'time' | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [validationError, setValidationError] = useState('');
+
+  const reminderAt = useMemo(
+    () => dayjs(eventDate).subtract(offsetMinutes, 'minute').toDate(),
+    [eventDate, offsetMinutes]
+  );
+
+  const confidenceLabel =
+    confidence >= 0.8 ? 'واضح' : confidence >= 0.6 ? 'متوسط' : 'يحتاج مراجعة';
+
+  function handleDateTimeChange(
+    _event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) {
+    if (selectedDate) {
+      setEventDate(selectedDate);
+    }
+
+    if (Platform.OS !== 'ios') {
+      setShowMode(null);
+    }
+  }
+
+  async function handleSave() {
+    setValidationError('');
+    if (!title.trim()) {
+      setValidationError('لازم يكون فيه اسم للمهمة.');
+      return;
+    }
+
+    if (dayjs(reminderAt).isBefore(dayjs())) {
+      setValidationError('وقت التذكير لازم يكون في المستقبل.');
+      return;
+    }
+
+    setSaving(true);
+    const nextDraft = {
+      title,
+      category,
+      eventAt: eventDate.toISOString(),
+      offsetMinutes,
+      recurrence,
+    };
+    const result =
+      isEdit && reminderId
+        ? await updateReminder(reminderId, nextDraft, transcript)
+        : await createReminder(nextDraft, transcript);
+    setSaving(false);
+
+    if (!result.ok) {
+      setValidationError(result.reason ?? 'فيه حاجة محتاجة تتراجع.');
+      return;
+    }
+
+    if (result.warning) {
+      Alert.alert('التذكير اتحفظ', result.warning, [
+        {
+          text: 'تمام',
+          onPress: () => {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Home' }],
+            });
+          },
+        },
+      ]);
+      return;
+    }
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Home' }],
+    });
+  }
+
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <Text style={styles.title}>
+        {isEdit ? 'عدّل التذكير' : isManualCreate ? 'أضف تذكيرًا يدويًا' : 'ظبطها بسرعة'}
+      </Text>
+      <Text style={styles.subtitle}>
+        {isEdit
+          ? 'غيّر اللي محتاجه واحفظ التعديل.'
+          : isManualCreate
+            ? 'اكتب المهمة، حدّد الوقت، ثم احفظ التذكير.'
+            : 'عدّل اللي محتاجه بس واحفظ.'}
+      </Text>
+
+      <LinearGradient colors={['#0D92BF', '#18B7E8']} style={styles.heroCard}>
+        <Text style={styles.heroLabel}>
+          {isEdit ? 'التعديل' : isManualCreate ? 'إضافة يدوية' : 'فهمناها'}
+        </Text>
+        <Text style={styles.heroValue}>{confidenceLabel}</Text>
+        <Text style={styles.heroCaption}>
+          {isEdit
+            ? 'حدّث الوقت أو الاسم أو التكرار.'
+            : isManualCreate
+              ? 'الإشعار يتحدد حسب الوقت الذي ستختاره.'
+            : missingFields.length
+              ? `راجع: ${missingFields.join(' / ')}`
+              : 'محتاجة لمسة أخيرة وخلاص.'}
+        </Text>
+      </LinearGradient>
+
+      {transcript.trim() ? (
+        <SectionCard title={isEdit ? 'النص الأصلي' : 'النص المسموع'}>
+          <Text style={styles.bodyText}>{transcript}</Text>
+        </SectionCard>
+      ) : null}
+
+      <SectionCard title="اسم المهمة">
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          placeholder="مثال: ميعاد الدكتور"
+          placeholderTextColor={colors.textMuted}
+          style={styles.input}
+          textAlign="right"
+        />
+      </SectionCard>
+
+      <SectionCard title="تصنيف المهمة" subtitle="التطبيق اقترح تصنيف تلقائي، وتقدر تعدله لو حبيت">
+        <View style={styles.choiceRow}>
+          {categoryOptions.map((value) => (
+            <Pressable
+              key={value}
+              onPress={() => setCategory(value)}
+              style={[
+                styles.choiceChip,
+                value === category && styles.choiceChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.choiceText,
+                  value === category && styles.choiceTextActive,
+                ]}
+              >
+                {getReminderCategoryLabel(value)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </SectionCard>
+
+      <SectionCard title="الموعد">
+        <View style={styles.row}>
+          <Pressable onPress={() => setShowMode('time')} style={styles.fieldChip}>
+            <Text style={styles.fieldChipLabel}>الوقت</Text>
+            <Text style={styles.fieldChipValue}>{toArabicTimeLabel(eventDate)}</Text>
+          </Pressable>
+          <Pressable onPress={() => setShowMode('date')} style={styles.fieldChip}>
+            <Text style={styles.fieldChipLabel}>اليوم</Text>
+            <Text style={styles.fieldChipValue}>{toArabicDateLabel(eventDate)}</Text>
+          </Pressable>
+        </View>
+
+        {showMode ? (
+          <DateTimePicker
+            mode={showMode}
+            value={eventDate}
+            is24Hour={false}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleDateTimeChange}
+          />
+        ) : null}
+      </SectionCard>
+
+      <SectionCard title="وقت التذكير">
+        <View style={styles.choiceRow}>
+          {offsetOptions.map((value) => (
+            <Pressable
+              key={value}
+              onPress={() => setOffsetMinutes(value)}
+              style={[
+                styles.choiceChip,
+                value === offsetMinutes && styles.choiceChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.choiceText,
+                  value === offsetMinutes && styles.choiceTextActive,
+                ]}
+              >
+                {relativeReminderLabel(value)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <Text style={styles.bodyText}>
+          التذكير سيصل: {toArabicDateLabel(reminderAt)} - {toArabicTimeLabel(reminderAt)}
+        </Text>
+      </SectionCard>
+
+      <SectionCard title="التكرار">
+        <View style={styles.choiceRow}>
+          {recurrenceOptions.map((value) => (
+            <Pressable
+              key={value}
+              onPress={() => setRecurrence(value)}
+              style={[
+                styles.choiceChip,
+                value === recurrence && styles.choiceChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.choiceText,
+                  value === recurrence && styles.choiceTextActive,
+                ]}
+              >
+                {value === 'none'
+                  ? 'مرة واحدة'
+                  : value === 'daily'
+                    ? 'يومي'
+                    : 'أسبوعي'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </SectionCard>
+
+      {validationError ? <Text style={styles.errorText}>{validationError}</Text> : null}
+
+      <View style={styles.footer}>
+        <GhostButton
+          label={saving ? 'جارِ الحفظ...' : isEdit ? 'احفظ التعديل' : 'احفظ التذكير'}
+          onPress={handleSave}
+          disabled={saving}
+        />
+        <GhostButton
+          label="رجوع"
+          variant="secondary"
+          onPress={() => navigation.goBack()}
+        />
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  content: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+    paddingBottom: 48,
+  },
+  title: {
+    fontFamily: fonts.bold,
+    fontSize: 22,
+    color: colors.text,
+    maxWidth: 260,
+  },
+  subtitle: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    color: colors.textMuted,
+    textAlign: 'right',
+    lineHeight: 22,
+    writingDirection: 'rtl',
+  },
+  heroCard: {
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    gap: spacing.sm,
+    shadowColor: colors.shadow,
+    shadowOpacity: 1,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 5,
+  },
+  heroLabel: {
+    color: 'rgba(255,255,255,0.76)',
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  heroValue: {
+    color: colors.white,
+    fontFamily: fonts.bold,
+    fontSize: 34,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  heroCaption: {
+    color: 'rgba(255,255,255,0.86)',
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    textAlign: 'right',
+    lineHeight: 22,
+    writingDirection: 'rtl',
+  },
+  bodyText: {
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    color: colors.text,
+    textAlign: 'right',
+    lineHeight: 22,
+    writingDirection: 'rtl',
+  },
+  input: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radii.md,
+    minHeight: 56,
+    paddingHorizontal: spacing.md,
+    fontFamily: fonts.medium,
+    fontSize: 16,
+    color: colors.text,
+    writingDirection: 'rtl',
+  },
+  row: {
+    gap: spacing.sm,
+  },
+  fieldChip: {
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.md,
+  },
+  fieldChipLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  fieldChipValue: {
+    fontFamily: fonts.bold,
+    fontSize: 15,
+    color: colors.text,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  choiceRow: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  choiceChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+  },
+  choiceChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  choiceText: {
+    fontFamily: fonts.semibold,
+    color: colors.text,
+    writingDirection: 'rtl',
+  },
+  choiceTextActive: {
+    color: colors.white,
+  },
+  errorText: {
+    color: colors.danger,
+    fontFamily: fonts.semibold,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  footer: {
+    gap: spacing.md,
+  },
+});
