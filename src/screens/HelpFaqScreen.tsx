@@ -93,6 +93,9 @@ export function HelpFaqScreen({ navigation }: Props) {
           <Text style={styles.answer}>
             التحليل الذكي الخارجي: {llmEnabled ? 'مفعّل في هذه النسخة.' : 'غير مفعّل في هذه النسخة.'}
           </Text>
+          <Text style={styles.answer}>
+            وإذا فعّلت إضافة التذكير للتقويم، قد يُنشئ التطبيق حدثًا في تقويم الجهاز أو Google Calendar حسب إعداداتك.
+          </Text>
         </View>
       </SectionCard>
 

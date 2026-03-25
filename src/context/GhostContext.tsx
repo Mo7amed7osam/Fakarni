@@ -9,7 +9,7 @@ import {
 } from 'react';
 import * as Notifications from 'expo-notifications';
 import dayjs from 'dayjs';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import {
   NotificationPermissionState,
   PersistedState,
@@ -33,6 +33,17 @@ import {
   scheduleReminderNotification,
   speakReminder,
 } from '../services/notifications';
+import {
+  clearGoogleCalendarCredentials,
+  createCalendarEvent,
+  GoogleCalendarCredentials,
+  saveGoogleCalendarCredentials,
+} from '../services/calendar';
+import {
+  canAutoSyncToAppleCalendar,
+  getAppleCalendarAuthorizationStatus,
+  requestAppleCalendarWriteAccess,
+} from '../services/appleCalendar';
 import { toDayKey } from '../utils/arabic';
 import { reminderCanScheduleNotification } from '../utils/reminders';
 
@@ -48,6 +59,14 @@ interface GhostContextValue {
   updateSettings: (patch: Partial<SettingsState>) => void;
   requestNotificationAccess: () => Promise<boolean>;
   openNotificationSettings: () => Promise<void>;
+  setAppleCalendarAutoSync: (
+    enabled: boolean
+  ) => Promise<{ enabled: boolean; message?: string }>;
+  connectGoogleCalendar: (
+    credentials: GoogleCalendarCredentials,
+    email?: string
+  ) => Promise<void>;
+  disconnectGoogleCalendar: () => Promise<void>;
   resetAppData: () => Promise<void>;
   createReminder: (
     draft: ReminderDraft,
@@ -71,6 +90,13 @@ const defaultSettings: SettingsState = {
   ttsEnabled: true,
   hasSeenOnboarding: false,
   ghostMode: 'sassy',
+  appleCalendar: {
+    autoSyncEnabled: false,
+    permissionStatus: Platform.OS === 'ios' ? 'not_determined' : 'not_supported',
+  },
+  googleCalendar: {
+    connected: false,
+  },
 };
 
 const GhostContext = createContext<GhostContextValue | null>(null);
@@ -81,6 +107,7 @@ function normalizeReminder(reminder: Reminder | (Omit<Reminder, 'category'> & { 
     category: reminder.category ?? 'other',
     notificationStatus:
       reminder.notificationStatus ?? (reminder.notificationId ? 'scheduled' : 'permission_required'),
+    calendarSyncStatus: reminder.calendarSyncStatus ?? 'none',
   };
 }
 
@@ -99,6 +126,8 @@ function normalizeSettings(settings: SettingsState | (Partial<SettingsState> & P
     ...defaultSettings,
     ...settings,
     ghostMode: settings.ghostMode ?? defaultSettings.ghostMode,
+    appleCalendar: settings.appleCalendar ?? defaultSettings.appleCalendar,
+    googleCalendar: settings.googleCalendar ?? defaultSettings.googleCalendar,
   };
 }
 
@@ -121,6 +150,31 @@ export function GhostProvider({ children }: PropsWithChildren) {
       current === nextPermission ? current : nextPermission
     );
     return nextPermission;
+  }
+
+  async function refreshAppleCalendarPermission() {
+    const nextStatus = await getAppleCalendarAuthorizationStatus();
+    setSettings((current) => {
+      const nextAutoSync = canAutoSyncToAppleCalendar(nextStatus)
+        ? current.appleCalendar.autoSyncEnabled
+        : false;
+      const currentPermission = current.appleCalendar.permissionStatus;
+      const currentAutoSync = current.appleCalendar.autoSyncEnabled;
+
+      if (currentPermission === nextStatus && currentAutoSync === nextAutoSync) {
+        return current;
+      }
+
+      return normalizeSettings({
+        ...current,
+        appleCalendar: {
+          autoSyncEnabled: nextAutoSync,
+          permissionStatus: nextStatus,
+        },
+      });
+    });
+
+    return nextStatus;
   }
 
   async function syncReminderNotifications(
@@ -203,6 +257,14 @@ export function GhostProvider({ children }: PropsWithChildren) {
       return;
     }
 
+    void refreshAppleCalendarPermission();
+  }, [hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
     const state: PersistedState = {
       reminders,
       settings,
@@ -239,6 +301,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
           void syncReminderNotifications(permission);
         }
       });
+      void refreshAppleCalendarPermission();
     });
 
     return () => {
@@ -314,12 +377,116 @@ export function GhostProvider({ children }: PropsWithChildren) {
       openNotificationSettings: async () => {
         await openSystemSettings();
       },
+      setAppleCalendarAutoSync: async (enabled) => {
+        if (Platform.OS !== 'ios') {
+          setSettings((current) =>
+            normalizeSettings({
+              ...current,
+              appleCalendar: {
+                autoSyncEnabled: false,
+                permissionStatus: 'not_supported',
+              },
+            })
+          );
+          return {
+            enabled: false,
+            message: 'Apple Calendar متاح على iPhone فقط.',
+          };
+        }
+
+        if (!enabled) {
+          const status = await getAppleCalendarAuthorizationStatus();
+          setSettings((current) =>
+            normalizeSettings({
+              ...current,
+              appleCalendar: {
+                autoSyncEnabled: false,
+                permissionStatus: status,
+              },
+            })
+          );
+          return {
+            enabled: false,
+          };
+        }
+
+        const currentStatus = await getAppleCalendarAuthorizationStatus();
+        if (canAutoSyncToAppleCalendar(currentStatus)) {
+          setSettings((current) =>
+            normalizeSettings({
+              ...current,
+              appleCalendar: {
+                autoSyncEnabled: true,
+                permissionStatus: currentStatus,
+              },
+            })
+          );
+          return {
+            enabled: true,
+          };
+        }
+
+        const accessResult = await requestAppleCalendarWriteAccess();
+        const nextEnabled =
+          accessResult.granted && canAutoSyncToAppleCalendar(accessResult.status);
+        setSettings((current) =>
+          normalizeSettings({
+            ...current,
+            appleCalendar: {
+              autoSyncEnabled: nextEnabled,
+              permissionStatus: accessResult.status,
+            },
+          })
+        );
+
+        if (nextEnabled) {
+          return {
+            enabled: true,
+          };
+        }
+
+        const message =
+          accessResult.status === 'restricted'
+            ? 'الوصول إلى التقويم مقيّد على هذا الجهاز.'
+            : accessResult.status === 'denied'
+              ? 'تم إيقاف الوصول إلى التقويم. اسمح به من إعدادات النظام إذا أردت المزامنة.'
+              : 'لم نتمكن من تفعيل مزامنة Apple Calendar الآن.';
+
+        return {
+          enabled: false,
+          message,
+        };
+      },
+      connectGoogleCalendar: async (credentials, email) => {
+        await saveGoogleCalendarCredentials(credentials);
+        setSettings((current) =>
+          normalizeSettings({
+            ...current,
+            googleCalendar: {
+              connected: true,
+              email,
+            },
+          })
+        );
+      },
+      disconnectGoogleCalendar: async () => {
+        await clearGoogleCalendarCredentials();
+        setSettings((current) =>
+          normalizeSettings({
+            ...current,
+            googleCalendar: {
+              connected: false,
+            },
+          })
+        );
+      },
       resetAppData: async () => {
         await Promise.all(
           remindersRef.current.map((reminder) =>
             cancelReminderNotification(reminder.notificationId)
           )
         );
+        await clearGoogleCalendarCredentials();
         setReminders([]);
         setSettings(defaultSettings);
         setUsageState(defaultUsageState);
@@ -345,6 +512,11 @@ export function GhostProvider({ children }: PropsWithChildren) {
           return { ok: false, reason: 'وقت التذكير لازم يكون قدام شوية.' };
         }
 
+        const shouldSyncCalendar =
+          Platform.OS === 'ios'
+            ? settings.appleCalendar.autoSyncEnabled
+            : Boolean(draft.addToCalendar);
+
         const reminder: Reminder = {
           id: `${Date.now()}`,
           title,
@@ -357,6 +529,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
           status: 'scheduled',
           createdAt: new Date().toISOString(),
           notificationStatus: 'permission_required',
+          calendarSyncStatus: shouldSyncCalendar ? 'pending' : 'none',
         };
 
         const scheduled = await scheduleReminderNotification(reminder);
@@ -368,6 +541,35 @@ export function GhostProvider({ children }: PropsWithChildren) {
           ...normalizedUsage,
           createdCount: normalizedUsage.createdCount + 1,
         });
+
+        if (shouldSyncCalendar) {
+          void createCalendarEvent({
+            title,
+            date: eventAt,
+            reminderOffset: draft.offsetMinutes,
+            platform: Platform.OS === 'ios' ? 'ios' : 'android',
+            googleCalendar: settings.googleCalendar,
+          })
+            .then((calendarResult) => {
+              setReminders((current) =>
+                current.map((item) =>
+                  item.id === reminder.id
+                    ? {
+                        ...item,
+                        calendarSyncStatus: calendarResult.status,
+                        calendarProvider: calendarResult.provider,
+                        calendarEventId: calendarResult.eventId,
+                      }
+                    : item
+                )
+              );
+            })
+            .catch((error) => {
+              if (__DEV__) {
+                console.warn('Calendar sync failed', error);
+              }
+            });
+        }
 
         return scheduled.status === 'permission_required'
           ? {
@@ -414,6 +616,9 @@ export function GhostProvider({ children }: PropsWithChildren) {
           recurrence: draft.recurrence,
           status: 'scheduled',
           notificationStatus: 'permission_required',
+          calendarSyncStatus: existing.calendarSyncStatus,
+          calendarProvider: existing.calendarProvider,
+          calendarEventId: existing.calendarEventId,
         };
 
         const scheduled = await scheduleReminderNotification(nextReminder);

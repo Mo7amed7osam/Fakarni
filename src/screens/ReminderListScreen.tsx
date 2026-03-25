@@ -38,9 +38,23 @@ export function ReminderListScreen({ navigation }: Props) {
       <GhostButton label="أضف تذكيرًا يدويًا" variant="secondary" onPress={openManualCreate} />
 
       <LinearGradient colors={['#0D92BF', '#1ABAE9']} style={styles.heroCard}>
-        <Text style={styles.heroLabel}>ملخص سريع</Text>
-        <Text style={styles.heroValue}>{reminders.length}</Text>
-        <Text style={styles.heroCaption}>إجمالي التذكيرات المحفوظة</Text>
+        <View style={styles.heroHeader}>
+          <View style={styles.heroBadge}>
+            <Text style={styles.heroBadgeText}>ملخص سريع</Text>
+          </View>
+          <Text style={styles.heroCaption}>نظرة هادئة على التذكيرات المحفوظة</Text>
+        </View>
+
+        <View style={styles.heroPrimaryRow}>
+          <View style={styles.heroCountBlock}>
+            <Text style={styles.heroValue}>{reminders.length}</Text>
+            <Text style={styles.heroValueLabel}>إجمالي التذكيرات</Text>
+          </View>
+          <View style={styles.heroCountAccent}>
+            <View style={styles.heroCountAccentDot} />
+          </View>
+        </View>
+
         <View style={styles.heroStats}>
           <View style={styles.heroStatCard}>
             <Text style={styles.heroStatNumber}>{recurringCount}</Text>
@@ -125,57 +139,106 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     borderRadius: radii.lg,
-    padding: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
     gap: spacing.sm,
-    shadowColor: colors.shadow,
-    shadowOpacity: 1,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    shadowColor: 'rgba(8, 113, 146, 0.26)',
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
-  heroLabel: {
-    color: 'rgba(255,255,255,0.76)',
-    fontFamily: fonts.medium,
-    fontSize: 13,
-    textAlign: 'right',
+  heroHeader: {
+    gap: 6,
+    alignItems: 'flex-end',
+  },
+  heroBadge: {
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  heroBadgeText: {
+    color: colors.white,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
     writingDirection: 'rtl',
+  },
+  heroPrimaryRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  heroCountBlock: {
+    flex: 1,
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  heroCountAccent: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroCountAccentDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#8FE8FF',
   },
   heroValue: {
     color: colors.white,
     fontFamily: fonts.bold,
-    fontSize: 42,
+    fontSize: 30,
     textAlign: 'right',
   },
-  heroCaption: {
+  heroValueLabel: {
     color: 'rgba(255,255,255,0.88)',
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: 12,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  heroCaption: {
+    color: 'rgba(255,255,255,0.82)',
+    fontFamily: fonts.medium,
+    fontSize: 12,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   heroStats: {
     flexDirection: 'row-reverse',
     gap: spacing.sm,
-    marginTop: spacing.sm,
   },
   heroStatCard: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     borderRadius: radii.md,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.22)',
+    gap: 2,
   },
   heroStatNumber: {
     color: colors.white,
     fontFamily: fonts.bold,
-    fontSize: 24,
+    fontSize: 22,
     textAlign: 'right',
   },
   heroStatText: {
     color: 'rgba(255,255,255,0.82)',
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: 12,
     textAlign: 'right',
     writingDirection: 'rtl',
   },

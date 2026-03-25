@@ -43,7 +43,7 @@ const categoryOptions: ReminderCategory[] = [
 ];
 
 export function ConfirmationScreen({ navigation, route }: Props) {
-  const { createReminder, updateReminder } = useGhost();
+  const { createReminder, updateReminder, settings } = useGhost();
   const { draft, transcript, confidence, missingFields, mode, reminderId } = route.params;
   const isEdit = mode === 'edit';
   const isManualCreate = !isEdit && !transcript.trim();
@@ -52,9 +52,16 @@ export function ConfirmationScreen({ navigation, route }: Props) {
   const [eventDate, setEventDate] = useState(new Date(draft.eventAt));
   const [offsetMinutes, setOffsetMinutes] = useState(draft.offsetMinutes);
   const [recurrence, setRecurrence] = useState<Recurrence>(draft.recurrence);
+  const [addToCalendar, setAddToCalendar] = useState(Boolean(draft.addToCalendar));
   const [showMode, setShowMode] = useState<'date' | 'time' | null>(null);
   const [saving, setSaving] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const showAndroidCalendarToggle = !isEdit && Platform.OS === 'android';
+  const showAppleCalendarSyncHint =
+    !isEdit && Platform.OS === 'ios' && settings.appleCalendar.autoSyncEnabled;
+  const calendarSubtitle = settings.googleCalendar.connected
+    ? 'سيُضاف إلى Google Calendar في الخلفية.'
+    : 'سيُضاف إلى تقويم الجهاز إذا كانت الصلاحية متاحة.';
 
   const reminderAt = useMemo(
     () => dayjs(eventDate).subtract(offsetMinutes, 'minute').toDate(),
@@ -96,6 +103,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
       eventAt: eventDate.toISOString(),
       offsetMinutes,
       recurrence,
+      addToCalendar: showAndroidCalendarToggle ? addToCalendar : undefined,
     };
     const result =
       isEdit && reminderId
@@ -277,6 +285,38 @@ export function ConfirmationScreen({ navigation, route }: Props) {
         </View>
       </SectionCard>
 
+      {showAppleCalendarSyncHint ? (
+        <View style={styles.inlineCalendarHint}>
+          <Text style={styles.inlineCalendarHintText}>
+            سيُحفظ هذا التذكير أيضًا في Apple Calendar تلقائيًا.
+          </Text>
+        </View>
+      ) : null}
+
+      {showAndroidCalendarToggle ? (
+        <SectionCard title="التقويم" subtitle={calendarSubtitle}>
+          <View style={styles.calendarRow}>
+            <Pressable
+              onPress={() => setAddToCalendar((current) => !current)}
+              style={[styles.calendarToggle, addToCalendar && styles.calendarToggleActive]}
+            >
+              <View
+                style={[
+                  styles.calendarToggleKnob,
+                  addToCalendar && styles.calendarToggleKnobActive,
+                ]}
+              />
+            </Pressable>
+            <View style={styles.calendarText}>
+              <Text style={styles.calendarTitle}>أضف إلى التقويم</Text>
+              <Text style={styles.calendarHint}>
+                يحفظ الموعد مع تنبيه قبل الحدث حسب وقت التذكير.
+              </Text>
+            </View>
+          </View>
+        </SectionCard>
+      ) : null}
+
       {validationError ? <Text style={styles.errorText}>{validationError}</Text> : null}
 
       <View style={styles.footer}>
@@ -424,6 +464,67 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontFamily: fonts.semibold,
     textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  calendarRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  calendarToggle: {
+    width: 54,
+    height: 32,
+    borderRadius: radii.pill,
+    backgroundColor: '#D9D2C5',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  calendarToggleActive: {
+    backgroundColor: colors.primary,
+  },
+  calendarToggleKnob: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+  },
+  calendarToggleKnobActive: {
+    alignSelf: 'flex-end',
+  },
+  calendarText: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  calendarTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 16,
+    color: colors.text,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  calendarHint: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'right',
+    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+  inlineCalendarHint: {
+    backgroundColor: '#F2F7F6',
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#D5E7E0',
+  },
+  inlineCalendarHintText: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.text,
+    textAlign: 'right',
+    lineHeight: 20,
     writingDirection: 'rtl',
   },
   footer: {

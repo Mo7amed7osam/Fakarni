@@ -20,14 +20,12 @@ import {
 } from 'expo-speech-recognition';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GhostButton } from '../components/GhostButton';
 import { useGhost } from '../context/GhostContext';
 import { colors, fonts, radii, spacing } from '../theme';
 import { ReminderDraft, RootStackParamList } from '../types';
 import { parseReminderText } from '../utils/parser';
 import { getReminderCategoryLabel } from '../utils/categorization';
 import { buildGhostReply } from '../utils/ghostPersonality';
-import { buildManualReminderDraft } from '../utils/reminders';
 import {
   relativeReminderLabel,
   toArabicDateTimeLabel,
@@ -210,10 +208,8 @@ export function HomeScreen({ navigation }: Props) {
   const shouldProcessOnEndRef = useRef(false);
   const autoConfirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestPendingParseRef = useRef<PendingParse | null>(null);
-  const { width, height } = useWindowDimensions();
+  const { height } = useWindowDimensions();
   const compact = height < 780;
-  const showNavLabel = height >= 760;
-  const heroWidth = width - spacing.lg * 2;
   const notificationActionLabel =
     notificationPermission === 'blocked' ? 'افتح الإعدادات' : 'فعّل الإشعارات';
 
@@ -365,6 +361,18 @@ export function HomeScreen({ navigation }: Props) {
   }, [pendingParse, confirmOpacity, confirmProgress, confirmScale]);
 
   const latestReminder = reminders[0];
+  const transcriptPreview = pendingParse
+    ? pendingParse.draft.title
+    : processing
+      ? 'بنحوّل كلامك إلى تذكير واضح...'
+      : transcript.trim();
+  const voiceStateLabel = processing
+    ? 'بنفهمها'
+    : isListening
+      ? 'سامعك'
+      : pendingParse
+        ? 'راجع بسرعة'
+        : 'جاهز';
 
   function buildDraftFromParse(parsed: Awaited<ReturnType<typeof parseReminderText>>) {
     return {
@@ -390,23 +398,6 @@ export function HomeScreen({ navigation }: Props) {
     });
     setPendingParse(null);
     setTranscript('');
-  }
-
-  function openManualCreate() {
-    if (autoConfirmTimeoutRef.current) {
-      clearTimeout(autoConfirmTimeoutRef.current);
-      autoConfirmTimeoutRef.current = null;
-    }
-
-    setPendingParse(null);
-    setErrorMessage('');
-    navigation.navigate('Confirmation', {
-      mode: 'create',
-      draft: buildManualReminderDraft(),
-      transcript: '',
-      confidence: 1,
-      missingFields: [],
-    });
   }
 
   function validateDraft(draft: ReminderDraft) {
@@ -622,243 +613,174 @@ export function HomeScreen({ navigation }: Props) {
       <View pointerEvents="none" style={styles.backgroundOrbTop} />
       <View pointerEvents="none" style={styles.backgroundOrbBottom} />
       <View style={styles.content}>
-        <View style={styles.topRow}>
+        <View style={styles.voiceTopBar}>
           <NavIconButton
             label="الإعدادات"
             onPress={() => navigation.navigate('Settings')}
             variant="settings"
-            showLabel={showNavLabel}
+            showLabel={false}
           />
+          <View style={styles.voiceBrand}>
+            <Text style={styles.voiceBrandTitle}>VoiceGhost</Text>
+            <Text style={styles.voiceBrandSubtitle}>صوت أولًا</Text>
+          </View>
           <NavIconButton
             label="تذكيراتك"
             onPress={() => navigation.navigate('ReminderList')}
             variant="reminders"
-            showLabel={showNavLabel}
+            showLabel={false}
           />
         </View>
 
-        <LinearGradient
-          colors={['#4E3ED1', '#6C5CE7', '#8C7FFF']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.hero, compact && styles.heroCompact]}
-        >
-          <View style={styles.heroGlowTop} />
-          <View style={styles.heroGlowBottom} />
-          <View style={styles.heroGlass} />
-
-          <View style={styles.heroCopy}>
-            <View style={styles.heroTopRow}>
-              <View style={styles.statusPill}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>جاهز</Text>
-              </View>
-            </View>
-
-            <Text
-              style={[
-                styles.title,
-                compact && styles.titleCompact,
-                { maxWidth: heroWidth * 0.72 },
-              ]}
+        {pendingPermissionReminders > 0 ? (
+          <View style={styles.statusBanner}>
+            <Text style={styles.statusBannerText}>
+              {pendingPermissionReminders === 1
+                ? 'يوجد تذكير محفوظ ينتظر تفعيل الإشعارات.'
+                : `يوجد ${pendingPermissionReminders} تذكيرات محفوظة تنتظر تفعيل الإشعارات.`}
+            </Text>
+            <Pressable
+              onPress={() => void handleNotificationAction()}
+              style={styles.statusBannerAction}
             >
-              قول بس وهنفكرك
-            </Text>
-            <Text style={[styles.subtitle, compact && styles.subtitleCompact]}>
-              {processing ? 'بنفهمها' : 'عايز تفكر بإيه؟'}
-            </Text>
-            <View style={styles.localePill}>
-              <View style={styles.localeDot} />
-              <Text style={styles.localeHint}>{getSpeechLocaleLabel(speechLocale)}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
-        <View style={[styles.micStage, compact && styles.micStageCompact]}>
-          <Animated.View
-            style={[
-              styles.micGlow,
-              {
-                opacity: pulse.interpolate({
-                  inputRange: [1, 1.08],
-                  outputRange: [0.2, 0.42],
-                }),
-                transform: [
-                  {
-                    scale: pulse.interpolate({
-                      inputRange: [1, 1.08],
-                      outputRange: [1, 1.12],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          />
-          <Animated.View style={{ transform: [{ scale: pulse }] }}>
-            <View style={[styles.micRingOuter, compact && styles.micRingOuterCompact]}>
-              <View style={[styles.micRingInner, compact && styles.micRingInnerCompact]}>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={toggleRecording}
-                  style={[styles.micButton, compact && styles.micButtonCompact]}
-                >
-                  {isListening ? <View style={styles.stopSquare} /> : <MicGlyph />}
-                </Pressable>
-              </View>
-            </View>
-          </Animated.View>
-
-          <Text style={[styles.micHint, compact && styles.micHintCompact]}>
-            {processing ? 'بظبطهالك' : isListening ? 'سامعك' : 'قول بس'}
-          </Text>
-          <Text style={[styles.micSubhint, compact && styles.micSubhintCompact]}>
-            {processing
-              ? 'ثانية ونطلعها صح.'
-              : isListening
-                ? 'كمّل للآخر.'
-                : 'دوس مرة واتكلم.'}
-          </Text>
-          {isListening ? <Waveform pulse={pulse} /> : null}
-          {processing ? (
-            <ActivityIndicator color={colors.primaryDark} style={styles.processingSpinner} />
-          ) : null}
-        </View>
-
-        <View style={[styles.transcriptBox, compact && styles.transcriptBoxCompact]}>
-          <View style={styles.transcriptHeader}>
-            <Text style={styles.transcriptLabel}>
-              {pendingParse ? 'فهمنا' : 'سمعنا'}
-            </Text>
-            {busy ? (
-              <Text style={styles.transcriptLive}>دلوقتي</Text>
-            ) : pendingParse ? (
-              <Text style={styles.transcriptLive}>راجع بسرعة</Text>
-            ) : null}
-          </View>
-          {busy && !transcript ? (
-            <View style={styles.transcriptRow}>
-              <View style={[styles.transcriptBadge, styles.transcriptBadgeBusy]}>
-                <ActivityIndicator size="small" color={colors.primaryDark} />
-              </View>
-              <Text style={[styles.transcriptText, compact && styles.transcriptTextCompact]}>
-                بنسمعك دلوقتي...
-              </Text>
-            </View>
-          ) : pendingParse ? (
-            <View style={styles.summaryBlock}>
-              <Text
-                numberOfLines={2}
-                style={[styles.transcriptText, compact && styles.transcriptTextCompact]}
-              >
-                {pendingParse.draft.title}
-              </Text>
-              <Text style={styles.summaryMeta}>
-                {toArabicDateTimeLabel(pendingParse.draft.eventAt)}
-              </Text>
-              <Text style={styles.summaryMeta}>
-                {relativeReminderLabel(pendingParse.draft.offsetMinutes)}
-              </Text>
-            </View>
-          ) : transcript || processing ? (
-            <Text
-              numberOfLines={compact ? 2 : 3}
-              style={[styles.transcriptText, compact && styles.transcriptTextCompact]}
-            >
-              {processing ? 'بنحلل الكلام ونظبط الوقت والفئة...' : transcript}
-            </Text>
-          ) : null}
-          {!busy && !pendingParse && !processing && !transcript ? (
-            <View style={styles.transcriptRow}>
-              <GhostIllustration />
-              <View style={styles.transcriptCopy}>
-                <Text style={styles.transcriptEmptyTitle}>لسه ما قولتش حاجة</Text>
-                <Text style={styles.transcriptEmptyMeta}>
-                  قول أول تذكير ليك أو اكتبه يدويًا
-                </Text>
-              </View>
-            </View>
-          ) : null}
-        </View>
-
-        {errorMessage ? (
-          <View style={styles.feedbackCard}>
-            <Text numberOfLines={2} style={styles.errorText}>
-              {errorMessage}
-            </Text>
-            {!processing ? (
-              <Pressable
-                onPress={() => {
-                  setErrorMessage('');
-                  void toggleRecording();
-                }}
-                style={styles.feedbackAction}
-              >
-                <Text style={styles.feedbackActionText}>قولها تاني</Text>
-              </Pressable>
-            ) : null}
+              <Text style={styles.statusBannerActionText}>{notificationActionLabel}</Text>
+            </Pressable>
           </View>
         ) : null}
 
-        <View style={styles.bottomStack}>
-          <GhostButton
-            label="أضف تذكيرًا يدويًا"
-            variant="secondary"
-            onPress={openManualCreate}
-          />
+        <View style={styles.voiceCenter}>
+          <Text style={styles.voiceTitle}>{processing ? 'ثانية ونرتبها' : 'دوس واتكلم'}</Text>
+          <Text style={styles.voiceSubtitle}>
+            {isListening
+              ? 'قل المهمة والوقت فقط.'
+              : pendingParse
+                ? 'راجعها بسرعة أو اتركها تتحفظ تلقائيًا.'
+                : 'قل ما تريد وسيحفظه VoiceGhost كتذكير خلال ثوانٍ.'}
+          </Text>
 
-          {pendingPermissionReminders > 0 ? (
-            <View style={styles.warningCard}>
-              <Text style={styles.warningText}>
-                {pendingPermissionReminders === 1
-                  ? 'في تذكير محفوظ بانتظار تفعيل الإشعارات.'
-                  : `في ${pendingPermissionReminders} تذكيرات محفوظة بانتظار تفعيل الإشعارات.`}
+          <View style={[styles.voiceStatePill, busy && styles.voiceStatePillActive]}>
+            <View style={styles.voiceStateDot} />
+            <Text style={styles.voiceStateText}>{voiceStateLabel}</Text>
+          </View>
+
+          <View style={[styles.micStage, compact && styles.micStageCompact, styles.voiceMicStage]}>
+            <Animated.View
+              style={[
+                styles.micGlow,
+                {
+                  opacity: pulse.interpolate({
+                    inputRange: [1, 1.08],
+                    outputRange: [0.2, 0.42],
+                  }),
+                  transform: [
+                    {
+                      scale: pulse.interpolate({
+                        inputRange: [1, 1.08],
+                        outputRange: [1, 1.12],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <Animated.View style={{ transform: [{ scale: pulse }] }}>
+              <View style={[styles.micRingOuter, compact && styles.micRingOuterCompact]}>
+                <View style={[styles.micRingInner, compact && styles.micRingInnerCompact]}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={toggleRecording}
+                    style={[styles.micButton, compact && styles.micButtonCompact]}
+                  >
+                    {isListening ? <View style={styles.stopSquare} /> : <MicGlyph />}
+                  </Pressable>
+                </View>
+              </View>
+            </Animated.View>
+
+            <Text style={[styles.micHint, compact && styles.micHintCompact]}>
+              {processing ? 'بنحفظه' : isListening ? 'كمّل' : 'Tap and speak'}
+            </Text>
+            <Text style={[styles.micSubhint, compact && styles.micSubhintCompact]}>
+              {processing
+                ? 'لا تحتاج لأي خطوة إضافية.'
+                : isListening
+                  ? 'قولها بطريقتك وسنتكفل بالباقي.'
+                  : 'لمسة واحدة ثم تكلم.'}
+            </Text>
+            {isListening ? <Waveform pulse={pulse} /> : null}
+            {processing ? (
+              <ActivityIndicator color={colors.primaryDark} style={styles.processingSpinner} />
+            ) : null}
+          </View>
+
+          <View style={styles.voiceTranscriptCard}>
+            {transcriptPreview ? (
+              <Text numberOfLines={2} style={styles.voiceTranscriptText}>
+                {transcriptPreview}
               </Text>
-              <Pressable onPress={() => void handleNotificationAction()} style={styles.warningAction}>
-                <Text style={styles.warningActionText}>{notificationActionLabel}</Text>
-              </Pressable>
+            ) : (
+              <Text style={styles.voiceTranscriptPlaceholder}>
+                مثال: فكرني بميعاد الدكتور بكرة الساعة ٦
+              </Text>
+            )}
+            <Text style={styles.voiceTranscriptMeta}>{getSpeechLocaleLabel(speechLocale)}</Text>
+          </View>
+
+          {errorMessage ? (
+            <View style={styles.inlineErrorCard}>
+              <Text numberOfLines={2} style={styles.inlineErrorText}>
+                {errorMessage}
+              </Text>
+              {!processing ? (
+                <Pressable
+                  onPress={() => {
+                    setErrorMessage('');
+                    void toggleRecording();
+                  }}
+                  style={styles.inlineErrorAction}
+                >
+                  <Text style={styles.inlineErrorActionText}>قولها تاني</Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
-
-          <Pressable
-            onPress={() => navigation.navigate('ReminderList')}
-            style={[styles.dashboardCard, styles.recentCard]}
-          >
-            <View style={styles.dashboardHeader}>
-              <Text style={styles.dashboardEyebrow}>الجاي</Text>
-              <Text style={styles.dashboardLink}>عرض الكل</Text>
-            </View>
-
-            {latestReminder ? (
-              <View style={styles.dashboardBody}>
-                <View style={styles.categoryPill}>
-                  <Text style={styles.categoryPillText}>
-                    {getReminderCategoryLabel(latestReminder.category)}
-                  </Text>
-                </View>
-                <Text numberOfLines={2} style={styles.dashboardTitle}>
-                  {latestReminder.title}
-                </Text>
-                <View style={styles.nextMetaRow}>
-                  <View style={styles.nextMetaBadge}>
-                    <View style={styles.nextMetaDot} />
-                  </View>
-                  <Text numberOfLines={1} style={styles.nextMetaText}>
-                    {toArabicDateTimeLabel(latestReminder.remindAt)}
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.dashboardEmptyState}>
-                <View style={styles.nextEmptyIcon}>
-                  <View style={styles.nextEmptyIconDot} />
-                </View>
-                <Text style={styles.dashboardTitle}>لسه مفيش حاجة جاية</Text>
-                <Text style={styles.dashboardMeta}>أول تذكير هيتحط هنا.</Text>
-              </View>
-            )}
-          </Pressable>
-
         </View>
+
+        <Pressable
+          onPress={() => navigation.navigate('ReminderList')}
+          style={styles.latestReminderCard}
+        >
+          <View style={styles.latestReminderHeader}>
+            <Text style={styles.latestReminderLink}>كل التذكيرات</Text>
+            <Text style={styles.latestReminderEyebrow}>آخر تذكير</Text>
+          </View>
+
+          {latestReminder ? (
+            <View style={styles.latestReminderBody}>
+              <View style={styles.categoryPill}>
+                <Text style={styles.categoryPillText}>
+                  {getReminderCategoryLabel(latestReminder.category)}
+                </Text>
+              </View>
+              <Text numberOfLines={2} style={styles.latestReminderTitle}>
+                {latestReminder.title}
+              </Text>
+              <Text numberOfLines={1} style={styles.latestReminderMeta}>
+                {toArabicDateTimeLabel(latestReminder.remindAt)}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.latestReminderEmpty}>
+              <GhostIllustration />
+              <View style={styles.latestReminderEmptyCopy}>
+                <Text style={styles.latestReminderTitle}>لا يوجد شيء محفوظ بعد</Text>
+                <Text style={styles.latestReminderMeta}>
+                  الإضافة اليدوية موجودة داخل شاشة التذكيرات كمسار ثانوي.
+                </Text>
+              </View>
+            </View>
+          )}
+        </Pressable>
 
         {pendingParse ? (
           <View style={styles.sheetBackdrop}>
@@ -1052,6 +974,246 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: spacing.md,
     gap: 12,
+  },
+  voiceTopBar: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 52,
+  },
+  voiceBrand: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  voiceBrandTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    color: colors.text,
+  },
+  voiceBrandSubtitle: {
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    color: colors.textMuted,
+    writingDirection: 'rtl',
+  },
+  statusBanner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    backgroundColor: colors.warningSoft,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: 'rgba(154,107,0,0.12)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  statusBannerText: {
+    flex: 1,
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.warning,
+    textAlign: 'right',
+    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+  statusBannerAction: {
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  statusBannerActionText: {
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    color: colors.warning,
+    writingDirection: 'rtl',
+  },
+  voiceCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  voiceTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 32,
+    color: colors.text,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
+  voiceSubtitle: {
+    fontFamily: fonts.medium,
+    fontSize: 15,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
+    writingDirection: 'rtl',
+    maxWidth: 280,
+  },
+  voiceStatePill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.card,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  voiceStatePillActive: {
+    borderColor: 'rgba(108,92,231,0.26)',
+  },
+  voiceStateDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accent,
+  },
+  voiceStateText: {
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    color: colors.primaryDark,
+    writingDirection: 'rtl',
+  },
+  voiceMicStage: {
+    marginTop: 0,
+    gap: spacing.xs,
+  },
+  voiceTranscriptCard: {
+    width: '100%',
+    maxWidth: 340,
+    minHeight: 78,
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.8,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
+  },
+  voiceTranscriptText: {
+    fontFamily: fonts.semibold,
+    fontSize: 16,
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 24,
+    writingDirection: 'rtl',
+  },
+  voiceTranscriptPlaceholder: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 21,
+    writingDirection: 'rtl',
+  },
+  voiceTranscriptMeta: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.primaryDark,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
+  inlineErrorCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFF1EF',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: '#F3D3CF',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+  },
+  inlineErrorText: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.danger,
+    textAlign: 'center',
+    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+  inlineErrorAction: {
+    alignSelf: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: '#F3D3CF',
+  },
+  inlineErrorActionText: {
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    color: colors.danger,
+    writingDirection: 'rtl',
+  },
+  latestReminderCard: {
+    borderRadius: radii.lg,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.md,
+    gap: spacing.sm,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.9,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 4,
+  },
+  latestReminderHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  latestReminderLink: {
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    color: colors.primaryDark,
+    writingDirection: 'rtl',
+  },
+  latestReminderEyebrow: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.textMuted,
+    writingDirection: 'rtl',
+  },
+  latestReminderBody: {
+    alignItems: 'flex-end',
+    gap: spacing.xs,
+  },
+  latestReminderTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 16,
+    color: colors.text,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  latestReminderMeta: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'right',
+    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+  latestReminderEmpty: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  latestReminderEmptyCopy: {
+    flex: 1,
+    alignItems: 'flex-end',
+    gap: 2,
   },
   hero: {
     borderRadius: radii.lg,

@@ -4,6 +4,16 @@ export type ParseSource = 'rules' | 'hybrid' | 'llm';
 export type GhostMode = 'sassy' | 'coach' | 'mom' | 'calm';
 export type ReminderNotificationStatus = 'scheduled' | 'permission_required';
 export type NotificationPermissionState = 'granted' | 'undetermined' | 'blocked';
+export type CalendarProvider = 'apple' | 'google' | 'device';
+export type CalendarSyncStatus = 'none' | 'pending' | 'synced' | 'failed' | 'skipped';
+export type AppleCalendarPermissionStatus =
+  | 'not_supported'
+  | 'not_determined'
+  | 'denied'
+  | 'restricted'
+  | 'authorized'
+  | 'write_only'
+  | 'full_access';
 export type ReminderCategory =
   | 'study'
   | 'work'
@@ -27,12 +37,21 @@ export interface Reminder {
   createdAt: string;
   notificationId?: string;
   notificationStatus: ReminderNotificationStatus;
+  calendarSyncStatus: CalendarSyncStatus;
+  calendarProvider?: CalendarProvider;
+  calendarEventId?: string;
 }
 
 export interface ReminderMutationResult {
   ok: boolean;
   reason?: string;
   warning?: string;
+}
+
+export interface CalendarEventResult {
+  status: CalendarSyncStatus;
+  provider?: CalendarProvider;
+  eventId?: string;
 }
 
 export interface ParseResult {
@@ -54,10 +73,22 @@ export interface UsageState {
   isProMock: boolean;
 }
 
+export interface GoogleCalendarConnection {
+  connected: boolean;
+  email?: string;
+}
+
+export interface AppleCalendarConnection {
+  autoSyncEnabled: boolean;
+  permissionStatus: AppleCalendarPermissionStatus;
+}
+
 export interface SettingsState {
   ttsEnabled: boolean;
   hasSeenOnboarding: boolean;
   ghostMode: GhostMode;
+  appleCalendar: AppleCalendarConnection;
+  googleCalendar: GoogleCalendarConnection;
 }
 
 export interface PersistedState {
@@ -72,6 +103,7 @@ export interface ReminderDraft {
   eventAt: string;
   offsetMinutes: number;
   recurrence: Recurrence;
+  addToCalendar?: boolean;
 }
 
 export type RootStackParamList = {

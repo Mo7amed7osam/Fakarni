@@ -2,6 +2,7 @@
   "expo": {
     "name": "VoiceGhost",
     "slug": "voiceghost",
+    "scheme": "voiceghost",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,6 +16,11 @@
       "bundleIdentifier": "com.mohamedhosam.voiceghostapp",
       "supportsTablet": false,
       "infoPlist": {
+        "NSCalendarsUsageDescription": "يسمح VoiceGhost بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",
+        "NSCalendarsFullAccessUsageDescription": "يسمح VoiceGhost بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "يسمح VoiceGhost بحفظ تذكيراتك في التقويم دون الوصول الكامل إلى أحداثك.",
+        "NSRemindersUsageDescription": "يسمح VoiceGhost بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.",
+        "NSRemindersFullAccessUsageDescription": "يسمح VoiceGhost بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.",
         "NSMicrophoneUsageDescription": "يسمح VoiceGhost بتسجيل صوتك لتحويل كلامك إلى تذكيرات.",
         "NSSpeechRecognitionUsageDescription": "يسمح VoiceGhost بتحويل الكلام العربي إلى نص لإنشاء التذكيرات بسرعة."
       }
@@ -30,7 +36,9 @@
       "package": "com.mohamedhosam.voiceghost",
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
       ]
     },
     "web": {
@@ -38,7 +46,15 @@
     },
     "plugins": [
       "expo-font",
+      "expo-web-browser",
       "@react-native-community/datetimepicker",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "يسمح VoiceGhost بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",
+          "remindersPermission": "يسمح VoiceGhost بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام."
+        }
+      ],
       [
         "expo-speech-recognition",
         {
@@ -48,7 +64,8 @@
             "com.google.android.googlequicksearchbox"
           ]
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

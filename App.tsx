@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { I18nManager, Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import {
   Cairo_400Regular,
   Cairo_500Medium,
@@ -15,6 +16,8 @@ import { GhostProvider } from './src/context/GhostContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors } from './src/theme';
 import { configureNotifications } from './src/services/notifications';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const navigationTheme = {
   ...DefaultTheme,
