@@ -1,4 +1,4 @@
-export type Recurrence = 'none' | 'daily' | 'weekly';
+export type Recurrence = 'none' | 'daily' | 'weekly' | 'weekdays';
 export type ReminderStatus = 'scheduled' | 'done' | 'missed';
 export type ParseSource = 'rules' | 'hybrid' | 'llm';
 export type GhostMode = 'sassy' | 'coach' | 'mom' | 'calm';
@@ -41,7 +41,15 @@ export interface Reminder {
   status: ReminderStatus;
   createdAt: string;
   notificationId?: string;
+  notificationIds?: string[];
   notificationStatus: ReminderNotificationStatus;
+  snoozedNotificationId?: string;
+  followUpNotificationId?: string;
+  followUpForAt?: string;
+  completedAt?: string;
+  snoozedUntil?: string;
+  lastTriggeredAt?: string;
+  followUpCount: number;
   calendarSyncStatus: CalendarSyncStatus;
   calendarProvider?: CalendarProvider;
   calendarEventId?: string;
@@ -95,6 +103,8 @@ export interface SettingsState {
   ttsEnabled: boolean;
   hasSeenOnboarding: boolean;
   ghostMode: GhostMode;
+  followUpEnabled: boolean;
+  followUpDelayMinutes: number;
   appleCalendar: AppleCalendarConnection;
   googleCalendar: GoogleCalendarConnection;
   analytics: AnalyticsSettingsState;

@@ -16,7 +16,7 @@ const validCategories: ReminderCategory[] = [
   'other',
 ];
 
-const validRecurrence: Recurrence[] = ['none', 'daily', 'weekly'];
+const validRecurrence: Recurrence[] = ['none', 'daily', 'weekly', 'weekdays'];
 
 interface LLMParsePayload {
   title?: unknown;
@@ -108,7 +108,7 @@ export async function refineParseWithLLM(
         {
           role: 'system',
           content:
-            'You parse Egyptian Arabic reminder requests into reminder data. Return JSON only with keys: title, category, eventAt, offsetMinutes, recurrence, confidence, missingFields. category must be one of study|work|meeting|health|shopping|finance|personal|other. recurrence must be none|daily|weekly. eventAt must be full ISO 8601 with a concrete date and time. Use the provided now and timezone as ground truth for phrases like today, tomorrow, next Thursday, and relative offsets like before one hour. Do not invent recurrence unless the user explicitly asks for repetition. If any field is ambiguous, keep the safest best guess, reduce confidence, and include that field in missingFields.',
+            'You parse Egyptian Arabic reminder requests into reminder data. Return JSON only with keys: title, category, eventAt, offsetMinutes, recurrence, confidence, missingFields. category must be one of study|work|meeting|health|shopping|finance|personal|other. recurrence must be none|daily|weekly|weekdays. Use weekdays only for workdays style phrases such as weekdays, every work day, or from Monday to Friday. eventAt must be full ISO 8601 with a concrete date and time. Use the provided now and timezone as ground truth for phrases like today, tomorrow, next Thursday, and relative offsets like before one hour. Do not invent recurrence unless the user explicitly asks for repetition. If any field is ambiguous, keep the safest best guess, reduce confidence, and include that field in missingFields.',
         },
         {
           role: 'user',
