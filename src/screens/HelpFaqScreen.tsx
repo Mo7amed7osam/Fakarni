@@ -31,6 +31,7 @@ const faq = [
 
 export function HelpFaqScreen({ navigation }: Props) {
   const {
+    settings,
     notificationPermission,
     pendingPermissionReminders,
     requestNotificationAccess,
@@ -72,7 +73,7 @@ export function HelpFaqScreen({ navigation }: Props) {
       return;
     }
 
-    await requestNotificationAccess();
+    await requestNotificationAccess('help');
   }
 
   return (
@@ -95,6 +96,9 @@ export function HelpFaqScreen({ navigation }: Props) {
           </Text>
           <Text style={styles.answer}>
             وإذا فعّلت إضافة التذكير للتقويم، قد يُنشئ التطبيق حدثًا في تقويم الجهاز أو Google Calendar حسب إعداداتك.
+          </Text>
+          <Text style={styles.answer}>
+            التحليلات المجهولة: {settings.analytics.enabled ? 'مفعّلة' : 'متوقفة'}، ولا ترسل transcript الخام أو أسماء التذكيرات.
           </Text>
         </View>
       </SectionCard>

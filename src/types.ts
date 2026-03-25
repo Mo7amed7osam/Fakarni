@@ -6,6 +6,11 @@ export type ReminderNotificationStatus = 'scheduled' | 'permission_required';
 export type NotificationPermissionState = 'granted' | 'undetermined' | 'blocked';
 export type CalendarProvider = 'apple' | 'google' | 'device';
 export type CalendarSyncStatus = 'none' | 'pending' | 'synced' | 'failed' | 'skipped';
+export interface AnalyticsSettingsState {
+  enabled: boolean;
+  consentShown: boolean;
+}
+
 export type AppleCalendarPermissionStatus =
   | 'not_supported'
   | 'not_determined'
@@ -71,6 +76,9 @@ export interface UsageState {
   dateKey: string;
   createdCount: number;
   isProMock: boolean;
+  installAt: string;
+  firstReminderCreatedAt?: string;
+  firstVoiceReminderCreatedAt?: string;
 }
 
 export interface GoogleCalendarConnection {
@@ -89,6 +97,7 @@ export interface SettingsState {
   ghostMode: GhostMode;
   appleCalendar: AppleCalendarConnection;
   googleCalendar: GoogleCalendarConnection;
+  analytics: AnalyticsSettingsState;
 }
 
 export interface PersistedState {
@@ -120,6 +129,7 @@ export type RootStackParamList = {
   };
   ReminderList: undefined;
   Settings: undefined;
+  FounderDashboard: undefined;
   HelpFaq: undefined;
   SpeechFailed: {
     transcript?: string;

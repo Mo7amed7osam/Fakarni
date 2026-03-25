@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as AuthSession from 'expo-auth-session';
+import * as Application from 'expo-application';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GhostButton } from '../components/GhostButton';
 import { SectionCard } from '../components/SectionCard';
@@ -32,7 +33,9 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 export function SettingsScreen({ navigation }: Props) {
   const {
     settings,
+    acknowledgeAnalyticsNotice,
     updateSettings,
+    setAnalyticsEnabled,
     notificationPermission,
     pendingPermissionReminders,
     requestNotificationAccess,
@@ -55,8 +58,12 @@ export function SettingsScreen({ navigation }: Props) {
   });
   const [googleBusy, setGoogleBusy] = useState(false);
   const [calendarBusy, setCalendarBusy] = useState(false);
+  const [analyticsBusy, setAnalyticsBusy] = useState(false);
   const [calendarNotice, setCalendarNotice] = useState('');
   const lastHandledGoogleCodeRef = useRef<string | null>(null);
+  const founderTapCountRef = useRef(0);
+  const founderTapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const appVersion = Application.nativeApplicationVersion ?? 'dev';
   const [googleRequest, googleResponse, promptGoogleAuth] = AuthSession.useAuthRequest(
     {
       clientId: googleClientId ?? 'voiceghost-google-not-configured',
@@ -83,7 +90,7 @@ export function SettingsScreen({ navigation }: Props) {
       return;
     }
 
-    await requestNotificationAccess();
+    await requestNotificationAccess('settings');
   }
 
   async function handleGoogleConnect() {
@@ -109,6 +116,30 @@ export function SettingsScreen({ navigation }: Props) {
     const result = await setAppleCalendarAutoSync(value);
     setCalendarBusy(false);
     setCalendarNotice(result.message ?? '');
+  }
+
+  async function handleAnalyticsToggle(value: boolean) {
+    setAnalyticsBusy(true);
+    await setAnalyticsEnabled(value);
+    setAnalyticsBusy(false);
+  }
+
+  function handleFounderTap() {
+    founderTapCountRef.current += 1;
+    if (founderTapTimeoutRef.current) {
+      clearTimeout(founderTapTimeoutRef.current);
+    }
+
+    if (founderTapCountRef.current >= 7) {
+      founderTapCountRef.current = 0;
+      navigation.navigate('FounderDashboard');
+      return;
+    }
+
+    founderTapTimeoutRef.current = setTimeout(() => {
+      founderTapCountRef.current = 0;
+      founderTapTimeoutRef.current = null;
+    }, 1600);
   }
 
   const appleCalendarEnabled = settings.appleCalendar.autoSyncEnabled;
@@ -189,6 +220,12 @@ export function SettingsScreen({ navigation }: Props) {
   }, [connectGoogleCalendar, googleClientId, googleRequest, googleResponse, redirectUri]);
 
   useEffect(() => {
+    if (!settings.analytics.consentShown) {
+      acknowledgeAnalyticsNotice();
+    }
+  }, [acknowledgeAnalyticsNotice, settings.analytics.consentShown]);
+
+  useEffect(() => {
     if (!calendarNotice) {
       return;
     }
@@ -200,12 +237,22 @@ export function SettingsScreen({ navigation }: Props) {
     return () => clearTimeout(timeout);
   }, [calendarNotice]);
 
+  useEffect(() => {
+    return () => {
+      if (founderTapTimeoutRef.current) {
+        clearTimeout(founderTapTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>إعدادات VoiceGhost</Text>
-      <Text style={styles.subtitle}>
-        فعّل الأساسيات مرة واحدة وخلي التطبيق يشتغل بالصوت بأقل احتكاك ممكن.
-      </Text>
+      <Pressable onPress={handleFounderTap} style={styles.titleWrap}>
+        <Text style={styles.title}>إعدادات VoiceGhost</Text>
+        <Text style={styles.subtitle}>
+          فعّل الأساسيات مرة واحدة وخلي التطبيق يشتغل بالصوت بأقل احتكاك ممكن.
+        </Text>
+      </Pressable>
 
       <LinearGradient colors={['#0D92BF', '#18B7E8']} style={styles.heroCard}>
         <Text style={styles.heroLabel}>حالة التطبيق</Text>
@@ -342,6 +389,48 @@ export function SettingsScreen({ navigation }: Props) {
         </SectionCard>
       )}
 
+      <SectionCard
+        title="Anonymous product analytics"
+        subtitle="تحليلات استخدام مجهولة تساعدك تقرر بسرعة بدون إرسال الكلام أو أسماء التذكيرات."
+      >
+        <View style={styles.row}>
+          <Switch
+            value={settings.analytics.enabled}
+            onValueChange={(value) => {
+              void handleAnalyticsToggle(value);
+            }}
+            disabled={analyticsBusy}
+            trackColor={{ false: '#D9D2C5', true: colors.primary }}
+          />
+          <View style={styles.rowText}>
+            <Text style={styles.rowTitle}>تشغيل التحليلات المجهولة</Text>
+            <Text style={styles.rowSubtitle}>
+              يتم إرسال metadata فقط مثل نجاح الفهم، الصلاحيات، ومسار الحفظ.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.analyticsCard}>
+          <Text style={styles.analyticsCardTitle}>
+            {settings.analytics.enabled ? 'التحليلات مفعّلة' : 'التحليلات متوقفة'}
+          </Text>
+          <Text style={styles.analyticsCardText}>
+            لا يتم إرسال transcript الخام أو اسم التذكير. ويمكنك إيقاف التحليلات في أي وقت من هنا.
+          </Text>
+        </View>
+      </SectionCard>
+
+      <SectionCard
+        title="Founder Tools"
+        subtitle="لوحة داخلية لمراجعة الأحداث، حالة الربط مع PostHog، وأهم مؤشرات الجهاز الحالي."
+      >
+        <GhostButton
+          label="افتح Founder Dashboard"
+          variant="secondary"
+          onPress={() => navigation.navigate('FounderDashboard')}
+        />
+      </SectionCard>
+
       <SectionCard title="شخصية الجوست" subtitle="اختار الردود اللي تناسبك أكتر">
         <View style={styles.modeRow}>
           {ghostModes.map((mode) => (
@@ -380,6 +469,10 @@ export function SettingsScreen({ navigation }: Props) {
           <Text style={styles.linkLabel}>الأسئلة الشائعة، الخصوصية، والدعم</Text>
         </Pressable>
       </SectionCard>
+
+      <Pressable onPress={handleFounderTap} style={styles.versionChip}>
+        <Text style={styles.versionChipText}>v{appVersion}</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -393,6 +486,9 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.lg,
     paddingBottom: 48,
+  },
+  titleWrap: {
+    gap: spacing.xs,
   },
   title: {
     fontFamily: fonts.bold,
@@ -495,6 +591,29 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     writingDirection: 'rtl',
   },
+  analyticsCard: {
+    backgroundColor: '#EEF4FF',
+    borderRadius: radii.md,
+    padding: spacing.md,
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#D7E3FF',
+  },
+  analyticsCardTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 15,
+    color: colors.primaryDark,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  analyticsCardText: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'right',
+    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
   googleStatusCard: {
     backgroundColor: '#EEF4FF',
     borderRadius: radii.md,
@@ -592,6 +711,20 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  versionChip: {
+    alignSelf: 'center',
+    backgroundColor: colors.cardMuted,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  versionChipText: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.textMuted,
   },
   modeRow: {
     flexDirection: 'row-reverse',

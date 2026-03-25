@@ -21,6 +21,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGhost } from '../context/GhostContext';
+import {
+  buildReminderAnalyticsProperties,
+  getCalendarMode,
+  track,
+} from '../services/analytics';
 import { colors, fonts, radii, spacing } from '../theme';
 import { ReminderDraft, RootStackParamList } from '../types';
 import { parseReminderText } from '../utils/parser';
@@ -218,6 +223,10 @@ export function HomeScreen({ navigation }: Props) {
     setErrorMessage('');
     setProcessing(false);
     setPendingParse(null);
+    track('voice listening started', {
+      source: 'home',
+      speech_locale: speechLocale,
+    });
   });
 
   useSpeechRecognitionEvent('end', () => {
@@ -230,10 +239,26 @@ export function HomeScreen({ navigation }: Props) {
 
     shouldProcessOnEndRef.current = false;
     const sourceTranscript = transcriptRef.current.trim();
+    track('voice listening ended', {
+      source: 'home',
+      speech_locale: speechLocale,
+      had_transcript: Boolean(sourceTranscript),
+    });
     if (!sourceTranscript) {
       setErrorMessage('لسه ما قولتش حاجة 👻');
       return;
     }
+
+    track('voice transcript captured', {
+      source: 'home',
+      speech_locale: speechLocale,
+      transcript_length_bucket:
+        sourceTranscript.length > 80
+          ? 'long'
+          : sourceTranscript.length > 30
+            ? 'medium'
+            : 'short',
+    });
 
     void processCapturedTranscript(sourceTranscript);
   });
@@ -320,6 +345,20 @@ export function HomeScreen({ navigation }: Props) {
     confirmOpacity.setValue(0);
     confirmScale.setValue(0.95);
     confirmProgress.setValue(1);
+    track('reminder confirmation shown', {
+      entry_point: 'voice_home',
+      confirmation_mode: 'inline',
+      ...buildReminderAnalyticsProperties({
+        draft: pendingParse.draft,
+        entryPoint: 'voice_home',
+        isVoiceFlow: true,
+        notificationPermissionState: notificationPermission,
+        calendarMode: getCalendarMode({ settings }),
+        parseConfidence: pendingParse.confidence,
+        missingFields: pendingParse.missingFields,
+        confirmationMode: 'inline',
+      }),
+    });
 
     Animated.parallel([
       Animated.timing(confirmOpacity, {
@@ -455,7 +494,11 @@ export function HomeScreen({ navigation }: Props) {
       ]).start(() => resolve());
     });
 
-    await saveDraft(target.draft, target.transcript);
+    await saveDraft(target.draft, target.transcript, {
+      confirmationMode: 'inline',
+      parseConfidence: target.confidence,
+      missingFields: target.missingFields,
+    });
   }
 
   async function processCapturedTranscript(sourceTranscript: string) {
@@ -464,9 +507,42 @@ export function HomeScreen({ navigation }: Props) {
       const parsed = await parseReminderText(sourceTranscript);
       const draft = buildDraftFromParse(parsed);
       const validationIssue = validateDraft(draft);
+      track('reminder parse succeeded', {
+        entry_point: 'voice_home',
+        ...buildReminderAnalyticsProperties({
+          draft,
+          entryPoint: 'voice_home',
+          isVoiceFlow: true,
+          notificationPermissionState: notificationPermission,
+          calendarMode: getCalendarMode({ settings }),
+          parseConfidence: parsed.confidence,
+          parseSource: parsed.source,
+          missingFields: parsed.missingFields,
+        }),
+      });
 
       if (!validationIssue && parsed.confidence >= 0.9 && parsed.missingFields.length === 0) {
-        await saveDraft(draft, sourceTranscript);
+        track('reminder inline auto-save triggered', {
+          entry_point: 'voice_home',
+          confirmation_mode: 'auto',
+          ...buildReminderAnalyticsProperties({
+            draft,
+            entryPoint: 'voice_home',
+            isVoiceFlow: true,
+            notificationPermissionState: notificationPermission,
+            calendarMode: getCalendarMode({ settings }),
+            parseConfidence: parsed.confidence,
+            parseSource: parsed.source,
+            missingFields: parsed.missingFields,
+            confirmationMode: 'auto',
+          }),
+        });
+        await saveDraft(draft, sourceTranscript, {
+          confirmationMode: 'auto',
+          parseConfidence: parsed.confidence,
+          parseSource: parsed.source,
+          missingFields: parsed.missingFields,
+        });
         return;
       }
 
@@ -490,24 +566,84 @@ export function HomeScreen({ navigation }: Props) {
       setPendingParse(nextPending);
       setErrorMessage('');
     } catch {
+      track('reminder parse failed', {
+        entry_point: 'voice_home',
+        is_voice_flow: true,
+        reason: 'parser_exception',
+      });
       setErrorMessage('حصلت لخبطة صغيرة. قولها تاني.');
     } finally {
       setProcessing(false);
     }
   }
 
-  async function saveDraft(draft: ReminderDraft, sourceTranscript: string) {
+  async function saveDraft(
+    draft: ReminderDraft,
+    sourceTranscript: string,
+    options?: {
+      confirmationMode?: 'auto' | 'inline';
+      parseConfidence?: number;
+      parseSource?: string;
+      missingFields?: string[];
+    }
+  ) {
     const validationIssue = validateDraft(draft);
     if (validationIssue) {
+      track('reminder create failed', {
+        entry_point: 'voice_home',
+        ...buildReminderAnalyticsProperties({
+          draft,
+          entryPoint: 'voice_home',
+          isVoiceFlow: true,
+          notificationPermissionState: notificationPermission,
+          calendarMode: getCalendarMode({ settings }),
+          parseConfidence: options?.parseConfidence,
+          parseSource: options?.parseSource,
+          missingFields: options?.missingFields,
+          confirmationMode: options?.confirmationMode,
+          resultReason: validationIssue,
+        }),
+      });
       setErrorMessage(validationIssue);
       return;
     }
 
     const result = await createReminder(draft, sourceTranscript);
     if (!result.ok) {
+      track('reminder create failed', {
+        entry_point: 'voice_home',
+        ...buildReminderAnalyticsProperties({
+          draft,
+          entryPoint: 'voice_home',
+          isVoiceFlow: true,
+          notificationPermissionState: notificationPermission,
+          calendarMode: getCalendarMode({ settings }),
+          parseConfidence: options?.parseConfidence,
+          parseSource: options?.parseSource,
+          missingFields: options?.missingFields,
+          confirmationMode: options?.confirmationMode,
+          resultReason: result.reason,
+        }),
+      });
       setErrorMessage(result.reason ?? 'فيه مشكلة في الحفظ. جرّب تاني.');
       return;
     }
+
+    track('reminder create succeeded', {
+      entry_point: 'voice_home',
+      notification_status: result.warning ? 'warning' : 'ok',
+      ...buildReminderAnalyticsProperties({
+        draft,
+        entryPoint: 'voice_home',
+        isVoiceFlow: true,
+        notificationPermissionState: notificationPermission,
+        calendarMode: getCalendarMode({ settings }),
+        parseConfidence: options?.parseConfidence,
+        parseSource: options?.parseSource,
+        missingFields: options?.missingFields,
+        confirmationMode: options?.confirmationMode,
+      }),
+    });
 
     setPendingParse(null);
     setTranscript('');
@@ -532,7 +668,7 @@ export function HomeScreen({ navigation }: Props) {
       return;
     }
 
-    await requestNotificationAccess();
+    await requestNotificationAccess('home_banner');
   }
 
   async function resolveSpeechLocale() {
@@ -559,6 +695,11 @@ export function HomeScreen({ navigation }: Props) {
     if (processing) {
       return;
     }
+
+    track('microphone tapped', {
+      source: 'home',
+      action: isListening ? 'stop' : 'start',
+    });
 
     if (isListening) {
       shouldProcessOnEndRef.current = true;

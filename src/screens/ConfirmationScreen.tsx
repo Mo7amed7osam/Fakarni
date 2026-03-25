@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -18,6 +18,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GhostButton } from '../components/GhostButton';
 import { SectionCard } from '../components/SectionCard';
 import { useGhost } from '../context/GhostContext';
+import {
+  buildReminderAnalyticsProperties,
+  getCalendarMode,
+  track,
+} from '../services/analytics';
 import { colors, fonts, radii, spacing } from '../theme';
 import { Recurrence, ReminderCategory, RootStackParamList } from '../types';
 import {
@@ -43,10 +48,16 @@ const categoryOptions: ReminderCategory[] = [
 ];
 
 export function ConfirmationScreen({ navigation, route }: Props) {
-  const { createReminder, updateReminder, settings } = useGhost();
+  const { createReminder, updateReminder, settings, notificationPermission } = useGhost();
   const { draft, transcript, confidence, missingFields, mode, reminderId } = route.params;
   const isEdit = mode === 'edit';
   const isManualCreate = !isEdit && !transcript.trim();
+  const entryPoint = isEdit
+    ? 'edit'
+    : isManualCreate
+      ? 'manual_confirmation'
+      : 'voice_home';
+  const isVoiceFlow = !isEdit && Boolean(transcript.trim());
   const [title, setTitle] = useState(draft.title);
   const [category, setCategory] = useState<ReminderCategory>(draft.category);
   const [eventDate, setEventDate] = useState(new Date(draft.eventAt));
@@ -62,6 +73,10 @@ export function ConfirmationScreen({ navigation, route }: Props) {
   const calendarSubtitle = settings.googleCalendar.connected
     ? 'سيُضاف إلى Google Calendar في الخلفية.'
     : 'سيُضاف إلى تقويم الجهاز إذا كانت الصلاحية متاحة.';
+  const calendarMode = getCalendarMode({
+    settings,
+    addToCalendar,
+  });
 
   const reminderAt = useMemo(
     () => dayjs(eventDate).subtract(offsetMinutes, 'minute').toDate(),
@@ -70,6 +85,62 @@ export function ConfirmationScreen({ navigation, route }: Props) {
 
   const confidenceLabel =
     confidence >= 0.8 ? 'واضح' : confidence >= 0.6 ? 'متوسط' : 'يحتاج مراجعة';
+
+  useEffect(() => {
+    track('reminder confirmation shown', {
+      entry_point: entryPoint,
+      ...buildReminderAnalyticsProperties({
+        draft: {
+          category,
+          eventAt: eventDate.toISOString(),
+          offsetMinutes,
+          recurrence,
+        },
+        entryPoint: entryPoint,
+        isVoiceFlow,
+        notificationPermissionState: notificationPermission,
+        calendarMode,
+        parseConfidence: confidence,
+        missingFields,
+        confirmationMode: 'full',
+      }),
+    });
+    // Track once when the screen is first opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function getEditedFieldsCount(nextDraft: typeof draft) {
+    let count = 0;
+    const normalizedOriginalEventAt = dayjs(draft.eventAt)
+      .second(0)
+      .millisecond(0)
+      .toISOString();
+    const normalizedNextEventAt = dayjs(nextDraft.eventAt)
+      .second(0)
+      .millisecond(0)
+      .toISOString();
+
+    if (draft.title.trim() !== nextDraft.title.trim()) {
+      count += 1;
+    }
+    if (draft.category !== nextDraft.category) {
+      count += 1;
+    }
+    if (normalizedOriginalEventAt !== normalizedNextEventAt) {
+      count += 1;
+    }
+    if (draft.offsetMinutes !== nextDraft.offsetMinutes) {
+      count += 1;
+    }
+    if (draft.recurrence !== nextDraft.recurrence) {
+      count += 1;
+    }
+    if (showAndroidCalendarToggle && Boolean(draft.addToCalendar) !== Boolean(nextDraft.addToCalendar)) {
+      count += 1;
+    }
+
+    return count;
+  }
 
   function handleDateTimeChange(
     _event: DateTimePickerEvent,
@@ -86,17 +157,6 @@ export function ConfirmationScreen({ navigation, route }: Props) {
 
   async function handleSave() {
     setValidationError('');
-    if (!title.trim()) {
-      setValidationError('لازم يكون فيه اسم للمهمة.');
-      return;
-    }
-
-    if (dayjs(reminderAt).isBefore(dayjs())) {
-      setValidationError('وقت التذكير لازم يكون في المستقبل.');
-      return;
-    }
-
-    setSaving(true);
     const nextDraft = {
       title,
       category,
@@ -105,6 +165,52 @@ export function ConfirmationScreen({ navigation, route }: Props) {
       recurrence,
       addToCalendar: showAndroidCalendarToggle ? addToCalendar : undefined,
     };
+    const editedFieldsCount = getEditedFieldsCount(nextDraft);
+    if (!title.trim()) {
+      if (!isEdit) {
+        track('reminder create failed', {
+          entry_point: entryPoint,
+          ...buildReminderAnalyticsProperties({
+            draft: nextDraft,
+            entryPoint,
+            isVoiceFlow,
+            notificationPermissionState: notificationPermission,
+            calendarMode,
+            parseConfidence: confidence,
+            missingFields,
+            confirmationMode: 'full',
+            editedFieldsCount,
+            resultReason: 'missing_title',
+          }),
+        });
+      }
+      setValidationError('لازم يكون فيه اسم للمهمة.');
+      return;
+    }
+
+    if (dayjs(reminderAt).isBefore(dayjs())) {
+      if (!isEdit) {
+        track('reminder create failed', {
+          entry_point: entryPoint,
+          ...buildReminderAnalyticsProperties({
+            draft: nextDraft,
+            entryPoint,
+            isVoiceFlow,
+            notificationPermissionState: notificationPermission,
+            calendarMode,
+            parseConfidence: confidence,
+            missingFields,
+            confirmationMode: 'full',
+            editedFieldsCount,
+            resultReason: 'past_reminder_time',
+          }),
+        });
+      }
+      setValidationError('وقت التذكير لازم يكون في المستقبل.');
+      return;
+    }
+
+    setSaving(true);
     const result =
       isEdit && reminderId
         ? await updateReminder(reminderId, nextDraft, transcript)
@@ -112,8 +218,59 @@ export function ConfirmationScreen({ navigation, route }: Props) {
     setSaving(false);
 
     if (!result.ok) {
+      if (!isEdit) {
+        track('reminder create failed', {
+          entry_point: entryPoint,
+          ...buildReminderAnalyticsProperties({
+            draft: nextDraft,
+            entryPoint,
+            isVoiceFlow,
+            notificationPermissionState: notificationPermission,
+            calendarMode,
+            parseConfidence: confidence,
+            missingFields,
+            confirmationMode: 'full',
+            editedFieldsCount,
+            resultReason: result.reason,
+          }),
+        });
+      }
       setValidationError(result.reason ?? 'فيه حاجة محتاجة تتراجع.');
       return;
+    }
+
+    if (isEdit) {
+      track('reminder updated', {
+        entry_point: entryPoint,
+        notification_status: result.warning ? 'warning' : 'ok',
+        ...buildReminderAnalyticsProperties({
+          draft: nextDraft,
+          entryPoint,
+          isVoiceFlow,
+          notificationPermissionState: notificationPermission,
+          calendarMode,
+          parseConfidence: confidence,
+          missingFields,
+          confirmationMode: 'full',
+          editedFieldsCount,
+        }),
+      });
+    } else {
+      track('reminder create succeeded', {
+        entry_point: entryPoint,
+        notification_status: result.warning ? 'warning' : 'ok',
+        ...buildReminderAnalyticsProperties({
+          draft: nextDraft,
+          entryPoint,
+          isVoiceFlow,
+          notificationPermissionState: notificationPermission,
+          calendarMode,
+          parseConfidence: confidence,
+          missingFields,
+          confirmationMode: 'full',
+          editedFieldsCount,
+        }),
+      });
     }
 
     if (result.warning) {

@@ -1,9 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  DefaultTheme,
+  useNavigationContainerRef,
+} from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { I18nManager, Platform } from 'react-native';
+import { AppState, I18nManager, Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import {
   Cairo_400Regular,
@@ -15,7 +19,9 @@ import {
 import { GhostProvider } from './src/context/GhostContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors } from './src/theme';
+import { flush, screen } from './src/services/analytics';
 import { configureNotifications } from './src/services/notifications';
+import { RootStackParamList } from './src/types';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -38,6 +44,8 @@ export default function App() {
     Cairo_600SemiBold,
     Cairo_700Bold,
   });
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
+  const routeNameRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!I18nManager.isRTL && Platform.OS !== 'web') {
@@ -45,6 +53,18 @@ export default function App() {
       I18nManager.forceRTL(true);
     }
     configureNotifications();
+  }, []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        void flush();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   if (!fontsLoaded) {
@@ -55,7 +75,27 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <GhostProvider>
-          <NavigationContainer theme={navigationTheme}>
+          <NavigationContainer
+            ref={navigationRef}
+            theme={navigationTheme}
+            onReady={() => {
+              routeNameRef.current = navigationRef.getCurrentRoute()?.name;
+              if (routeNameRef.current) {
+                screen(routeNameRef.current);
+              }
+            }}
+            onStateChange={() => {
+              const currentRouteName = navigationRef.getCurrentRoute()?.name;
+              if (!currentRouteName || routeNameRef.current === currentRouteName) {
+                return;
+              }
+
+              screen(currentRouteName, {
+                previous_screen: routeNameRef.current,
+              });
+              routeNameRef.current = currentRouteName;
+            }}
+          >
             <StatusBar style="dark" />
             <RootNavigator />
           </NavigationContainer>

@@ -44,6 +44,12 @@ import {
   getAppleCalendarAuthorizationStatus,
   requestAppleCalendarWriteAccess,
 } from '../services/appleCalendar';
+import {
+  getCalendarMode,
+  initAnalytics,
+  reminderPropertiesFromReminder,
+  track,
+} from '../services/analytics';
 import { toDayKey } from '../utils/arabic';
 import { reminderCanScheduleNotification } from '../utils/reminders';
 
@@ -56,8 +62,10 @@ interface GhostContextValue {
   notificationPermission: NotificationPermissionState;
   pendingPermissionReminders: number;
   completeOnboarding: () => void;
+  acknowledgeAnalyticsNotice: () => void;
   updateSettings: (patch: Partial<SettingsState>) => void;
-  requestNotificationAccess: () => Promise<boolean>;
+  setAnalyticsEnabled: (enabled: boolean) => Promise<void>;
+  requestNotificationAccess: (source?: string) => Promise<boolean>;
   openNotificationSettings: () => Promise<void>;
   setAppleCalendarAutoSync: (
     enabled: boolean
@@ -84,6 +92,7 @@ const defaultUsageState: UsageState = {
   dateKey: toDayKey(),
   createdCount: 0,
   isProMock: true,
+  installAt: new Date().toISOString(),
 };
 
 const defaultSettings: SettingsState = {
@@ -96,6 +105,10 @@ const defaultSettings: SettingsState = {
   },
   googleCalendar: {
     connected: false,
+  },
+  analytics: {
+    enabled: true,
+    consentShown: false,
   },
 };
 
@@ -118,6 +131,7 @@ function normalizeUsageState(usageState: UsageState) {
     dateKey: today,
     createdCount: usageState.dateKey === today ? usageState.createdCount : 0,
     isProMock: true,
+    installAt: usageState.installAt ?? new Date().toISOString(),
   };
 }
 
@@ -128,7 +142,29 @@ function normalizeSettings(settings: SettingsState | (Partial<SettingsState> & P
     ghostMode: settings.ghostMode ?? defaultSettings.ghostMode,
     appleCalendar: settings.appleCalendar ?? defaultSettings.appleCalendar,
     googleCalendar: settings.googleCalendar ?? defaultSettings.googleCalendar,
+    analytics: settings.analytics ?? defaultSettings.analytics,
   };
+}
+
+function trackNotificationPermissionTransition(
+  source: string,
+  before: NotificationPermissionState,
+  after: NotificationPermissionState
+) {
+  if (before === 'undetermined') {
+    track('notification permission requested', {
+      source,
+      previous_state: before,
+    });
+  }
+
+  if (before !== after) {
+    track('notification permission changed', {
+      source,
+      previous_state: before,
+      next_state: after,
+    });
+  }
 }
 
 export function GhostProvider({ children }: PropsWithChildren) {
@@ -211,6 +247,13 @@ export function GhostProvider({ children }: PropsWithChildren) {
         }
 
         const scheduled = await scheduleReminderNotification(reminder);
+        if (scheduled.status === 'scheduled') {
+          track('notification scheduled', {
+            source: 'permission_resync',
+            notification_status: scheduled.status,
+            ...reminderPropertiesFromReminder(reminder),
+          });
+        }
         return {
           ...reminder,
           notificationId: scheduled.notificationId,
@@ -251,6 +294,14 @@ export function GhostProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     void refreshNotificationPermission();
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    void initAnalytics(settings.analytics.enabled);
+  }, [hydrated, settings.analytics.enabled]);
 
   useEffect(() => {
     if (!hydrated) {
@@ -359,14 +410,46 @@ export function GhostProvider({ children }: PropsWithChildren) {
       notificationPermission,
       pendingPermissionReminders,
       completeOnboarding: () => {
+        track('onboarding completed');
         setSettings((current) => ({ ...current, hasSeenOnboarding: true }));
       },
+      acknowledgeAnalyticsNotice: () => {
+        setSettings((current) =>
+          current.analytics.consentShown
+            ? current
+            : normalizeSettings({
+                ...current,
+                analytics: {
+                  ...current.analytics,
+                  consentShown: true,
+                },
+              })
+        );
+      },
       updateSettings: (patch) => {
+        track('settings changed', {
+          setting_keys: Object.keys(patch).join(','),
+          ghost_mode: patch.ghostMode,
+          tts_enabled: patch.ttsEnabled,
+        });
         setSettings((current) => normalizeSettings({ ...current, ...patch }));
       },
-      requestNotificationAccess: async () => {
+      setAnalyticsEnabled: async (enabled) => {
+        setSettings((current) =>
+          normalizeSettings({
+            ...current,
+            analytics: {
+              enabled,
+              consentShown: true,
+            },
+          })
+        );
+      },
+      requestNotificationAccess: async (source = 'settings') => {
+        const before = notificationPermission;
         const permission = await requestNotificationPermission();
         setNotificationPermission(permission);
+        trackNotificationPermissionTransition(source, before, permission);
         if (permission === 'granted') {
           await syncReminderNotifications(permission);
           return true;
@@ -405,6 +488,11 @@ export function GhostProvider({ children }: PropsWithChildren) {
               },
             })
           );
+          track('apple calendar auto-sync toggled', {
+            requested_enabled: false,
+            enabled: false,
+            permission_status: status,
+          });
           return {
             enabled: false,
           };
@@ -421,6 +509,11 @@ export function GhostProvider({ children }: PropsWithChildren) {
               },
             })
           );
+          track('apple calendar auto-sync toggled', {
+            requested_enabled: true,
+            enabled: true,
+            permission_status: currentStatus,
+          });
           return {
             enabled: true,
           };
@@ -438,6 +531,11 @@ export function GhostProvider({ children }: PropsWithChildren) {
             },
           })
         );
+        track('apple calendar auto-sync toggled', {
+          requested_enabled: true,
+          enabled: nextEnabled,
+          permission_status: accessResult.status,
+        });
 
         if (nextEnabled) {
           return {
@@ -468,6 +566,9 @@ export function GhostProvider({ children }: PropsWithChildren) {
             },
           })
         );
+        track('google calendar connected', {
+          has_email: Boolean(email),
+        });
       },
       disconnectGoogleCalendar: async () => {
         await clearGoogleCalendarCredentials();
@@ -479,6 +580,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
             },
           })
         );
+        track('google calendar disconnected');
       },
       resetAppData: async () => {
         await Promise.all(
@@ -516,6 +618,10 @@ export function GhostProvider({ children }: PropsWithChildren) {
           Platform.OS === 'ios'
             ? settings.appleCalendar.autoSyncEnabled
             : Boolean(draft.addToCalendar);
+        const calendarMode = getCalendarMode({
+          settings,
+          addToCalendar: draft.addToCalendar,
+        });
 
         const reminder: Reminder = {
           id: `${Date.now()}`,
@@ -532,17 +638,47 @@ export function GhostProvider({ children }: PropsWithChildren) {
           calendarSyncStatus: shouldSyncCalendar ? 'pending' : 'none',
         };
 
+        const notificationBefore = await getNotificationPermissionState();
         const scheduled = await scheduleReminderNotification(reminder);
         reminder.notificationId = scheduled.notificationId;
         reminder.notificationStatus = scheduled.status;
+        const notificationAfter =
+          scheduled.status === 'scheduled'
+            ? 'granted'
+            : await getNotificationPermissionState();
+        trackNotificationPermissionTransition(
+          'reminder_create',
+          notificationBefore,
+          notificationAfter
+        );
+        if (scheduled.status === 'scheduled') {
+          track('notification scheduled', {
+            source: 'reminder_create',
+            notification_status: scheduled.status,
+            notification_permission_state: notificationAfter,
+            calendar_mode: calendarMode,
+            ...reminderPropertiesFromReminder(reminder),
+          });
+        }
 
         setReminders((current) => [reminder, ...current]);
         setUsageState({
           ...normalizedUsage,
           createdCount: normalizedUsage.createdCount + 1,
+          firstReminderCreatedAt:
+            normalizedUsage.firstReminderCreatedAt ?? reminder.createdAt,
+          firstVoiceReminderCreatedAt:
+            originalTranscript.trim()
+              ? normalizedUsage.firstVoiceReminderCreatedAt ?? reminder.createdAt
+              : normalizedUsage.firstVoiceReminderCreatedAt,
         });
 
         if (shouldSyncCalendar) {
+          track('calendar sync attempted', {
+            source: 'reminder_create',
+            calendar_mode: calendarMode,
+            ...reminderPropertiesFromReminder(reminder),
+          });
           void createCalendarEvent({
             title,
             date: eventAt,
@@ -551,6 +687,20 @@ export function GhostProvider({ children }: PropsWithChildren) {
             googleCalendar: settings.googleCalendar,
           })
             .then((calendarResult) => {
+              if (calendarResult.status === 'synced' || calendarResult.status === 'failed') {
+                track(
+                  calendarResult.status === 'synced'
+                    ? 'calendar sync succeeded'
+                    : 'calendar sync failed',
+                  {
+                    source: 'reminder_create',
+                    calendar_mode: calendarMode,
+                    calendar_provider: calendarResult.provider,
+                    calendar_status: calendarResult.status,
+                    ...reminderPropertiesFromReminder(reminder),
+                  }
+                );
+              }
               setReminders((current) =>
                 current.map((item) =>
                   item.id === reminder.id
@@ -565,6 +715,11 @@ export function GhostProvider({ children }: PropsWithChildren) {
               );
             })
             .catch((error) => {
+              track('calendar sync failed', {
+                source: 'reminder_create',
+                calendar_mode: calendarMode,
+                ...reminderPropertiesFromReminder(reminder),
+              });
               if (__DEV__) {
                 console.warn('Calendar sync failed', error);
               }
@@ -621,9 +776,26 @@ export function GhostProvider({ children }: PropsWithChildren) {
           calendarEventId: existing.calendarEventId,
         };
 
+        const notificationBefore = await getNotificationPermissionState();
         const scheduled = await scheduleReminderNotification(nextReminder);
         nextReminder.notificationId = scheduled.notificationId;
         nextReminder.notificationStatus = scheduled.status;
+        const notificationAfter =
+          scheduled.status === 'scheduled'
+            ? 'granted'
+            : await getNotificationPermissionState();
+        trackNotificationPermissionTransition(
+          'reminder_update',
+          notificationBefore,
+          notificationAfter
+        );
+        if (scheduled.status === 'scheduled') {
+          track('notification scheduled', {
+            source: 'reminder_update',
+            notification_status: scheduled.status,
+            ...reminderPropertiesFromReminder(nextReminder),
+          });
+        }
 
         setReminders((current) =>
           current.map((item) => (item.id === id ? nextReminder : item))
@@ -631,8 +803,8 @@ export function GhostProvider({ children }: PropsWithChildren) {
 
         return scheduled.status === 'permission_required'
           ? {
-              ok: true,
-              warning: 'التعديل اتحفظ، لكن الإشعارات ما زالت غير مفعّلة لهذا التذكير.',
+            ok: true,
+            warning: 'التعديل اتحفظ، لكن الإشعارات ما زالت غير مفعّلة لهذا التذكير.',
             }
           : { ok: true };
       },
@@ -642,6 +814,13 @@ export function GhostProvider({ children }: PropsWithChildren) {
           await cancelReminderNotification(target.notificationId);
         }
 
+        if (target) {
+          track('reminder deleted', {
+            entry_point: 'edit',
+            notification_permission_state: target.notificationStatus,
+            ...reminderPropertiesFromReminder(target),
+          });
+        }
         setReminders((current) => current.filter((item) => item.id !== id));
       },
     }),
