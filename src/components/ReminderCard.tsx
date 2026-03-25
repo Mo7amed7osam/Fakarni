@@ -184,13 +184,13 @@ export function ReminderCard({
 
       <Text style={styles.title}>{reminder.title}</Text>
       <Text style={styles.meta}>
-        {settings.uiLanguage === 'en' ? 'Event:' : 'الموعد:'}{' '}
-        {toArabicDateTimeLabel(reminder.eventAt, settings.uiLanguage)}
-      </Text>
-      <Text style={styles.meta}>
         {reminderTimeLabel}: {toArabicDateTimeLabel(snapshot.activeReminderAt, settings.uiLanguage)}
       </Text>
-      <Text style={styles.meta}>
+      <Text style={styles.metaSecondary}>
+        {settings.uiLanguage === 'en' ? 'Event:' : 'المعاد:'}{' '}
+        {toArabicDateTimeLabel(reminder.eventAt, settings.uiLanguage)}
+      </Text>
+      <Text style={styles.metaSecondary}>
         {settings.uiLanguage === 'en' ? 'Offset:' : 'الفاصل:'}{' '}
         {relativeReminderLabel(reminder.offsetMinutes, settings.uiLanguage)}
       </Text>
@@ -228,7 +228,7 @@ export function ReminderCard({
           ) : null}
           {onComplete ? (
             <Pressable onPress={onComplete} style={styles.quickPrimaryAction}>
-              <Text style={styles.quickPrimaryActionText}>{copy.common.save}</Text>
+              <Text style={styles.quickPrimaryActionText}>{copy.common.done}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -432,9 +432,16 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   meta: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 14,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  metaSecondary: {
     color: colors.textMuted,
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: 12,
     textAlign: 'right',
     writingDirection: 'rtl',
   },

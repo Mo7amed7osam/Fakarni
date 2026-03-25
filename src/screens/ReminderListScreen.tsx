@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
 import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
 import { ReminderCard } from '../components/ReminderCard';
@@ -28,6 +27,7 @@ export function ReminderListScreen({ navigation }: Props) {
   } = useGhost();
   const copy = getAppCopy(settings.uiLanguage);
   const [activeFilter, setActiveFilter] = useState<ReminderListFilter>('today');
+  const [showDoneSummary, setShowDoneSummary] = useState(false);
 
   const counts = useMemo(
     () => ({
@@ -85,41 +85,34 @@ export function ReminderListScreen({ navigation }: Props) {
       <Text style={styles.title}>{copy.reminderList.title}</Text>
       <Text style={styles.subtitle}>{copy.reminderList.subtitle}</Text>
 
-      <GhostButton label={copy.reminderList.manualCta} variant="secondary" onPress={openManualCreate} />
+      <Pressable onPress={openManualCreate} style={styles.manualLink}>
+        <Text style={styles.manualLinkText}>{copy.reminderList.manualCta}</Text>
+      </Pressable>
 
-      <LinearGradient colors={['#0D92BF', '#1ABAE9']} style={styles.heroCard}>
-        <View style={styles.heroHeader}>
-          <View style={styles.heroBadge}>
-            <Text style={styles.heroBadgeText}>{copy.reminderList.heroBadge}</Text>
-          </View>
-          <Text style={styles.heroCaption}>{copy.reminderList.heroCaption}</Text>
+      <View style={styles.heroStrip}>
+        <View style={styles.heroStripMain}>
+          <Text style={styles.heroStripValue}>{counts.today}</Text>
+          <Text style={styles.heroStripLabel}>{copy.reminderList.compactDue}</Text>
         </View>
 
-        <View style={styles.heroPrimaryRow}>
-          <View style={styles.heroCountBlock}>
-            <Text style={styles.heroValue}>{counts.today}</Text>
-            <Text style={styles.heroValueLabel}>{copy.reminderList.needsActionToday}</Text>
+        <View style={styles.heroStripStats}>
+          <View style={[styles.heroMiniPill, counts.overdue > 0 && styles.heroMiniPillOverdue]}>
+            <Text
+              style={[
+                styles.heroMiniPillText,
+                counts.overdue > 0 && styles.heroMiniPillTextOverdue,
+              ]}
+            >
+              {counts.overdue} {copy.common.overdue}
+            </Text>
           </View>
-          <View style={styles.heroCountAccent}>
-            <View style={styles.heroCountAccentDot} />
-          </View>
-        </View>
-
-        <View style={styles.heroStats}>
-          <View style={styles.heroStatCard}>
-            <Text style={styles.heroStatNumber}>{counts.overdue}</Text>
-            <Text style={styles.heroStatText}>{copy.common.overdue}</Text>
-          </View>
-          <View style={styles.heroStatCard}>
-            <Text style={styles.heroStatNumber}>{counts.upcoming}</Text>
-            <Text style={styles.heroStatText}>{copy.common.upcoming}</Text>
-          </View>
-          <View style={styles.heroStatCard}>
-            <Text style={styles.heroStatNumber}>{counts.done}</Text>
-            <Text style={styles.heroStatText}>{copy.common.done}</Text>
+          <View style={styles.heroMiniPill}>
+            <Text style={styles.heroMiniPillText}>
+              {counts.done} {copy.reminderList.compactDone}
+            </Text>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       <View style={styles.filterRow}>
         {filters.map((filter) => {
@@ -219,11 +212,17 @@ export function ReminderListScreen({ navigation }: Props) {
       )}
 
       {doneReminders.length > 0 ? (
-        <SectionCard
-          title={copy.reminderList.doneTitle}
-          subtitle={copy.reminderList.doneSubtitle}
-        >
-          <Text style={styles.doneSummary}>{copy.reminderList.doneSummary(doneReminders.length)}</Text>
+        <SectionCard title={copy.reminderList.doneTitle} subtitle={copy.reminderList.doneSubtitle}>
+          <Pressable onPress={() => setShowDoneSummary((current) => !current)} style={styles.doneToggle}>
+            <Text style={styles.doneToggleText}>
+              {showDoneSummary ? copy.reminderList.hideDone : copy.reminderList.showDone}
+            </Text>
+          </Pressable>
+          {showDoneSummary ? (
+            <Text style={styles.doneSummary}>
+              {copy.reminderList.doneSummary(doneReminders.length)}
+            </Text>
+          ) : null}
         </SectionCard>
       ) : null}
     </ScrollView>
@@ -255,109 +254,73 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     writingDirection: 'rtl',
   },
-  heroCard: {
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    shadowColor: 'rgba(8, 113, 146, 0.26)',
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
+  manualLink: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  heroHeader: {
-    gap: 6,
-    alignItems: 'flex-end',
-  },
-  heroBadge: {
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  heroBadgeText: {
-    color: colors.white,
+  manualLinkText: {
+    color: colors.primaryDark,
     fontFamily: fonts.semibold,
-    fontSize: 12,
+    fontSize: 13,
+    writingDirection: 'rtl',
   },
-  heroPrimaryRow: {
+  heroStrip: {
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  heroCountBlock: {
-    flex: 1,
+  heroStripMain: {
     alignItems: 'flex-end',
     gap: 2,
   },
-  heroCountAccent: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroCountAccentDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#8FE8FF',
-  },
-  heroValue: {
-    color: colors.white,
+  heroStripValue: {
+    color: colors.text,
     fontFamily: fonts.bold,
-    fontSize: 30,
+    fontSize: 28,
     textAlign: 'right',
   },
-  heroValueLabel: {
-    color: 'rgba(255,255,255,0.88)',
+  heroStripLabel: {
+    color: colors.textMuted,
     fontFamily: fonts.medium,
     fontSize: 12,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
-  heroCaption: {
-    color: 'rgba(255,255,255,0.82)',
-    fontFamily: fonts.medium,
-    fontSize: 12,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  heroStats: {
+  heroStripStats: {
     flexDirection: 'row-reverse',
-    gap: spacing.sm,
+    gap: spacing.xs,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
   },
-  heroStatCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderRadius: radii.md,
+  heroMiniPill: {
+    borderRadius: radii.pill,
+    backgroundColor: colors.cardMuted,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: spacing.xs,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    gap: 2,
+    borderColor: colors.line,
   },
-  heroStatNumber: {
-    color: colors.white,
-    fontFamily: fonts.bold,
-    fontSize: 22,
-    textAlign: 'right',
+  heroMiniPillOverdue: {
+    backgroundColor: 'rgba(248,113,113,0.12)',
+    borderColor: 'rgba(185,28,28,0.12)',
   },
-  heroStatText: {
-    color: 'rgba(255,255,255,0.82)',
-    fontFamily: fonts.medium,
+  heroMiniPillText: {
+    color: colors.textMuted,
+    fontFamily: fonts.semibold,
     fontSize: 12,
-    textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  heroMiniPillTextOverdue: {
+    color: '#B91C1C',
   },
   filterRow: {
     flexDirection: 'row-reverse',
@@ -399,6 +362,16 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 14,
     textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  doneToggle: {
+    alignSelf: 'flex-end',
+    marginBottom: spacing.xs,
+  },
+  doneToggleText: {
+    color: colors.primaryDark,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
     writingDirection: 'rtl',
   },
 });

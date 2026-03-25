@@ -117,7 +117,7 @@ function buildDeviceCalendarEvent(input: CalendarEventInput) {
     title: input.title,
     startDate,
     endDate,
-    notes: 'Created by VoiceGhost',
+    notes: 'Created by Fakarni',
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     alarms:
       input.reminderOffset > 0

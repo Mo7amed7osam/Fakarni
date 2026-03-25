@@ -60,7 +60,7 @@ const repliesByModeEnglish: Record<GhostMode, (input: ReplyInput) => string[]> =
   sassy: ({ title, category }) => [
     `Alright... ${title} is locked in. No excuses now.`,
     `${title} is saved. ${categoryRoastsEnglish[category]?.[0] ?? 'I will let this one slide.'}`,
-    `Saved. VoiceGhost will remember it so your brain does not have to.`,
+    `Saved. Fakarni will remember it so your brain does not have to.`,
   ],
   coach: ({ title }) => [
     `${title} is saved. Let's do it right.`,
@@ -117,7 +117,7 @@ export function buildShareMessage(
 
   if (language === 'en') {
     return [
-      'VoiceGhost 👻',
+      'Fakarni 👻',
       '',
       `Reminder: ${reminder.title}`,
       `Category: ${category}`,
@@ -129,7 +129,7 @@ export function buildShareMessage(
   }
 
   return [
-    'VoiceGhost 👻',
+    'Fakarni 👻',
     '',
     `التذكير: ${reminder.title}`,
     `الفئة: ${category}`,

@@ -11,7 +11,6 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as AuthSession from 'expo-auth-session';
 import * as Application from 'expo-application';
-import { LinearGradient } from 'expo-linear-gradient';
 import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
 import { SectionCard } from '../components/SectionCard';
@@ -24,13 +23,9 @@ import {
   isGoogleCalendarConfigured,
 } from '../services/calendar';
 import { colors, fonts, radii, spacing } from '../theme';
-import { AdsProvider, RootStackParamList } from '../types';
-import { getGhostModeLabel } from '../utils/ghostPersonality';
+import { RootStackParamList } from '../types';
 
-const ghostModes = ['sassy', 'coach', 'mom', 'calm'] as const;
 const followUpDelayOptions = [10, 20, 30, 60];
-const adsProviders: AdsProvider[] = ['none', 'admob'];
-const interstitialOptions = [0, 3, 5, 10];
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
@@ -277,35 +272,6 @@ export function SettingsScreen({ navigation }: Props) {
         <Text style={styles.subtitle}>{copy.settings.subtitle}</Text>
       </Pressable>
 
-      <LinearGradient colors={['#0D92BF', '#18B7E8']} style={styles.heroCard}>
-        <Text style={styles.heroLabel}>{copy.settings.appStatus}</Text>
-        <Text style={styles.heroValue}>
-          {notificationsReady ? copy.settings.ready : copy.settings.needsStep}
-        </Text>
-        <View style={styles.heroRow}>
-          <View style={styles.heroPill}>
-            <Text style={styles.heroPillText}>{copy.settings.egyptianVoice}</Text>
-          </View>
-          <View style={styles.heroPill}>
-            <Text style={styles.heroPillText}>
-              {notificationsReady
-                ? copy.settings.notificationsOn
-                : copy.settings.notificationsOff}
-            </Text>
-          </View>
-        </View>
-      </LinearGradient>
-
-      <SectionCard
-        title={copy.settings.essentialsTitle}
-        subtitle={copy.settings.essentialsSubtitle}
-      >
-        <View style={styles.planCard}>
-          <Text style={styles.planValue}>{copy.settings.promiseTitle}</Text>
-          <Text style={styles.planText}>{copy.settings.promiseText}</Text>
-        </View>
-      </SectionCard>
-
       <SectionCard title={copy.settings.languageTitle} subtitle={copy.settings.languageSubtitle}>
         <View style={styles.followUpCard}>
           <Text style={styles.followUpCardTitle}>{copy.settings.languageRowTitle}</Text>
@@ -523,8 +489,8 @@ export function SettingsScreen({ navigation }: Props) {
       )}
 
       <SectionCard
-        title={copy.settings.analyticsTitle}
-        subtitle={copy.settings.analyticsSubtitle}
+        title={copy.settings.trustTitle}
+        subtitle={copy.settings.trustSubtitle}
       >
         <View style={styles.row}>
           <Switch
@@ -557,179 +523,18 @@ export function SettingsScreen({ navigation }: Props) {
               : 'لا يتم إرسال النص الخام أو اسم التذكير. ويمكنك إيقاف التحليلات في أي وقت من هنا.'}
           </Text>
         </View>
-      </SectionCard>
-
-      <SectionCard
-        title={copy.settings.internalToolsTitle}
-        subtitle={copy.settings.internalToolsSubtitle}
-      >
-        <GhostButton
-          label={copy.settings.openFounderDashboard}
-          variant="secondary"
-          onPress={() => navigation.navigate('FounderDashboard')}
-        />
-      </SectionCard>
-
-      <SectionCard
-        title={copy.settings.ghostPersonalityTitle}
-        subtitle={copy.settings.ghostPersonalitySubtitle}
-      >
-        <View style={styles.modeRow}>
-          {ghostModes.map((mode) => (
-            <Pressable
-              key={mode}
-              onPress={() => updateSettings({ ghostMode: mode })}
-              style={[
-                styles.modeChip,
-                settings.ghostMode === mode && styles.modeChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.modeChipText,
-                  settings.ghostMode === mode && styles.modeChipTextActive,
-                ]}
-              >
-                {getGhostModeLabel(mode, settings.uiLanguage)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </SectionCard>
-
-      <SectionCard title={copy.settings.helpPrivacyTitle}>
         <Pressable onPress={() => navigation.navigate('HelpFaq')} style={styles.linkCard}>
-          <Text style={styles.linkLabel}>{copy.settings.helpPrivacyLink}</Text>
+          <Text style={styles.linkLabel}>{copy.settings.supportTitle}</Text>
+          <Text style={styles.linkMeta}>{copy.settings.supportSubtitle}</Text>
+        </Pressable>
+
+        <Pressable onPress={handleFounderTap} style={styles.versionRow}>
+          <Text style={styles.versionLabel}>{copy.settings.versionLabel}</Text>
+          <View style={styles.versionChip}>
+            <Text style={styles.versionChipText}>v{appVersion}</Text>
+          </View>
         </Pressable>
       </SectionCard>
-
-      <SectionCard title={copy.settings.adsTitle} subtitle={copy.settings.adsSubtitle}>
-        <View style={styles.row}>
-          <Switch
-            value={settings.ads.enabled}
-            onValueChange={(value) =>
-              updateSettings({
-                ads: {
-                  ...settings.ads,
-                  enabled: value,
-                },
-              })
-            }
-            trackColor={{ false: '#D9D2C5', true: colors.primary }}
-          />
-          <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>{copy.settings.adsEnabled}</Text>
-            <Text style={styles.rowSubtitle}>{copy.settings.adsEnabledSubtitle}</Text>
-          </View>
-        </View>
-
-        <View style={styles.followUpCard}>
-          <Text style={styles.followUpCardTitle}>{copy.settings.adsProvider}</Text>
-        </View>
-        <View style={styles.followUpChipRow}>
-          {adsProviders.map((provider) => (
-            <Pressable
-              key={provider}
-              onPress={() =>
-                updateSettings({
-                  ads: {
-                    ...settings.ads,
-                    provider,
-                  },
-                })
-              }
-              style={[
-                styles.followUpChip,
-                settings.ads.provider === provider && styles.followUpChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.followUpChipText,
-                  settings.ads.provider === provider && styles.followUpChipTextActive,
-                ]}
-              >
-                {provider === 'none' ? 'None' : 'AdMob'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.row}>
-          <Switch
-            value={settings.ads.homeBannerEnabled}
-            onValueChange={(value) =>
-              updateSettings({
-                ads: {
-                  ...settings.ads,
-                  homeBannerEnabled: value,
-                },
-              })
-            }
-            trackColor={{ false: '#D9D2C5', true: colors.primary }}
-          />
-          <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>{copy.settings.homeBanner}</Text>
-            <Text style={styles.rowSubtitle}>{copy.settings.homeBannerSubtitle}</Text>
-          </View>
-        </View>
-
-        <View style={styles.followUpCard}>
-          <Text style={styles.followUpCardTitle}>{copy.settings.interstitialEvery}</Text>
-        </View>
-        <View style={styles.followUpChipRow}>
-          {interstitialOptions.map((value) => (
-            <Pressable
-              key={value}
-              onPress={() =>
-                updateSettings({
-                  ads: {
-                    ...settings.ads,
-                    interstitialEveryActions: value,
-                  },
-                })
-              }
-              style={[
-                styles.followUpChip,
-                settings.ads.interstitialEveryActions === value && styles.followUpChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.followUpChipText,
-                  settings.ads.interstitialEveryActions === value &&
-                    styles.followUpChipTextActive,
-                ]}
-              >
-                {value === 0 ? copy.settings.noInterstitial : value}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.row}>
-          <Switch
-            value={settings.ads.hideAdsForFutureSubscribers}
-            onValueChange={(value) =>
-              updateSettings({
-                ads: {
-                  ...settings.ads,
-                  hideAdsForFutureSubscribers: value,
-                },
-              })
-            }
-            trackColor={{ false: '#D9D2C5', true: colors.primary }}
-          />
-          <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>{copy.settings.hideForSubscribers}</Text>
-            <Text style={styles.rowSubtitle}>{copy.settings.hideForSubscribersSubtitle}</Text>
-          </View>
-        </View>
-      </SectionCard>
-
-      <Pressable onPress={handleFounderTap} style={styles.versionChip}>
-        <Text style={styles.versionChipText}>v{appVersion}</Text>
-      </Pressable>
     </ScrollView>
   );
 }
@@ -762,44 +567,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 22,
     writingDirection: 'rtl',
-  },
-  heroCard: {
-    borderRadius: radii.lg,
-    padding: spacing.xl,
-    gap: spacing.md,
-    shadowColor: colors.shadow,
-    shadowOpacity: 1,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 5,
-  },
-  heroLabel: {
-    color: 'rgba(255,255,255,0.76)',
-    fontFamily: fonts.medium,
-    fontSize: 13,
-  },
-  heroValue: {
-    color: colors.white,
-    fontFamily: fonts.bold,
-    fontSize: 34,
-  },
-  heroRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  heroPill: {
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  heroPillText: {
-    color: colors.white,
-    fontFamily: fonts.semibold,
-    fontSize: 12,
   },
   row: {
     flexDirection: 'row-reverse',
@@ -985,34 +752,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     writingDirection: 'rtl',
   },
-  planCard: {
-    backgroundColor: '#E9F8FE',
-    borderRadius: radii.md,
-    padding: spacing.lg,
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: '#CBEAF7',
-  },
-  planValue: {
-    fontFamily: fonts.bold,
-    fontSize: 24,
-    color: colors.primaryDark,
-    textAlign: 'right',
-  },
-  planText: {
-    fontFamily: fonts.medium,
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'right',
-    lineHeight: 22,
-    writingDirection: 'rtl',
-  },
   linkCard: {
     backgroundColor: colors.white,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.line,
     padding: spacing.md,
+    gap: spacing.xs,
   },
   linkLabel: {
     fontFamily: fonts.semibold,
@@ -1021,8 +767,28 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  linkMeta: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  versionRow: {
+    marginTop: spacing.sm,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  versionLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   versionChip: {
-    alignSelf: 'center',
     backgroundColor: colors.cardMuted,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
@@ -1034,31 +800,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 12,
     color: colors.textMuted,
-  },
-  modeRow: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  modeChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.cardMuted,
-  },
-  modeChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  modeChipText: {
-    fontFamily: fonts.semibold,
-    fontSize: 13,
-    color: colors.text,
-    writingDirection: 'rtl',
-  },
-  modeChipTextActive: {
-    color: colors.white,
   },
 });

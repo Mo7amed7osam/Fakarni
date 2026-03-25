@@ -14,7 +14,6 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import dayjs from 'dayjs';
-import { LinearGradient } from 'expo-linear-gradient';
 import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
 import { SectionCard } from '../components/SectionCard';
@@ -322,7 +321,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
             : copy.confirmation.subtitleVoice}
       </Text>
 
-      <LinearGradient colors={['#0D92BF', '#18B7E8']} style={styles.heroCard}>
+      <View style={styles.heroCard}>
         <Text style={styles.heroLabel}>
           {isEdit
             ? copy.confirmation.heroEdit
@@ -342,7 +341,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                 : `راجع: ${missingFields.join(' / ')}`
               : copy.confirmation.heroVoiceCaptionNoMissing}
         </Text>
-      </LinearGradient>
+      </View>
 
       {transcript.trim() ? (
         <SectionCard title={isEdit ? copy.confirmation.originalText : copy.confirmation.heardText}>
@@ -361,33 +360,6 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           style={styles.input}
           textAlign="right"
         />
-      </SectionCard>
-
-      <SectionCard
-        title={copy.confirmation.taskCategory}
-        subtitle={copy.confirmation.taskCategorySubtitle}
-      >
-        <View style={styles.choiceRow}>
-          {categoryOptions.map((value) => (
-            <Pressable
-              key={value}
-              onPress={() => setCategory(value)}
-              style={[
-                styles.choiceChip,
-                value === category && styles.choiceChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.choiceText,
-                  value === category && styles.choiceTextActive,
-                ]}
-              >
-                {getReminderCategoryLabel(value, settings.uiLanguage)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
       </SectionCard>
 
       <SectionCard title={copy.confirmation.schedule}>
@@ -465,6 +437,33 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                 ]}
               >
                 {getRecurrenceLabel(value, settings.uiLanguage)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </SectionCard>
+
+      <SectionCard
+        title={copy.confirmation.taskCategory}
+        subtitle={copy.confirmation.taskCategorySubtitle}
+      >
+        <View style={styles.choiceRow}>
+          {categoryOptions.map((value) => (
+            <Pressable
+              key={value}
+              onPress={() => setCategory(value)}
+              style={[
+                styles.choiceChip,
+                value === category && styles.choiceChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.choiceText,
+                  value === category && styles.choiceTextActive,
+                ]}
+              >
+                {getReminderCategoryLabel(value, settings.uiLanguage)}
               </Text>
             </Pressable>
           ))}
@@ -550,35 +549,38 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   heroCard: {
+    backgroundColor: colors.card,
     borderRadius: radii.lg,
-    padding: spacing.xl,
+    padding: spacing.lg,
     gap: spacing.sm,
-    shadowColor: colors.shadow,
-    shadowOpacity: 1,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   heroLabel: {
-    color: 'rgba(255,255,255,0.76)',
-    fontFamily: fonts.medium,
-    fontSize: 13,
+    alignSelf: 'flex-end',
+    color: colors.primary,
+    backgroundColor: 'rgba(108,92,231,0.08)',
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   heroValue: {
-    color: colors.white,
+    color: colors.text,
     fontFamily: fonts.bold,
-    fontSize: 34,
+    fontSize: 22,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   heroCaption: {
-    color: 'rgba(255,255,255,0.86)',
+    color: colors.textMuted,
     fontFamily: fonts.medium,
     fontSize: 14,
     textAlign: 'right',
-    lineHeight: 22,
+    lineHeight: 20,
     writingDirection: 'rtl',
   },
   bodyText: {

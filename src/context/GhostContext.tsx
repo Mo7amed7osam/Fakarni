@@ -115,7 +115,7 @@ const defaultSettings: SettingsState = {
   uiLanguage: 'ar-EG',
   ttsEnabled: true,
   hasSeenOnboarding: false,
-  ghostMode: 'sassy',
+  ghostMode: 'calm',
   followUpEnabled: true,
   followUpDelayMinutes: 20,
   appleCalendar: {
@@ -187,7 +187,7 @@ function normalizeSettings(
     ...defaultSettings,
     ...settings,
     uiLanguage: settings.uiLanguage ?? defaultSettings.uiLanguage,
-    ghostMode: settings.ghostMode ?? defaultSettings.ghostMode,
+    ghostMode: defaultSettings.ghostMode,
     followUpEnabled: settings.followUpEnabled ?? defaultSettings.followUpEnabled,
     followUpDelayMinutes:
       settings.followUpDelayMinutes ?? defaultSettings.followUpDelayMinutes,
@@ -1067,12 +1067,13 @@ export function GhostProvider({ children }: PropsWithChildren) {
           reminderCanScheduleNotification(reminder)
           ? {
               ok: true,
+              reminderId: reminder.id,
               warning:
                 settings.uiLanguage === 'en'
                   ? 'The reminder was saved, but you need to enable notifications so it arrives on time.'
                   : 'التذكير اتحفظ، لكن لازم تفعّل الإشعارات علشان يوصلك في وقته.',
             }
-          : { ok: true };
+          : { ok: true, reminderId: reminder.id };
       },
       updateReminder: async (id, draft, originalTranscript) => {
         const existing = remindersRef.current.find((item) => item.id === id);

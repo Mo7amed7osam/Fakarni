@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Application from 'expo-application';
 import { GhostButton } from '../components/GhostButton';
@@ -12,10 +12,12 @@ import {
   subscribeAnalyticsDebug,
 } from '../services/analytics';
 import { colors, fonts, radii, spacing } from '../theme';
-import { RootStackParamList } from '../types';
+import { AdsProvider, RootStackParamList } from '../types';
 import { toArabicDateTimeLabel } from '../utils/arabic';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FounderDashboard'>;
+const adsProviders: AdsProvider[] = ['none', 'admob'];
+const interstitialOptions = [0, 3, 5, 10];
 
 function formatJsonValue(value: Record<string, unknown>) {
   const serialized = JSON.stringify(value);
@@ -29,6 +31,7 @@ export function FounderDashboardScreen({ navigation }: Props) {
     usageState,
     notificationPermission,
     pendingPermissionReminders,
+    updateSettings,
   } = useGhost();
   const [debugState, setDebugState] = useState(getAnalyticsDebugState());
   const recurringCount = reminders.filter(
@@ -76,7 +79,7 @@ export function FounderDashboardScreen({ navigation }: Props) {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.eyebrow}>Founder diagnostics</Text>
-      <Text style={styles.title}>VoiceGhost Dashboard</Text>
+      <Text style={styles.title}>Fakarni Dashboard</Text>
       <Text style={styles.subtitle}>
         Snapshot for product health, analytics wiring, and local reminder behavior.
       </Text>
@@ -159,9 +162,150 @@ export function FounderDashboardScreen({ navigation }: Props) {
           <Text style={styles.infoText}>
             Follow-up delay: {settings.followUpDelayMinutes} minutes
           </Text>
+          <Text style={styles.infoText}>Ads enabled: {settings.ads.enabled ? 'Yes' : 'No'}</Text>
+          <Text style={styles.infoText}>Ads provider: {settings.ads.provider}</Text>
           <Text style={styles.infoText}>Recurring reminders: {recurringCount}</Text>
           <Text style={styles.infoText}>Calendar synced reminders: {syncedCalendarCount}</Text>
           <Text style={styles.infoText}>Calendar sync failures: {failedCalendarCount}</Text>
+        </View>
+      </SectionCard>
+
+      <SectionCard
+        title="Monetization Controls"
+        subtitle="Internal-only ad config. Keep this out of the public settings surface."
+      >
+        <View style={styles.controlRow}>
+          <Switch
+            value={settings.ads.enabled}
+            onValueChange={(value) =>
+              updateSettings({
+                ads: {
+                  ...settings.ads,
+                  enabled: value,
+                },
+              })
+            }
+            trackColor={{ false: '#D9D2C5', true: colors.primary }}
+          />
+          <View style={styles.controlText}>
+            <Text style={styles.controlTitle}>Enable ads</Text>
+            <Text style={styles.controlSubtitle}>
+              Founder toggle for future monetization behavior.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.controlCard}>
+          <Text style={styles.controlCardTitle}>Ads provider</Text>
+          <Text style={styles.controlCardSubtitle}>
+            Prepared only. No real SDK is wired in this build.
+          </Text>
+        </View>
+        <View style={styles.chipRow}>
+          {adsProviders.map((provider) => (
+            <Pressable
+              key={provider}
+              onPress={() =>
+                updateSettings({
+                  ads: {
+                    ...settings.ads,
+                    provider,
+                  },
+                })
+              }
+              style={[
+                styles.chip,
+                settings.ads.provider === provider && styles.chipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  settings.ads.provider === provider && styles.chipTextActive,
+                ]}
+              >
+                {provider === 'none' ? 'None' : 'AdMob'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={styles.controlRow}>
+          <Switch
+            value={settings.ads.homeBannerEnabled}
+            onValueChange={(value) =>
+              updateSettings({
+                ads: {
+                  ...settings.ads,
+                  homeBannerEnabled: value,
+                },
+              })
+            }
+            trackColor={{ false: '#D9D2C5', true: colors.primary }}
+          />
+          <View style={styles.controlText}>
+            <Text style={styles.controlTitle}>Home banner</Text>
+            <Text style={styles.controlSubtitle}>
+              Reserved for a future banner placement on Home.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.controlCard}>
+          <Text style={styles.controlCardTitle}>Interstitial every X actions</Text>
+          <Text style={styles.controlCardSubtitle}>
+            Controls future pacing for interstitial experiments.
+          </Text>
+        </View>
+        <View style={styles.chipRow}>
+          {interstitialOptions.map((value) => (
+            <Pressable
+              key={value}
+              onPress={() =>
+                updateSettings({
+                  ads: {
+                    ...settings.ads,
+                    interstitialEveryActions: value,
+                  },
+                })
+              }
+              style={[
+                styles.chip,
+                settings.ads.interstitialEveryActions === value && styles.chipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  settings.ads.interstitialEveryActions === value &&
+                    styles.chipTextActive,
+                ]}
+              >
+                {value === 0 ? 'None' : String(value)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={styles.controlRow}>
+          <Switch
+            value={settings.ads.hideAdsForFutureSubscribers}
+            onValueChange={(value) =>
+              updateSettings({
+                ads: {
+                  ...settings.ads,
+                  hideAdsForFutureSubscribers: value,
+                },
+              })
+            }
+            trackColor={{ false: '#D9D2C5', true: colors.primary }}
+          />
+          <View style={styles.controlText}>
+            <Text style={styles.controlTitle}>Hide ads for future subscribers</Text>
+            <Text style={styles.controlSubtitle}>
+              Keeps a clean premium path ready without another data migration.
+            </Text>
+          </View>
         </View>
       </SectionCard>
 
@@ -278,6 +422,74 @@ const styles = StyleSheet.create({
   actionsRow: {
     gap: spacing.sm,
     marginTop: spacing.sm,
+  },
+  controlRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  controlText: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  controlTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 16,
+    color: colors.text,
+  },
+  controlSubtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.textMuted,
+    lineHeight: 20,
+  },
+  controlCard: {
+    backgroundColor: '#EEF4FF',
+    borderRadius: radii.md,
+    padding: spacing.md,
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#D7E3FF',
+  },
+  controlCardTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 15,
+    color: colors.primaryDark,
+  },
+  controlCardSubtitle: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.textMuted,
+    lineHeight: 20,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  chip: {
+    minWidth: 76,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.cardMuted,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  chipText: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+  },
+  chipTextActive: {
+    color: colors.white,
   },
   emptyText: {
     fontFamily: fonts.medium,

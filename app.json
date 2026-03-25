@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "VoiceGhost",
+    "name": "Fakarni",
     "slug": "voiceghost",
     "scheme": "voiceghost",
     "version": "1.0.0",
@@ -16,13 +16,13 @@
       "bundleIdentifier": "com.mohamedhosam.voiceghostapp",
       "supportsTablet": false,
       "infoPlist": {
-        "NSCalendarsUsageDescription": "يسمح VoiceGhost بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",
-        "NSCalendarsFullAccessUsageDescription": "يسمح VoiceGhost بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",
-        "NSCalendarsWriteOnlyAccessUsageDescription": "يسمح VoiceGhost بحفظ تذكيراتك في التقويم دون الوصول الكامل إلى أحداثك.",
-        "NSRemindersUsageDescription": "يسمح VoiceGhost بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.",
-        "NSRemindersFullAccessUsageDescription": "يسمح VoiceGhost بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.",
-        "NSMicrophoneUsageDescription": "يسمح VoiceGhost بتسجيل صوتك لتحويل كلامك إلى تذكيرات.",
-        "NSSpeechRecognitionUsageDescription": "يسمح VoiceGhost بتحويل الكلام العربي إلى نص لإنشاء التذكيرات بسرعة."
+        "NSCalendarsUsageDescription": "يسمح Fakarni بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",
+        "NSCalendarsFullAccessUsageDescription": "يسمح Fakarni بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "يسمح Fakarni بحفظ تذكيراتك في التقويم دون الوصول الكامل إلى أحداثك.",
+        "NSRemindersUsageDescription": "يسمح Fakarni بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.",
+        "NSRemindersFullAccessUsageDescription": "يسمح Fakarni بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.",
+        "NSMicrophoneUsageDescription": "يسمح Fakarni بتسجيل صوتك لتحويل كلامك إلى تذكيرات.",
+        "NSSpeechRecognitionUsageDescription": "يسمح Fakarni بتحويل الكلام العربي إلى نص لإنشاء التذكيرات بسرعة."
       }
     },
     "android": {
@@ -51,15 +51,15 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "يسمح VoiceGhost بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",
-          "remindersPermission": "يسمح VoiceGhost بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام."
+          "calendarPermission": "يسمح Fakarni بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",
+          "remindersPermission": "يسمح Fakarni بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام."
         }
       ],
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "اسمح لـ VoiceGhost باستخدام الميكروفون.",
-          "speechRecognitionPermission": "اسمح لـ VoiceGhost بالتعرف على الكلام.",
+          "microphonePermission": "اسمح لـ Fakarni باستخدام الميكروفون.",
+          "speechRecognitionPermission": "اسمح لـ Fakarni بالتعرف على الكلام.",
           "androidSpeechServicePackages": [
             "com.google.android.googlequicksearchbox"
           ]

@@ -5,7 +5,6 @@ import {
   Easing,
   Platform,
   Pressable,
-  Share,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -33,7 +32,6 @@ import { colors, fonts, radii, spacing } from '../theme';
 import { ReminderDraft, RootStackParamList } from '../types';
 import { parseReminderText } from '../utils/parser';
 import { getReminderCategoryLabel } from '../utils/categorization';
-import { buildGhostReply } from '../utils/ghostPersonality';
 import {
   toArabicDateLabel,
   toArabicTimeLabel,
@@ -70,13 +68,24 @@ function RemindersGlyph() {
 }
 
 function SettingsGlyph() {
+  const teeth = [
+    'toothTop',
+    'toothBottom',
+    'toothLeft',
+    'toothRight',
+    'toothTopLeft',
+    'toothTopRight',
+    'toothBottomLeft',
+    'toothBottomRight',
+  ] as const;
+
   return (
     <View style={navGlyphStyles.gearWrap}>
+      {teeth.map((tooth) => (
+        <View key={tooth} style={[navGlyphStyles.gearTooth, navGlyphStyles[tooth]]} />
+      ))}
+      <View style={navGlyphStyles.gearRing} />
       <View style={navGlyphStyles.gearCenter} />
-      <View style={[navGlyphStyles.gearTooth, navGlyphStyles.toothTop]} />
-      <View style={[navGlyphStyles.gearTooth, navGlyphStyles.toothBottom]} />
-      <View style={[navGlyphStyles.gearTooth, navGlyphStyles.toothLeft]} />
-      <View style={[navGlyphStyles.gearTooth, navGlyphStyles.toothRight]} />
     </View>
   );
 }
@@ -215,6 +224,7 @@ export function HomeScreen({ navigation }: Props) {
   const {
     reminders,
     createReminder,
+    removeReminder,
     settings,
     notificationPermission,
     pendingPermissionReminders,
@@ -232,7 +242,9 @@ export function HomeScreen({ navigation }: Props) {
   const [confirmPaused, setConfirmPaused] = useState(false);
   const [showPickerMode, setShowPickerMode] = useState<'date' | 'time' | null>(null);
   const [toastMessage, setToastMessage] = useState('');
-  const [toastShareText, setToastShareText] = useState('');
+  const [toastTone, setToastTone] = useState<'success' | 'warning'>('success');
+  const [undoReminderId, setUndoReminderId] = useState<string | null>(null);
+  const [exampleIndex, setExampleIndex] = useState(0);
   const pulse = useRef(new Animated.Value(1)).current;
   const confirmOpacity = useRef(new Animated.Value(0)).current;
   const confirmScale = useRef(new Animated.Value(0.95)).current;
@@ -253,6 +265,8 @@ export function HomeScreen({ navigation }: Props) {
       pendingParse.missingFields.length === 0 &&
       !pendingParse.requiresManualConfirmation
   );
+  const examplePrompts = [copy.home.exampleOne, copy.home.exampleTwo];
+  const activeExample = examplePrompts[exampleIndex % examplePrompts.length];
 
   useSpeechRecognitionEvent('start', () => {
     setIsListening(true);
@@ -331,10 +345,18 @@ export function HomeScreen({ navigation }: Props) {
 
     const timeout = setTimeout(() => {
       setToastMessage('');
-      setToastShareText('');
+      setUndoReminderId(null);
     }, 3000);
     return () => clearTimeout(timeout);
   }, [toastMessage]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setExampleIndex((current) => current + 1);
+    }, 3200);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!isListening) {
@@ -736,23 +758,19 @@ export function HomeScreen({ navigation }: Props) {
     setPendingParse(null);
     setTranscript('');
     setErrorMessage('');
-    const reply = buildGhostReply({
-      mode: settings.ghostMode,
-      title: draft.title,
-      category: draft.category,
-      recurrence: draft.recurrence,
-      language: settings.uiLanguage,
-    });
-    setToastMessage(result.warning ?? reply);
-    setToastShareText(
-      result.warning
-        ? ''
-        : settings.uiLanguage === 'en'
-          ? ['VoiceGhost 👻', '', `You said: ${sourceTranscript}`, `Ghost reply: ${reply}`].join(
-              '\n'
-            )
-          : ['VoiceGhost 👻', '', `قلت: ${sourceTranscript}`, `الجوست رد: ${reply}`].join('\n')
-    );
+    setToastTone(result.warning ? 'warning' : 'success');
+    setToastMessage(result.warning ?? copy.home.savedToast);
+    setUndoReminderId(result.reminderId ?? null);
+  }
+
+  async function handleUndoCreate() {
+    if (!undoReminderId) {
+      return;
+    }
+
+    await removeReminder(undoReminderId);
+    setUndoReminderId(null);
+    setToastMessage('');
   }
 
   async function handleNotificationAction() {
@@ -867,7 +885,7 @@ export function HomeScreen({ navigation }: Props) {
             showLabel={false}
           />
           <View style={styles.voiceBrand}>
-            <Text style={styles.voiceBrandTitle}>VoiceGhost</Text>
+            <Text style={styles.voiceBrandTitle}>Fakarni</Text>
             <Text style={styles.voiceBrandSubtitle}>{copy.home.brandSubtitle}</Text>
           </View>
           <NavIconButton
@@ -959,6 +977,12 @@ export function HomeScreen({ navigation }: Props) {
                   ? copy.home.subhintListening
                   : copy.home.subhintIdle}
             </Text>
+            {!isListening && !processing ? (
+              <View style={styles.examplePrompt}>
+                <Text style={styles.examplePromptLabel}>{copy.home.exampleLabel}</Text>
+                <Text style={styles.examplePromptText}>{activeExample}</Text>
+              </View>
+            ) : null}
             {isListening ? <Waveform pulse={pulse} /> : null}
             {processing ? (
               <ActivityIndicator color={colors.primaryDark} style={styles.processingSpinner} />
@@ -1184,24 +1208,6 @@ export function HomeScreen({ navigation }: Props) {
                   {relativeReminderLabel(pendingParse.draft.offsetMinutes, settings.uiLanguage)}
                 </Text>
 
-                {pendingParse.missingFields.length > 0 ? (
-                  <View style={styles.confirmWarningRow}>
-                    {pendingParse.missingFields.map((field) => (
-                      <View key={field} style={styles.confirmWarningChip}>
-                        <Text style={styles.confirmWarningChipText}>
-                          {field === 'time'
-                            ? copy.home.unclearTime
-                            : field === 'date'
-                              ? copy.home.unclearDate
-                              : field === 'title'
-                                ? copy.home.unclearTitle
-                                : field}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-
                 <View style={styles.confirmActions}>
                   <Pressable
                     onPress={() => {
@@ -1252,16 +1258,21 @@ export function HomeScreen({ navigation }: Props) {
         ) : null}
 
         {toastMessage ? (
-          <View style={styles.toast}>
+          <View
+            style={[
+              styles.toast,
+              toastTone === 'warning' ? styles.toastWarning : styles.toastSuccess,
+            ]}
+          >
             <Text style={styles.toastText}>{toastMessage}</Text>
-            {toastShareText ? (
+            {undoReminderId ? (
               <Pressable
                 onPress={() => {
-                  void Share.share({ message: toastShareText });
+                  void handleUndoCreate();
                 }}
                 style={styles.toastShare}
               >
-                <Text style={styles.toastShareText}>{copy.common.share}</Text>
+                <Text style={styles.toastShareText}>{copy.home.undo}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -1305,7 +1316,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 52,
+    minHeight: 44,
   },
   voiceBrand: {
     alignItems: 'center',
@@ -1313,12 +1324,12 @@ const styles = StyleSheet.create({
   },
   voiceBrandTitle: {
     fontFamily: fonts.bold,
-    fontSize: 18,
+    fontSize: 16,
     color: colors.text,
   },
   voiceBrandSubtitle: {
     fontFamily: fonts.medium,
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textMuted,
     writingDirection: 'rtl',
   },
@@ -1487,7 +1498,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.92)',
     borderWidth: 1,
     borderColor: colors.line,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     gap: spacing.sm,
     shadowColor: colors.shadow,
     shadowOpacity: 0.9,
@@ -1525,14 +1537,14 @@ const styles = StyleSheet.create({
   },
   latestReminderTitle: {
     fontFamily: fonts.bold,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   latestReminderMeta: {
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
     textAlign: 'right',
     lineHeight: 20,
@@ -1614,10 +1626,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   navIconShell: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.72)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.8)',
     borderWidth: 1,
     borderColor: 'rgba(108,92,231,0.1)',
     alignItems: 'center',
@@ -1808,6 +1820,29 @@ const styles = StyleSheet.create({
   micSubhintCompact: {
     fontSize: 11,
     lineHeight: 16,
+  },
+  examplePrompt: {
+    marginTop: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    gap: 2,
+  },
+  examplePromptLabel: {
+    color: colors.textMuted,
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+    writingDirection: 'rtl',
+  },
+  examplePromptText: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 13,
+    writingDirection: 'rtl',
   },
   waveRow: {
     flexDirection: 'row',
@@ -2086,8 +2121,8 @@ const styles = StyleSheet.create({
   },
   confirmCardInner: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
-    gap: spacing.md,
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
   },
   confirmStateBadge: {
     alignSelf: 'flex-end',
@@ -2126,9 +2161,9 @@ const styles = StyleSheet.create({
   confirmWarningText: {
     color: '#9A6700',
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: 12,
     textAlign: 'right',
-    lineHeight: 20,
+    lineHeight: 18,
     writingDirection: 'rtl',
   },
   confirmDetailGrid: {
@@ -2210,26 +2245,6 @@ const styles = StyleSheet.create({
   confirmPickerLabelDate: {
     paddingBottom: spacing.xs,
   },
-  confirmWarningRow: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginTop: -2,
-  },
-  confirmWarningChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.pill,
-    backgroundColor: '#FFF2C7',
-    borderWidth: 1,
-    borderColor: '#F6D88A',
-  },
-  confirmWarningChipText: {
-    color: '#9A6700',
-    fontFamily: fonts.semibold,
-    fontSize: 12,
-    writingDirection: 'rtl',
-  },
   confirmActions: {
     flexDirection: 'row-reverse',
     gap: spacing.sm,
@@ -2281,10 +2296,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: spacing.lg,
     alignSelf: 'center',
-    backgroundColor: colors.text,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radii.pill,
+    borderRadius: radii.lg,
     shadowColor: colors.shadow,
     shadowOpacity: 1,
     shadowRadius: 16,
@@ -2294,23 +2308,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     maxWidth: '88%',
+    borderWidth: 1,
+  },
+  toastSuccess: {
+    backgroundColor: colors.white,
+    borderColor: colors.line,
+  },
+  toastWarning: {
+    backgroundColor: '#FFF8E8',
+    borderColor: '#F3D48E',
   },
   toastText: {
     flex: 1,
-    color: colors.white,
+    color: colors.text,
     fontFamily: fonts.bold,
-    fontSize: 14,
+    fontSize: 13,
     writingDirection: 'rtl',
     textAlign: 'right',
   },
   toastShare: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(108,92,231,0.08)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
   toastShareText: {
-    color: colors.white,
+    color: colors.primary,
     fontFamily: fonts.semibold,
     fontSize: 12,
     writingDirection: 'rtl',
@@ -2499,37 +2522,65 @@ const navGlyphStyles = StyleSheet.create({
     backgroundColor: colors.primaryDark,
   },
   gearWrap: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  gearCenter: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  gearRing: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     borderWidth: 2,
     borderColor: colors.primaryDark,
+    backgroundColor: 'transparent',
+  },
+  gearCenter: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primaryDark,
   },
   gearTooth: {
     position: 'absolute',
     width: 3,
-    height: 6,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 1.5,
     backgroundColor: colors.primaryDark,
   },
   toothTop: {
-    top: 0,
+    top: 0.5,
   },
   toothBottom: {
-    bottom: 0,
+    bottom: 0.5,
   },
   toothLeft: {
-    left: 0,
+    left: 0.5,
     transform: [{ rotate: '90deg' }],
   },
   toothRight: {
-    right: 0,
+    right: 0.5,
     transform: [{ rotate: '90deg' }],
+  },
+  toothTopLeft: {
+    top: 1.7,
+    left: 1.7,
+    transform: [{ rotate: '45deg' }],
+  },
+  toothTopRight: {
+    top: 1.7,
+    right: 1.7,
+    transform: [{ rotate: '-45deg' }],
+  },
+  toothBottomLeft: {
+    bottom: 1.7,
+    left: 1.7,
+    transform: [{ rotate: '-45deg' }],
+  },
+  toothBottomRight: {
+    bottom: 1.7,
+    right: 1.7,
+    transform: [{ rotate: '45deg' }],
   },
 });

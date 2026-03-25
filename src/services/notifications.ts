@@ -85,11 +85,11 @@ function buildNotificationContent(
     title:
       kind === 'follow_up'
         ? isEnglish
-          ? 'VoiceGhost follow-up'
-          : 'متابعة من VoiceGhost'
+          ? 'Fakarni follow-up'
+          : 'متابعة من Fakarni'
         : isEnglish
-          ? 'VoiceGhost reminder'
-          : 'تذكير من VoiceGhost',
+          ? 'Fakarni reminder'
+          : 'تذكير من Fakarni',
     body:
       kind === 'follow_up'
         ? isEnglish
@@ -137,7 +137,7 @@ export async function configureNotifications(language: UiLanguage = 'ar-EG') {
       },
     ],
     {
-      previewPlaceholder: isEnglish ? 'VoiceGhost reminder' : 'تذكير من VoiceGhost',
+      previewPlaceholder: isEnglish ? 'Fakarni reminder' : 'تذكير من Fakarni',
       intentIdentifiers: [],
       categorySummaryFormat: isEnglish ? 'Reminder' : 'تذكير',
     }
@@ -193,7 +193,7 @@ export async function configureAndroidChannel() {
   }
 
   await Notifications.setNotificationChannelAsync('voiceghost-reminders', {
-    name: 'VoiceGhost Reminders',
+    name: 'Fakarni Reminders',
     importance: Notifications.AndroidImportance.MAX,
     sound: 'default',
     vibrationPattern: [0, 250, 250, 250],

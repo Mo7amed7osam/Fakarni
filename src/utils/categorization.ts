@@ -244,6 +244,22 @@ export function getReminderCategoryLabel(
     : reminderCategoryLabels[category];
 }
 
+function escapeKeyword(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function includesKeyword(normalizedInput: string, keyword: string) {
+  const normalizedKeyword = normalizeArabicText(keyword).toLowerCase();
+  const isArabicSingleWord =
+    /[ء-ي]/.test(normalizedKeyword) && !normalizedKeyword.includes(' ');
+  const keywordPattern =
+    isArabicSingleWord && !normalizedKeyword.startsWith('ال')
+      ? `(?:ال)?${escapeKeyword(normalizedKeyword)}`
+      : escapeKeyword(normalizedKeyword);
+  const pattern = new RegExp(`(^|\\s)${keywordPattern}(?=\\s|$)`);
+  return pattern.test(normalizedInput);
+}
+
 export function classifyReminderCategory(input: string): ReminderCategory {
   const normalized = normalizeArabicText(input).toLowerCase();
 
@@ -254,7 +270,7 @@ export function classifyReminderCategory(input: string): ReminderCategory {
   const scored = categoryRules.map((rule) => ({
     category: rule.category,
     score: rule.keywords.reduce((sum, keyword) => {
-      return normalized.includes(normalizeArabicText(keyword).toLowerCase()) ? sum + 1 : sum;
+      return includesKeyword(normalized, keyword) ? sum + 1 : sum;
     }, 0),
   }));
 

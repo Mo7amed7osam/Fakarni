@@ -9,8 +9,10 @@
     "run:android": "expo run:android",
     "ios": "expo run:ios",
     "run:ios": "expo run:ios",
-    "test:parser": "node -r ./tests/register-ts.cjs --test tests/parser.english.test.cjs",
+    "test:parser": "node -r ./tests/register-ts.cjs --test tests/parser.arabic.test.cjs tests/parser.english.test.cjs tests/parser.hybrid.test.cjs",
+    "test:parser:arabic": "node -r ./tests/register-ts.cjs --test tests/parser.arabic.test.cjs",
     "test:parser:english": "node -r ./tests/register-ts.cjs --test tests/parser.english.test.cjs",
+    "test:parser:hybrid": "node -r ./tests/register-ts.cjs --test tests/parser.hybrid.test.cjs",
     "typecheck": "tsc --noEmit",
     "web": "expo start --web"
   },

@@ -38,7 +38,7 @@ export function SplashScreen({ navigation }: Props) {
       style={styles.container}
     >
       <Animated.View style={[styles.ghostOrb, { opacity }]} />
-      <Text style={styles.logo}>VoiceGhost</Text>
+      <Text style={styles.logo}>Fakarni</Text>
       <Text style={styles.subtitle}>المهام اليومية بصوتك وبأقل خطوة ممكنة</Text>
     </LinearGradient>
   );

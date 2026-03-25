@@ -69,6 +69,7 @@ export interface ReminderMutationResult {
   ok: boolean;
   reason?: string;
   warning?: string;
+  reminderId?: string;
 }
 
 export interface CalendarEventResult {

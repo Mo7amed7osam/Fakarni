@@ -34,6 +34,13 @@ const englishWeekdayMap: Record<string, number> = {
   saturday: 6,
 };
 
+const arabicTaskTitleNormalizers: Array<[RegExp, string]> = [
+  [/^كلم(?=\s|$)/, 'اكلم'],
+  [/^روح(?=\s|$)/, 'اروح'],
+  [/^راجع(?=\s|$)/, 'اراجع'],
+  [/^ذاكر(?=\s|$)/, 'اذاكر'],
+];
+
 function detectRuleLanguage(value: string): RuleLanguage {
   const englishMatches = value.match(/[A-Za-z]/g)?.length ?? 0;
   const arabicMatches = value.match(/[ء-ي]/g)?.length ?? 0;
@@ -251,6 +258,7 @@ function parseTimeParts(value: string, language: RuleLanguage) {
   const patterns = [
     /الساعه\s*(\d{1,2})(?::|\.|٫)?(\d{2})?\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)?/,
     /(\d{1,2})(?::|\.|٫)?(\d{2})?\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)/,
+    /\b([1-9]|1[0-2])(?::|\.|٫)?(\d{2})?\b(?!\s*(?:دقيقه|دقائق|ساعه|ساعتين|ساعات))/,
   ];
 
   for (const pattern of patterns) {
@@ -309,6 +317,7 @@ function stripMetaFromTitle(value: string, language: RuleLanguage) {
   return value
     .replace(/فكرني|ذكرني|افتكرني|عايزك تفكرني|من فضلك/g, '')
     .replace(/بعد بكره|بكره|غدا|النهارده|اليوم|دلوقتي/g, '')
+    .replace(/الاحد|الأحد|الاتنين|الاثنين|الثلاثاء|الاربعاء|الأربعاء|الخميس|الجمعه|الجمعة|السبت/g, '')
     .replace(/الساعه\s*\d{1,2}(?::|\.|٫)?\d{0,2}\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)?/g, '')
     .replace(/\d{1,2}(?::|\.|٫)?\d{0,2}\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)/g, '')
     .replace(/(?:قبل|ب)\s*(نص ساعه|نصف ساعه|ربع ساعه|ساعه|ساعتين|\d{1,3}\s*دقيقه|\d{1,2}\s*ساع(?:ه|ات))/g, '')
@@ -316,6 +325,24 @@ function stripMetaFromTitle(value: string, language: RuleLanguage) {
       /ايام العمل|أيام العمل|كل يوم شغل|كل يوم من الاحد للخميس|كل يوم من الاثنين للجمعه|كل يوم من الاثنين للجمعة|كل يوم من الاتنين للجمعه|كل يوم من الاتنين للجمعة|كل يوم|يومي|يوميا|كل اسبوع|اسبوعيا/g,
       ''
     )
+    .replace(/\b([1-9]|1[0-2])(?::|\.|٫)?(\d{2})?\b(?!\s*(?:دقيقه|دقائق|ساعه|ساعتين|ساعات))/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeArabicTaskTitle(value: string) {
+  let normalized = value.trim();
+
+  for (const [pattern, replacement] of arabicTaskTitleNormalizers) {
+    if (pattern.test(normalized)) {
+      normalized = normalized.replace(pattern, replacement);
+      break;
+    }
+  }
+
+  return normalized
+    .replace(/\bايميل\b/g, 'الايميل')
+    .replace(/\bايجار\b/g, 'الايجار')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -361,7 +388,9 @@ export function parseReminderRules(transcript: string): ParseResult {
     }
   }
 
-  const title = stripMetaFromTitle(normalized, language);
+  const rawTitle = stripMetaFromTitle(normalized, language);
+  const title =
+    language === 'ar' ? normalizeArabicTaskTitle(rawTitle) : rawTitle;
   const categorySuggestion = classifyReminderCategory(title || normalized);
 
   if (!title) {
