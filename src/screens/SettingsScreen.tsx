@@ -425,7 +425,7 @@ export function SettingsScreen({ navigation }: Props) {
             </View>
           ) : null}
 
-          {appleCalendarStatus === 'denied' ? (
+          {appleCalendarStatus === 'denied' || appleCalendarStatus === 'restricted' ? (
             <GhostButton
               label={copy.common.openSystemSettings}
               variant="secondary"

@@ -78,11 +78,13 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - onboarding، home، settings، reminder list، وconfirmation متقاربين أكثر في النبرة والهدف.
 - retention loop مطبق حاليًا: Done / Snooze / Today-Upcoming-Overdue / weekdays / follow-up واحد.
 - Apple Calendar auto-save موجود على iOS.
+- مسار Apple Calendar على iOS عاد يعتمد على native EventKit bridge فعلي داخل مشروع Xcode، بدل وجود JS layer وحدها بدون module مسجل.
 - founder analytics مع PostHog موجودة داخل التطبيق.
 - ما زال يحتاج تحققًا على جهاز حقيقي لسلوك notification actions، follow-up timing، وcalendar flows.
 - ما زالت بعض الأسطح الداخلية تحمل نبرة developer-first أكثر من اللازم، لكنها ليست ضمن المسار الأساسي للمستخدم.
 
 ## Recent Decisions
+- 2026-03-26: إعادة native bridge الخاص بـ Apple Calendar داخل مشروع iOS نفسه، لأن toggle الإعدادات كان يشير إلى module غير موجود وبالتالي لا يطلب الإذن أصلًا.
 - 2026-03-26: إضافة زر رجوع صغير أعلى شاشة التذكيرات، لأن المسار كان يحتاج affordance واضح وسريع للرجوع بدل الاعتماد على gesture أو stack فقط.
 - 2026-03-26: استبدال active state الأسود في فلاتر شاشة التذكيرات بموف من نفس palette، لأن الأسود كان حادًا ومقطوعًا عن بقية اللغة البصرية.
 - 2026-03-26: حذف `صوت أولًا` من onboarding واستبداله بسطر أهدأ `خليك فاكر` تحت البراند، لأن الشعار القديم لم يكن رايقًا ولا منسجمًا مع نبرة المنتج.
