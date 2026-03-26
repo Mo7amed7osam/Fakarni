@@ -47,8 +47,9 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - واجهة الـ widget نفسها أصبحت mic-only tile: بدون أي نص داخلها، فقط مايك مركزي واضح حتى تبدو أقرب لـ launch affordance نظيفة لا mini card.
 - widget path أصبح يقيس `widget opened / attempted / succeeded / fallback`، ويعرض fallback هادئ داخل Home عند نقص الأذونات أو غياب locale أو فشل بدء التسجيل.
 - يوجد الآن Siri entry على iOS عبر App Intents + App Shortcuts لحالتين: `Start Voice Capture` و`Create Reminder From Spoken Text`.
-- مسار Siri يعيد استخدام نفس quick-capture والـ parser والـ confirmation الحالية: `siri_record` يبدأ التسجيل فور فتح التطبيق، و`siri_text` يمرر النص مباشرة إلى parse/save/review بدل اختراع flow جديد.
+- مسار Siri يعيد استخدام نفس quick-capture والـ parser والـ confirmation الحالية: `siri_record` يبدأ التسجيل فور فتح التطبيق، و`siri_text` يمرر النص مباشرة إلى parse/save/review بدل اختراع flow جديد. في Siri text shortcut نفسه، Siri يطلب جملة التذكير كـ parameter بعد invocation بدل الاعتماد على phrase interpolation بنص حر.
 - analytics الآن تميّز بين `siri_record` و`siri_text` عبر `siri shortcut invoked / launch attempted / launch succeeded / text parse completed / fallback shown`.
+- تم إصلاح أخطاء Swift الأولية في Siri/App Intents وEventKit (`AppShortcutsProvider` و`EKAuthorizationStatus`)؛ المتبقي الآن في البناء المحلي مرتبط ببيئة Xcode/Storyboard والصلاحيات، لا بمنطق Siri نفسه.
 - Home يحمل الآن `daily trust pack`: شريط صحة صلاحيات هادئ عند تعطل الإشعارات أو مزامنة التقويم، وبطاقة `محتاج حركة دلوقتي` للتذكير المستحق أو المتأخر مع `تم` و`غفوة` مباشرة.
 - بطاقة `محتاج حركة دلوقتي` نفسها أصبحت أقرب للغة Fakarni: hierarchy أوضح، timing pill أنظف، وتصنيف ظاهر بشكل أخف بدل كارت تشغيلية خشنة.
 - تم تنفيذ home-first trust redesign فعليًا: الشاشة الرئيسية الآن تركز بصريًا على البراند والمايك والمثال وأقرب تذكير فقط، مع تقليل العناصر الثانوية في وضع السكون.
@@ -99,6 +100,7 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - ما زالت بعض الأسطح الداخلية تحمل نبرة developer-first أكثر من اللازم، لكنها ليست ضمن المسار الأساسي للمستخدم.
 
 ## Recent Decisions
+- 2026-03-26: إصلاح صياغة `AppShortcutsProvider` وتغطية حالة `authorized` القديمة في EventKit، لأن أول build محلي توقف على أخطاء compile مباشرة في Siri وApple Calendar bridge.
 - 2026-03-26: إضافة Siri entry على iOS عبر App Intents + App Shortcuts بدل أي SiriKit legacy path، لأن المطلوب surface حديثة وخفيفة تعيد استخدام منطق التطبيق نفسه بدل خلق مسار native منفصل.
 - 2026-03-26: إبقاء Siri v1 thin layer فقط: `open and record` و`pass spoken text to app`، لأن القيمة هنا في تسريع الدخول للصوت لا في تكرار parser أو reminder logic داخل Swift.
 - 2026-03-26: تحويل same-time Apple Calendar alerts إلى `absoluteDate = startDate` بدل `relativeOffset = 0`، لأن الحدث كان أحيانًا يُحفظ بلا alert ظاهر رغم اختيار التوقيت نفسه.

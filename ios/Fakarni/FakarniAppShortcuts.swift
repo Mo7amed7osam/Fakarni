@@ -26,7 +26,10 @@ struct CreateReminderFromSpokenTextIntent: AppIntent {
   )
   static var openAppWhenRun: Bool = true
 
-  @Parameter(title: "Reminder")
+  @Parameter(
+    title: "Reminder",
+    requestValueDialog: IntentDialog("What reminder should I create?")
+  )
   var spokenText: String
 
   static var parameterSummary: some ParameterSummary {
@@ -48,27 +51,25 @@ struct FakarniShortcuts: AppShortcutsProvider {
   static var shortcutTileColor: ShortcutTileColor = .purple
 
   static var appShortcuts: [AppShortcut] {
-    [
-      AppShortcut(
-        intent: StartVoiceCaptureIntent(),
-        phrases: [
-          "Start \(.applicationName)",
-          "Open \(.applicationName) and start recording",
-          "Start voice capture in \(.applicationName)",
-        ],
-        shortTitle: "Start Voice",
-        systemImageName: "mic.fill"
-      ),
-      AppShortcut(
-        intent: CreateReminderFromSpokenTextIntent(),
-        phrases: [
-          "Tell \(.applicationName) to remind me \(\.$spokenText)",
-          "Ask \(.applicationName) to remind me \(\.$spokenText)",
-          "Create a reminder with \(.applicationName) \(\.$spokenText)",
-        ],
-        shortTitle: "Create Reminder",
-        systemImageName: "text.badge.plus"
-      ),
-    ]
+    AppShortcut(
+      intent: StartVoiceCaptureIntent(),
+      phrases: [
+        "Start \(.applicationName)",
+        "Open \(.applicationName) and start recording",
+        "Start voice capture in \(.applicationName)",
+      ],
+      shortTitle: "Start Voice",
+      systemImageName: "mic.fill"
+    )
+    AppShortcut(
+      intent: CreateReminderFromSpokenTextIntent(),
+      phrases: [
+        "Create a reminder with \(.applicationName)",
+        "Tell \(.applicationName) to create a reminder",
+        "Ask \(.applicationName) to create a reminder",
+      ],
+      shortTitle: "Create Reminder",
+      systemImageName: "text.badge.plus"
+    )
   }
 }

@@ -156,6 +156,8 @@ class VoiceGhostAppleCalendar: NSObject {
         return "restricted"
       case .denied:
         return "denied"
+      case .authorized:
+        return "authorized"
       case .fullAccess:
         return "full_access"
       case .writeOnly:

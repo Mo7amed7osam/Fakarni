@@ -253,11 +253,15 @@
 				LastUpgradeCheck = 1130;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
+						DevelopmentTeam = 8TBB6SU34J;
 						LastSwiftMigration = 1250;
+						ProvisioningStyle = Automatic;
 					};
 					5C2D5A0D1F8A4C7B9E0D1A11 = {
 						CreatedOnToolsVersion = 15.4;
+						DevelopmentTeam = 8TBB6SU34J;
 						LastSwiftMigration = 1550;
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
