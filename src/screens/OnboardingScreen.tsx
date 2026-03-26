@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     borderWidth: 1,
     borderColor: colors.line,
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   eyebrow: {
     alignSelf: 'flex-start',
@@ -78,14 +78,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.bold,
-    fontSize: 30,
+    fontSize: 28,
     color: colors.text,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   description: {
     fontFamily: fonts.medium,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.textMuted,
     textAlign: 'right',
     writingDirection: 'rtl',
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   flowStep: {
     flex: 1,

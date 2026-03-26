@@ -146,6 +146,64 @@ function parseOffsetMinutes(value: string, language: RuleLanguage) {
   return 0;
 }
 
+function parseRelativeFutureMinutes(value: string, language: RuleLanguage) {
+  if (language === 'en') {
+    const directPatterns: Array<[RegExp, number]> = [
+      [/\b(?:in|after)\s+an\s+hour\b/, 60],
+      [/\b(?:in|after)\s+two\s+hours\b/, 120],
+      [/\b(?:in|after)\s+1\s+hour\b/, 60],
+      [/\b(?:in|after)\s+2\s+hours\b/, 120],
+      [/\b(?:in|after)\s+1\s+minute\b/, 1],
+      [/\b(?:in|after)\s+2\s+minutes\b/, 2],
+    ];
+
+    for (const [pattern, amount] of directPatterns) {
+      if (pattern.test(value)) {
+        return amount;
+      }
+    }
+
+    const minuteMatch = value.match(/\b(?:in|after)\s+(\d{1,3})\s+minutes?\b/);
+    if (minuteMatch) {
+      return Number(minuteMatch[1]);
+    }
+
+    const hourMatch = value.match(/\b(?:in|after)\s+(\d{1,2})\s+hours?\b/);
+    if (hourMatch) {
+      return Number(hourMatch[1]) * 60;
+    }
+
+    return null;
+  }
+
+  const directPatterns: Array<[RegExp, number]> = [
+    [/(?:بعد|كمان)\s*دقيقه(?=\s|$)/, 1],
+    [/(?:بعد|كمان)\s*دقيقتين(?=\s|$)/, 2],
+    [/(?:بعد|كمان)\s*ساعه(?=\s|$)/, 60],
+    [/(?:بعد|كمان)\s*ساعتين(?=\s|$)/, 120],
+  ];
+
+  for (const [pattern, amount] of directPatterns) {
+    if (pattern.test(value)) {
+      return amount;
+    }
+  }
+
+  const minuteMatch = value.match(
+    /(?:بعد|كمان)\s*(\d{1,3})\s*(?:دقيقه|دقايق|دقائق)(?=\s|$)/
+  );
+  if (minuteMatch) {
+    return Number(minuteMatch[1]);
+  }
+
+  const hourMatch = value.match(/(?:بعد|كمان)\s*(\d{1,2})\s*(?:ساعه|ساعات)(?=\s|$)/);
+  if (hourMatch) {
+    return Number(hourMatch[1]) * 60;
+  }
+
+  return null;
+}
+
 function parseDayBase(value: string, language: RuleLanguage) {
   const now = dayjs();
 
@@ -301,6 +359,7 @@ function stripMetaFromTitle(value: string, language: RuleLanguage) {
       )
       .replace(/at\s*\d{1,2}(?::|\.|٫)?\d{0,2}\s*(am|pm)?/g, '')
       .replace(/\d{1,2}(?::|\.|٫)?\d{0,2}\s*(am|pm)\b/g, '')
+      .replace(/\b(?:in|after)\s+(?:an\s+hour|two\s+hours|1\s+hour|2\s+hours|1\s+minute|2\s+minutes|\d{1,3}\s+minutes?|\d{1,2}\s+hours?)\b/g, '')
       .replace(
         /(?:half an hour|30 minutes|quarter of an hour|15 minutes|an hour|1 hour|2 hours|two hours|\d{1,3}\s*minutes?|\d{1,2}\s*hours?)\s+before/g,
         ''
@@ -320,6 +379,7 @@ function stripMetaFromTitle(value: string, language: RuleLanguage) {
     .replace(/الاحد|الأحد|الاتنين|الاثنين|الثلاثاء|الاربعاء|الأربعاء|الخميس|الجمعه|الجمعة|السبت/g, '')
     .replace(/الساعه\s*\d{1,2}(?::|\.|٫)?\d{0,2}\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)?/g, '')
     .replace(/\d{1,2}(?::|\.|٫)?\d{0,2}\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)/g, '')
+    .replace(/(?:بعد|كمان)\s*(?:دقيقه|دقيقتين|ساعه|ساعتين|\d{1,3}\s*(?:دقيقه|دقايق|دقائق)|\d{1,2}\s*(?:ساعه|ساعات))/g, '')
     .replace(/(?:قبل|ب)\s*(نص ساعه|نصف ساعه|ربع ساعه|ساعه|ساعتين|\d{1,3}\s*دقيقه|\d{1,2}\s*ساع(?:ه|ات))/g, '')
     .replace(
       /ايام العمل|أيام العمل|كل يوم شغل|كل يوم من الاحد للخميس|كل يوم من الاثنين للجمعه|كل يوم من الاثنين للجمعة|كل يوم من الاتنين للجمعه|كل يوم من الاتنين للجمعة|كل يوم|يومي|يوميا|كل اسبوع|اسبوعيا/g,
@@ -352,39 +412,50 @@ export function parseReminderRules(transcript: string): ParseResult {
   const language = detectRuleLanguage(transcript);
   const recurrenceSuggestion = extractRecurrence(normalized, language);
   const offsetMinutes = parseOffsetMinutes(normalized, language);
+  const relativeFutureMinutes = parseRelativeFutureMinutes(normalized, language);
   const dayBase = parseDayBase(normalized, language);
   const timeParts = parseTimeParts(normalized, language);
   const missingFields: string[] = [];
   let confidence = 0.45;
 
-  let eventDate = dayBase;
-  if (!eventDate) {
-    eventDate = dayjs().startOf('day');
-    if (recurrenceSuggestion !== 'daily' && recurrenceSuggestion !== 'weekdays') {
-      missingFields.push('date');
+  let eventAt: dayjs.Dayjs;
+
+  if (relativeFutureMinutes !== null) {
+    eventAt = dayjs()
+      .add(relativeFutureMinutes, 'minute')
+      .second(0)
+      .millisecond(0);
+    confidence += 0.4;
+  } else {
+    let eventDate = dayBase;
+    if (!eventDate) {
+      eventDate = dayjs().startOf('day');
+      if (recurrenceSuggestion !== 'daily' && recurrenceSuggestion !== 'weekdays') {
+        missingFields.push('date');
+      } else {
+        confidence += 0.1;
+      }
     } else {
-      confidence += 0.1;
+      confidence += 0.2;
     }
-  } else {
-    confidence += 0.2;
-  }
 
-  let hour = 9;
-  let minute = 0;
-  if (timeParts) {
-    hour = timeParts.hour;
-    minute = timeParts.minute;
-    confidence += timeParts.inferred ? 0.15 : 0.25;
-  } else {
-    missingFields.push('time');
-  }
+    let hour = 9;
+    let minute = 0;
+    if (timeParts) {
+      hour = timeParts.hour;
+      minute = timeParts.minute;
+      confidence += timeParts.inferred ? 0.15 : 0.25;
+    } else {
+      missingFields.push('time');
+    }
 
-  let eventAt = eventDate.hour(hour).minute(minute).second(0).millisecond(0);
+    eventAt = eventDate.hour(hour).minute(minute).second(0).millisecond(0);
 
-  if (!dayBase && timeParts) {
-    const now = dayjs();
-    if (eventAt.isBefore(now)) {
-      eventAt = eventAt.add(1, 'day');
+    if (!dayBase && timeParts) {
+      const now = dayjs();
+      if (eventAt.isBefore(now)) {
+        eventAt = eventAt.add(1, 'day');
+      }
     }
   }
 
@@ -400,6 +471,9 @@ export function parseReminderRules(transcript: string): ParseResult {
   }
 
   const remindAt = eventAt.subtract(offsetMinutes, 'minute');
+  if (remindAt.isBefore(dayjs().add(1, 'minute'))) {
+    confidence = Math.min(confidence, 0.72);
+  }
 
   return {
     title: title || (language === 'en' ? 'New reminder' : 'تذكير جديد'),

@@ -54,20 +54,20 @@ export function GhostButton({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 56,
+    minHeight: 52,
     borderRadius: radii.pill,
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
     shadowColor: colors.shadow,
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 3,
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   primary: {
     backgroundColor: colors.primary,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.32)',
+    borderColor: 'rgba(255,255,255,0.24)',
   },
   secondary: {
     backgroundColor: colors.card,

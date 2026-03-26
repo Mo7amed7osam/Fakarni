@@ -8,6 +8,15 @@ function expectDatePart(isoString, expectedDay) {
   assert.equal(dayjs(isoString).format('YYYY-MM-DD'), expectedDay.format('YYYY-MM-DD'));
 }
 
+function expectNearFutureMinutes(isoString, minMinutes, maxMinutes) {
+  const now = dayjs();
+  const diffSeconds = dayjs(isoString).diff(now, 'second');
+  assert.ok(
+    diffSeconds >= minMinutes * 60 && diffSeconds <= maxMinutes * 60,
+    `expected ${isoString} to be between ${minMinutes} and ${maxMinutes} minutes in the future`
+  );
+}
+
 test('parses English shopping reminder with tomorrow, time, and offset', () => {
   const result = parseReminderRules('Remind me to buy groceries tomorrow at 5 pm 30 minutes before');
 
@@ -62,4 +71,23 @@ test('keeps English missing-time behavior when only the day is clear', () => {
   assert.ok(result.missingFields.includes('time'));
   assert.ok(!result.missingFields.includes('date'));
   expectDatePart(result.eventAt, dayjs().add(1, 'day'));
+});
+
+test('parses English relative future phrases as event time, not offset', () => {
+  const result = parseReminderRules('Call Ahmed in 2 minutes');
+
+  assert.equal(result.title, 'call ahmed');
+  assert.equal(result.offsetMinutes, 0);
+  assert.deepEqual(result.missingFields, []);
+  expectNearFutureMinutes(result.eventAt, 1, 3);
+});
+
+test('parses English after-minutes phrasing as a future event time', () => {
+  const result = parseReminderRules('Send the email after 10 minutes');
+
+  assert.equal(result.title, 'send the email');
+  assert.equal(result.categorySuggestion, 'work');
+  assert.equal(result.offsetMinutes, 0);
+  assert.deepEqual(result.missingFields, []);
+  expectNearFutureMinutes(result.eventAt, 8, 11);
 });

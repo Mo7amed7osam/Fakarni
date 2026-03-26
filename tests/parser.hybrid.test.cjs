@@ -117,3 +117,39 @@ test('parseReminderText accepts colloquial Arabic normalization from LLM refinem
   assert.equal(result.title, 'اكلم احمد');
   assert.equal(result.needsConfirmation, false);
 });
+
+test('parseReminderText keeps relative-future rule parsing usable when LLM is unavailable', async () => {
+  const { parseReminderText } = loadParserWithMock(async () => {
+    throw new Error('LLM unavailable');
+  });
+
+  const result = await parseReminderText('اكلم احمد كمان دقيقتين');
+
+  assert.equal(result.source, 'rules');
+  assert.equal(result.title, 'اكلم احمد');
+  assert.equal(result.offsetMinutes, 0);
+  assert.deepEqual(result.missingFields, []);
+});
+
+test('parseReminderText preserves relative-future event semantics when LLM refines the result', async () => {
+  const targetEventAt = dayjs().add(2, 'minute').second(0).millisecond(0);
+  const { parseReminderText } = loadParserWithMock(async (_transcript, baseParse) => ({
+    ...baseParse,
+    title: 'اكلم احمد',
+    eventAt: targetEventAt.toISOString(),
+    remindAt: targetEventAt.toISOString(),
+    offsetMinutes: 0,
+    confidence: 0.96,
+    missingFields: [],
+    source: 'llm',
+    needsConfirmation: false,
+  }));
+
+  const result = await parseReminderText('اكلم احمد كمان دقيقتين');
+
+  assert.equal(result.source, 'hybrid');
+  assert.equal(result.title, 'اكلم احمد');
+  assert.equal(result.offsetMinutes, 0);
+  assert.deepEqual(result.missingFields, []);
+  assert.equal(result.needsConfirmation, false);
+});

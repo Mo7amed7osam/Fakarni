@@ -14,6 +14,7 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import dayjs from 'dayjs';
+import { GlassSurface } from '../components/GlassSurface';
 import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
 import { SectionCard } from '../components/SectionCard';
@@ -321,7 +322,13 @@ export function ConfirmationScreen({ navigation, route }: Props) {
             : copy.confirmation.subtitleVoice}
       </Text>
 
-      <View style={styles.heroCard}>
+      <GlassSurface
+        style={styles.heroCard}
+        contentStyle={styles.heroCardContent}
+        intensity={52}
+        overlayColor="rgba(255,255,255,0.24)"
+        borderColor="rgba(255,255,255,0.5)"
+      >
         <Text style={styles.heroLabel}>
           {isEdit
             ? copy.confirmation.heroEdit
@@ -341,7 +348,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                 : `راجع: ${missingFields.join(' / ')}`
               : copy.confirmation.heroVoiceCaptionNoMissing}
         </Text>
-      </View>
+      </GlassSurface>
 
       {transcript.trim() ? (
         <SectionCard title={isEdit ? copy.confirmation.originalText : copy.confirmation.heardText}>
@@ -531,30 +538,29 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.md,
     paddingBottom: 48,
   },
   title: {
     fontFamily: fonts.bold,
-    fontSize: 22,
+    fontSize: 20,
     color: colors.text,
     maxWidth: 260,
   },
   subtitle: {
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textMuted,
     textAlign: 'right',
-    lineHeight: 22,
+    lineHeight: 20,
     writingDirection: 'rtl',
   },
   heroCard: {
-    backgroundColor: colors.card,
     borderRadius: radii.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.line,
+  },
+  heroCardContent: {
+    padding: 18,
+    gap: spacing.xs,
   },
   heroLabel: {
     alignSelf: 'flex-end',
@@ -571,16 +577,16 @@ const styles = StyleSheet.create({
   heroValue: {
     color: colors.text,
     fontFamily: fonts.bold,
-    fontSize: 22,
+    fontSize: 20,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   heroCaption: {
     color: colors.textMuted,
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'right',
-    lineHeight: 20,
+    lineHeight: 18,
     writingDirection: 'rtl',
   },
   bodyText: {

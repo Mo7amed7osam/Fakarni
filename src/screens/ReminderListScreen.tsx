@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { GlassSurface } from '../components/GlassSurface';
 import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
 import { ReminderCard } from '../components/ReminderCard';
@@ -89,7 +90,13 @@ export function ReminderListScreen({ navigation }: Props) {
         <Text style={styles.manualLinkText}>{copy.reminderList.manualCta}</Text>
       </Pressable>
 
-      <View style={styles.heroStrip}>
+      <GlassSurface
+        style={styles.heroStrip}
+        contentStyle={styles.heroStripContent}
+        intensity={46}
+        overlayColor="rgba(255,255,255,0.22)"
+        borderColor="rgba(255,255,255,0.5)"
+      >
         <View style={styles.heroStripMain}>
           <Text style={styles.heroStripValue}>{counts.today}</Text>
           <Text style={styles.heroStripLabel}>{copy.reminderList.compactDue}</Text>
@@ -112,7 +119,7 @@ export function ReminderListScreen({ navigation }: Props) {
             </Text>
           </View>
         </View>
-      </View>
+      </GlassSurface>
 
       <View style={styles.filterRow}>
         {filters.map((filter) => {
@@ -236,46 +243,45 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.md,
     paddingBottom: 52,
   },
   title: {
     fontFamily: fonts.bold,
-    fontSize: 22,
+    fontSize: 20,
     color: colors.text,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   subtitle: {
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textMuted,
     textAlign: 'right',
-    lineHeight: 22,
+    lineHeight: 20,
     writingDirection: 'rtl',
   },
   manualLink: {
     alignSelf: 'flex-end',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
   },
   manualLinkText: {
     color: colors.primaryDark,
     fontFamily: fonts.semibold,
-    fontSize: 13,
+    fontSize: 12,
     writingDirection: 'rtl',
   },
   heroStrip: {
     borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.card,
+  },
+  heroStripContent: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: 10,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   heroStripMain: {
     alignItems: 'flex-end',
@@ -284,7 +290,7 @@ const styles = StyleSheet.create({
   heroStripValue: {
     color: colors.text,
     fontFamily: fonts.bold,
-    fontSize: 28,
+    fontSize: 24,
     textAlign: 'right',
   },
   heroStripLabel: {
@@ -329,17 +335,17 @@ const styles = StyleSheet.create({
   filterChip: {
     flex: 1,
     borderRadius: radii.md,
-    backgroundColor: colors.card,
+    backgroundColor: 'rgba(255,255,255,0.78)',
     borderWidth: 1,
     borderColor: colors.line,
-    paddingVertical: spacing.md,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
   },
   filterChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: colors.text,
+    borderColor: colors.text,
   },
   filterChipLabel: {
     color: colors.text,
@@ -352,7 +358,7 @@ const styles = StyleSheet.create({
   filterChipCount: {
     color: colors.textMuted,
     fontFamily: fonts.bold,
-    fontSize: 16,
+    fontSize: 15,
   },
   filterChipCountActive: {
     color: colors.white,
@@ -371,7 +377,7 @@ const styles = StyleSheet.create({
   doneToggleText: {
     color: colors.primaryDark,
     fontFamily: fonts.semibold,
-    fontSize: 13,
+    fontSize: 12,
     writingDirection: 'rtl',
   },
 });

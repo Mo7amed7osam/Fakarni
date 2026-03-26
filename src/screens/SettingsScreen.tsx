@@ -546,15 +546,15 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.md,
     paddingBottom: 48,
   },
   titleWrap: {
-    gap: spacing.xs,
+    gap: 4,
   },
   title: {
     fontFamily: fonts.bold,
-    fontSize: 22,
+    fontSize: 20,
     color: colors.text,
     maxWidth: 280,
     textAlign: 'right',
@@ -562,10 +562,10 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontFamily: fonts.medium,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textMuted,
     textAlign: 'right',
-    lineHeight: 22,
+    lineHeight: 20,
     writingDirection: 'rtl',
   },
   row: {
@@ -593,12 +593,12 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   notificationStatusCard: {
-    backgroundColor: colors.warningSoft,
+    backgroundColor: '#FFF9ED',
     borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.xs,
     borderWidth: 1,
-    borderColor: 'rgba(154,107,0,0.12)',
+    borderColor: 'rgba(154,107,0,0.08)',
   },
   notificationStatusTitle: {
     fontFamily: fonts.bold,
@@ -616,12 +616,12 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   followUpCard: {
-    backgroundColor: '#EEF7FF',
+    backgroundColor: '#F6FAFF',
     borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.xs,
     borderWidth: 1,
-    borderColor: '#D3E9FF',
+    borderColor: '#E3EFFC',
   },
   followUpCardTitle: {
     fontFamily: fonts.bold,
@@ -668,12 +668,12 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   analyticsCard: {
-    backgroundColor: '#EEF4FF',
+    backgroundColor: '#F7FAFF',
     borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.xs,
     borderWidth: 1,
-    borderColor: '#D7E3FF',
+    borderColor: '#E6ECFB',
   },
   analyticsCardTitle: {
     fontFamily: fonts.bold,
@@ -691,12 +691,12 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   googleStatusCard: {
-    backgroundColor: '#EEF4FF',
+    backgroundColor: '#F7FAFF',
     borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.xs,
     borderWidth: 1,
-    borderColor: '#D7E3FF',
+    borderColor: '#E6ECFB',
   },
   googleStatusTitle: {
     fontFamily: fonts.bold,
@@ -714,12 +714,12 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   calendarStatusCard: {
-    backgroundColor: '#F2F7F6',
+    backgroundColor: '#F7FBFA',
     borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.xs,
     borderWidth: 1,
-    borderColor: '#D5E7E0',
+    borderColor: '#E2ECE8',
   },
   calendarStatusTitle: {
     fontFamily: fonts.bold,
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   linkCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardMuted,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.line,
