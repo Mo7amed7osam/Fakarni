@@ -76,6 +76,15 @@ export function ReminderListScreen({ navigation }: Props) {
     });
   }
 
+  function handleBack() {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.navigate('Home');
+  }
+
   const filters: Array<{ id: ReminderListFilter; label: string }> = [
     { id: 'today', label: copy.common.today },
     { id: 'upcoming', label: copy.common.upcoming },
@@ -85,6 +94,11 @@ export function ReminderListScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+        <Pressable onPress={handleBack} style={styles.backButton}>
+          <Text style={styles.backButtonLabel}>{copy.common.back}</Text>
+          <Text style={styles.backButtonIcon}>→</Text>
+        </Pressable>
+
         <Text style={styles.title}>{copy.reminderList.title}</Text>
         <Text style={styles.subtitle}>{copy.reminderList.subtitle}</Text>
 
@@ -252,6 +266,30 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
     paddingBottom: 52,
+  },
+  backButton: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  backButtonLabel: {
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    color: colors.primaryDark,
+    writingDirection: 'rtl',
+  },
+  backButtonIcon: {
+    fontFamily: fonts.bold,
+    fontSize: 14,
+    color: colors.primaryDark,
+    marginTop: -1,
   },
   title: {
     fontFamily: fonts.bold,

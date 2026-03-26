@@ -30,7 +30,7 @@ const appCopy = {
       featureTwoTitle: 'نأكد ونفكرك',
       featureTwoText: 'مراجعة خفيفة وبعدها التذكير يتظبط لوحده',
       flowSpeak: 'اتكلم',
-      flowConfirm: 'نتأكد',
+      flowConfirm: 'نتاللوأكد',
       flowRemember: 'نفكرك',
       exampleLabel: 'مثال',
       exampleText: 'فكّرني أكلم أحمد بكرة الساعة ٥',
