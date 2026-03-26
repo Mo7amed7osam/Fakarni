@@ -104,6 +104,21 @@ const appCopy = {
       parseFailure: 'فيه لخبطة بسيطة. قولها تاني.',
       saveFailure: 'فيه مشكلة في الحفظ. جرّب تاني.',
       voiceEmpty: 'لسه ما قلتش حاجة.',
+      widgetMicPermissionFallback:
+        'فتحنا لك التطبيق. فعّل المايك والتعرف على الكلام علشان تبدأ من الودجت بسرعة.',
+      widgetLocaleFallback:
+        'فتحنا لك التطبيق، لكن الصوت العربي مش جاهز على الجهاز ده دلوقتي.',
+      widgetStartFallback: 'فتحنا لك التطبيق. دوس على المايك الكبير ونكمّل من هنا.',
+      siriMicPermissionFallback:
+        'فتحنا لك Fakarni. فعّل إذن المايك علشان Siri تبدأ التسجيل من جوه التطبيق.',
+      siriSpeechPermissionFallback:
+        'فتحنا لك Fakarni. فعّل التعرف على الكلام علشان Siri تقدر تكمل الطلبات الصوتية.',
+      siriLocaleFallback:
+        'فتحنا لك Fakarni، لكن لغة التعرف على الكلام مش جاهزة على الجهاز دلوقتي.',
+      siriStartFallback:
+        'فتحنا لك Fakarni. جرّب تضغط على المايك ونكمل من هنا.',
+      siriEmptyTextFallback:
+        'Siri فتحت التطبيق، لكن مفيش كلام واضح وصل للتذكير. قلها تاني أو سجلها بصوتك.',
     },
     reminderList: {
       title: 'اللي عليك دلوقتي',
@@ -369,6 +384,20 @@ const appCopy = {
       parseFailure: 'Something was unclear. Say it again.',
       saveFailure: 'Saving failed. Please try again.',
       voiceEmpty: 'No speech was captured yet.',
+      widgetMicPermissionFallback:
+        'The app is open. Enable microphone and speech access so the widget can start recording next time.',
+      widgetLocaleFallback:
+        'The app is open, but the selected speech locale is not available on this device right now.',
+      widgetStartFallback: 'The app is open. Tap the main mic here and continue.',
+      siriMicPermissionFallback:
+        'Fakarni is open. Enable microphone access so Siri can start recording inside the app.',
+      siriSpeechPermissionFallback:
+        'Fakarni is open. Enable speech recognition so Siri voice requests can continue in the app.',
+      siriLocaleFallback:
+        'Fakarni is open, but the selected speech locale is not available on this device right now.',
+      siriStartFallback: 'Fakarni is open. Tap the main mic here and continue.',
+      siriEmptyTextFallback:
+        'Fakarni is open, but Siri did not pass clear reminder text. Try again or use voice capture here.',
     },
     reminderList: {
       title: 'What needs action now',

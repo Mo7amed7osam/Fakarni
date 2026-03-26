@@ -43,6 +43,12 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 
 ## Current State
 - تجربة home أصبحت voice-first وواضحة بصريًا.
+- يوجد الآن iPhone Home Screen widget صغير للمايك فقط، يفتح Fakarni عبر deep link إلى Home ويطلب بدء التسجيل تلقائيًا بدل إجبار المستخدم على فتح التطبيق ثم الوصول للمايك يدويًا.
+- واجهة الـ widget نفسها أصبحت mic-only tile: بدون أي نص داخلها، فقط مايك مركزي واضح حتى تبدو أقرب لـ launch affordance نظيفة لا mini card.
+- widget path أصبح يقيس `widget opened / attempted / succeeded / fallback`، ويعرض fallback هادئ داخل Home عند نقص الأذونات أو غياب locale أو فشل بدء التسجيل.
+- يوجد الآن Siri entry على iOS عبر App Intents + App Shortcuts لحالتين: `Start Voice Capture` و`Create Reminder From Spoken Text`.
+- مسار Siri يعيد استخدام نفس quick-capture والـ parser والـ confirmation الحالية: `siri_record` يبدأ التسجيل فور فتح التطبيق، و`siri_text` يمرر النص مباشرة إلى parse/save/review بدل اختراع flow جديد.
+- analytics الآن تميّز بين `siri_record` و`siri_text` عبر `siri shortcut invoked / launch attempted / launch succeeded / text parse completed / fallback shown`.
 - Home يحمل الآن `daily trust pack`: شريط صحة صلاحيات هادئ عند تعطل الإشعارات أو مزامنة التقويم، وبطاقة `محتاج حركة دلوقتي` للتذكير المستحق أو المتأخر مع `تم` و`غفوة` مباشرة.
 - بطاقة `محتاج حركة دلوقتي` نفسها أصبحت أقرب للغة Fakarni: hierarchy أوضح، timing pill أنظف، وتصنيف ظاهر بشكل أخف بدل كارت تشغيلية خشنة.
 - تم تنفيذ home-first trust redesign فعليًا: الشاشة الرئيسية الآن تركز بصريًا على البراند والمايك والمثال وأقرب تذكير فقط، مع تقليل العناصر الثانوية في وضع السكون.
@@ -84,14 +90,21 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - onboarding، home، settings، reminder list، وconfirmation متقاربين أكثر في النبرة والهدف.
 - retention loop مطبق حاليًا: Done / Snooze / Today-Upcoming-Overdue / weekdays / follow-up واحد.
 - Apple Calendar auto-save موجود على iOS.
-- Apple Calendar auto-save على iOS صار يضيف calendar alert حتى لو offset التذكير `0`، بحيث الحدث المتحفظ في التقويم لا يبقى صامتًا.
+- Apple Calendar auto-save على iOS صار يستخدم same-time alarm مطلق عند `startDate` نفسه عندما يكون offset التذكير `0`، لأن `relativeOffset = 0` لم يكن يظهر دائمًا كـ visible alert داخل الحدث.
 - منطق calendar alerts أصبح موحدًا عبر Apple Calendar وdevice calendar وGoogle-backed calendar: `0` يعني alert في نفس الوقت، وأي offset موجب يعني alert قبل الحدث بنفس الدقائق التي اختارها المستخدم.
 - مسار Apple Calendar على iOS عاد يعتمد على native EventKit bridge فعلي داخل مشروع Xcode، بدل وجود JS layer وحدها بدون module مسجل.
 - founder analytics مع PostHog موجودة داخل التطبيق.
 - ما زال يحتاج تحققًا على جهاز حقيقي لسلوك notification actions، follow-up timing، وcalendar flows.
+- ما زال يحتاج تحققًا على iPhone حقيقي لسلوك Siri shortcuts الفعلي من Siri وShortcuts app، خصوصًا handoff بين App Intents وفتح التطبيق والبدء الفوري للتسجيل.
 - ما زالت بعض الأسطح الداخلية تحمل نبرة developer-first أكثر من اللازم، لكنها ليست ضمن المسار الأساسي للمستخدم.
 
 ## Recent Decisions
+- 2026-03-26: إضافة Siri entry على iOS عبر App Intents + App Shortcuts بدل أي SiriKit legacy path، لأن المطلوب surface حديثة وخفيفة تعيد استخدام منطق التطبيق نفسه بدل خلق مسار native منفصل.
+- 2026-03-26: إبقاء Siri v1 thin layer فقط: `open and record` و`pass spoken text to app`، لأن القيمة هنا في تسريع الدخول للصوت لا في تكرار parser أو reminder logic داخل Swift.
+- 2026-03-26: تحويل same-time Apple Calendar alerts إلى `absoluteDate = startDate` بدل `relativeOffset = 0`، لأن الحدث كان أحيانًا يُحفظ بلا alert ظاهر رغم اختيار التوقيت نفسه.
+- 2026-03-26: إضافة iPhone Home Screen mic widget صغير يفتح Home ويبدأ التسجيل تلقائيًا عبر deep link، لأن أسرع UX مناسب لـ Fakarni هو `touch mic, speak, done`.
+- 2026-03-26: إبقاء widget v1 stateless وmic-only مع fallback داخل Home بدل أي widget ذكي أو shared data، لأن الهدف تقليل الاحتكاك لا خلق سطح موازي معقّد.
+- 2026-03-26: تبسيط واجهة الـ widget إلى mic-only tile بلا أي نص أو branding داخل الـ tile نفسها، لأن الشكل النصي السابق كان أقرب لكارت صغير لا لزر دخول سريع.
 - 2026-03-26: توحيد calendar alert semantics على كل providers بحيث `offsetMinutes` هو source of truth دائمًا، لأن بعض المسارات كانت تعتبر `0` كأنه بلا alert بينما المطلوب same-time alert.
 - 2026-03-26: ضغط شاشة الإضافة اليدوية إلى core card + more options لأن الـ scroll الطويل كان يضعف الإحساس بالسرعة والوضوح في المسار اليدوي.
 - 2026-03-26: اعتماد formatter مختصر للتاريخ في حقول التأكيد بدل الصيغة الكاملة، لأن التاريخ الطويل كان ثقيلًا بصريًا وغير رايق.
@@ -136,11 +149,12 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - 2026-03-25: تحويل قائمة التذكيرات إلى view تشغيلية بدل أرشيف عام، لدعم follow-through اليومي.
 
 ## Next Priorities
+- اختبار Siri shortcuts على iPhone حقيقي: invocation phrases، فتح التطبيق، auto-start للتسجيل، وتمرير النص إلى parse/review path.
+- اختبار widget على iPhone حقيقي: launch من Home Screen، auto-start، وسلوك fallback عند غياب الأذونات.
 - اختبار فعلي على جهاز حقيقي لـ notification actions وfollow-up timing وcalendar behavior.
 - نشر parsing gateway الجديد وربط `EXPO_PUBLIC_PARSE_GATEWAY_URL` به، حتى تخرج provider keys من التطبيق نهائيًا.
 - مراجعة Home وConfirmation على جهاز حقيقي لضبط الإحساس بالحجم والمسافات وسلوك Daily Trust Pack.
 - تنظيف اللغة المتبقية في الشاشات غير الأساسية وتوحيد tone of voice بالكامل.
-- تجهيز App Store assets والنصوص وsubmission checklist.
 
 ## Founder Analytics
 - PostHog مفعّل داخل التطبيق عبر environment variables محلية، مع founder dashboard للفحص السريع.

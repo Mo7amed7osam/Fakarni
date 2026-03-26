@@ -27,15 +27,20 @@ import {
   buildReminderAnalyticsProperties,
   getCalendarMode,
   track,
+  trackSiriFallback,
+  trackWidgetMicFallback,
 } from '../services/analytics';
 import { colors, fonts, radii, spacing } from '../theme';
 import {
+  ExternalLaunchSource,
   ParseLLMReason,
   ParseModelTier,
   ParsePath,
   Reminder,
   ReminderDraft,
   RootStackParamList,
+  SiriLaunchSource,
+  VoiceEntrySource,
 } from '../types';
 import { parseReminderText } from '../utils/parser';
 import { getReminderCategoryLabel } from '../utils/categorization';
@@ -57,6 +62,7 @@ type PendingParse = {
   transcript: string;
   confidence: number;
   missingFields: string[];
+  launchSource?: ExternalLaunchSource;
   parseSource?: string;
   parsePath?: ParsePath;
   llmReason?: ParseLLMReason;
@@ -215,7 +221,7 @@ function pickEnglishLocale(locales: string[]) {
   return uniqueLocales.find((locale) => locale.toLowerCase().startsWith('en'));
 }
 
-export function HomeScreen({ navigation }: Props) {
+export function HomeScreen({ navigation, route }: Props) {
   const {
     reminders,
     createReminder,
@@ -252,6 +258,9 @@ export function HomeScreen({ navigation }: Props) {
   const shouldProcessOnEndRef = useRef(false);
   const autoConfirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestPendingParseRef = useRef<PendingParse | null>(null);
+  const handledExternalLaunchRef = useRef<string | null>(null);
+  const voiceEntrySourceRef = useRef<VoiceEntrySource>('home');
+  const [quickCaptureMode, setQuickCaptureMode] = useState(false);
   const { height } = useWindowDimensions();
   const compact = height < 780;
   const now = dayjs();
@@ -282,10 +291,23 @@ export function HomeScreen({ navigation }: Props) {
     setErrorMessage('');
     setProcessing(false);
     setPendingParse(null);
+    const source = voiceEntrySourceRef.current;
     track('voice listening started', {
-      source: 'home',
+      source,
       speech_locale: speechLocale,
     });
+    if (source === 'widget_mic') {
+      track('widget mic launch succeeded', {
+        widget_source: 'widget_mic',
+        speech_locale: speechLocale,
+      });
+    } else if (source === 'siri_record') {
+      track('siri record launch succeeded', {
+        source: 'siri_record',
+        siri_mode: 'record',
+        speech_locale: speechLocale,
+      });
+    }
   });
 
   useSpeechRecognitionEvent('end', () => {
@@ -298,8 +320,9 @@ export function HomeScreen({ navigation }: Props) {
 
     shouldProcessOnEndRef.current = false;
     const sourceTranscript = transcriptRef.current.trim();
+    const source = voiceEntrySourceRef.current;
     track('voice listening ended', {
-      source: 'home',
+      source,
       speech_locale: speechLocale,
       had_transcript: Boolean(sourceTranscript),
     });
@@ -309,7 +332,7 @@ export function HomeScreen({ navigation }: Props) {
     }
 
     track('voice transcript captured', {
-      source: 'home',
+      source,
       speech_locale: speechLocale,
       transcript_length_bucket:
         sourceTranscript.length > 80
@@ -368,6 +391,80 @@ export function HomeScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => {
+    const launchNonce = route.params?.launchNonce;
+    const launchSource = route.params?.launchSource;
+    const launchAction = route.params?.launchAction;
+    const spokenText = route.params?.spokenText?.trim() ?? '';
+
+    if (
+      !launchNonce ||
+      !launchSource ||
+      !launchAction ||
+      handledExternalLaunchRef.current === launchNonce ||
+      processing ||
+      busy
+    ) {
+      return;
+    }
+
+    if (launchAction === 'start_recording' && isListening) {
+      return;
+    }
+
+    handledExternalLaunchRef.current = launchNonce;
+    setQuickCaptureMode(true);
+
+    if (launchAction === 'start_recording') {
+      if (launchSource === 'widget_mic') {
+        track('widget mic launch attempted', {
+          widget_source: 'widget_mic',
+        });
+      } else if (launchSource === 'siri_record') {
+        track('siri record launch attempted', {
+          source: 'siri_record',
+          siri_mode: 'record',
+        });
+      }
+
+      void toggleRecording(launchSource);
+      return;
+    }
+
+    if (
+      launchAction !== 'process_text' ||
+      launchSource !== 'siri_text'
+    ) {
+      return;
+    }
+
+    track('siri text launch attempted', {
+      source: 'siri_text',
+      siri_mode: 'text',
+      has_text: Boolean(spokenText),
+    });
+
+    if (!spokenText) {
+      setErrorMessage(copy.home.siriEmptyTextFallback);
+      trackSiriFallback('empty_text', 'siri_text');
+      return;
+    }
+
+    setTranscript(spokenText);
+    transcriptRef.current = spokenText;
+    voiceEntrySourceRef.current = 'siri_text';
+    void processCapturedTranscript(spokenText, 'siri_text');
+  }, [
+    route.params?.launchAction,
+    route.params?.launchNonce,
+    route.params?.launchSource,
+    route.params?.spokenText,
+    isListening,
+    processing,
+    busy,
+    copy.home.siriEmptyTextFallback,
+  ]);
+
+  useEffect(() => {
     if (!isListening) {
       pulse.stopAnimation();
       pulse.setValue(1);
@@ -415,6 +512,7 @@ export function HomeScreen({ navigation }: Props) {
     confirmProgress.setValue(1);
     track('reminder confirmation shown', {
       entry_point: 'voice_home',
+      source: pendingParse.launchSource ?? voiceEntrySourceRef.current,
       confirmation_mode: 'inline',
       confidence_state:
         pendingParse.confidence >= 0.9 &&
@@ -461,6 +559,7 @@ export function HomeScreen({ navigation }: Props) {
     ) {
       track('reminder inline auto-save triggered', {
         entry_point: 'voice_home',
+        source: pendingParse.launchSource ?? voiceEntrySourceRef.current,
         confirmation_mode: 'auto',
         confidence_state: 'high',
         ...buildReminderAnalyticsProperties({
@@ -527,7 +626,8 @@ export function HomeScreen({ navigation }: Props) {
     : null;
   const showVoiceStatePill = Boolean(isListening || processing || pendingParse || busy);
   const showTranscriptCard = Boolean(pendingParse || processing || transcript.trim());
-  const showNextReminderCard = !urgentReminder && Boolean(nextDueReminder || overdueCount > 0);
+  const showNextReminderCard =
+    !quickCaptureMode && !urgentReminder && Boolean(nextDueReminder || overdueCount > 0);
   const reminderTimingLabel =
     settings.uiLanguage === 'en' ? 'Reminder timing' : 'موعد التنبيه';
   const transcriptPreview = pendingParse
@@ -583,6 +683,67 @@ export function HomeScreen({ navigation }: Props) {
               onPress: () => navigation.navigate('Settings'),
             }
           : null;
+  const isExternalQuickCapture =
+    quickCaptureMode &&
+    (busy ||
+      processing ||
+      isListening ||
+      Boolean(pendingParse) ||
+      Boolean(errorMessage) ||
+      Boolean(transcript.trim()));
+
+  function isSiriSource(source: VoiceEntrySource): source is SiriLaunchSource {
+    return source === 'siri_record' || source === 'siri_text';
+  }
+
+  function getExternalRetrySource(): VoiceEntrySource {
+    const activeSource = route.params?.launchSource;
+    if (activeSource === 'widget_mic' || activeSource === 'siri_record') {
+      return activeSource;
+    }
+
+    if (activeSource === 'siri_text') {
+      return 'siri_record';
+    }
+
+    return 'home';
+  }
+
+  function getPermissionFallbackMessage(
+    source: VoiceEntrySource,
+    reason: 'microphone_permission' | 'speech_permission'
+  ) {
+    if (source === 'widget_mic') {
+      return copy.home.widgetMicPermissionFallback;
+    }
+
+    if (source === 'siri_record') {
+      return reason === 'microphone_permission'
+        ? copy.home.siriMicPermissionFallback
+        : copy.home.siriSpeechPermissionFallback;
+    }
+
+    return copy.home.speechPermissionNeeded;
+  }
+
+  function trackExternalFallback(
+    source: VoiceEntrySource,
+    reason:
+      | 'microphone_permission'
+      | 'speech_permission'
+      | 'locale_unavailable'
+      | 'start_failed'
+      | 'empty_text'
+  ) {
+    if (source === 'widget_mic') {
+      trackWidgetMicFallback(reason as 'microphone_permission' | 'speech_permission' | 'locale_unavailable' | 'start_failed');
+      return;
+    }
+
+    if (isSiriSource(source)) {
+      trackSiriFallback(reason, source);
+    }
+  }
 
   function buildDraftFromParse(parsed: Awaited<ReturnType<typeof parseReminderText>>) {
     const normalizedTitle =
@@ -722,16 +883,21 @@ export function HomeScreen({ navigation }: Props) {
       cacheHit: target.cacheHit,
       modelTier: target.modelTier,
       missingFields: target.missingFields,
+      source: target.launchSource ?? voiceEntrySourceRef.current,
     });
   }
 
-  async function processCapturedTranscript(sourceTranscript: string) {
+  async function processCapturedTranscript(
+    sourceTranscript: string,
+    source: VoiceEntrySource = voiceEntrySourceRef.current
+  ) {
     try {
       setProcessing(true);
       const parsed = await parseReminderText(sourceTranscript);
       const draft = buildDraftFromParse(parsed);
       track('reminder parse succeeded', {
         entry_point: 'voice_home',
+        source,
         ...buildReminderAnalyticsProperties({
           draft,
           entryPoint: 'voice_home',
@@ -749,11 +915,24 @@ export function HomeScreen({ navigation }: Props) {
         llm_used: Boolean(parsed.llmUsed),
       });
 
+      if (source === 'siri_text') {
+        track('siri text parse completed', {
+          source: 'siri_text',
+          siri_mode: 'text',
+          parse_success: true,
+          parse_path: parsed.parsePath,
+          llm_reason: parsed.llmReason,
+          cache_hit: Boolean(parsed.cacheHit),
+          model_tier: parsed.modelTier,
+        });
+      }
+
       const nextPending = {
         draft,
         transcript: sourceTranscript,
         confidence: parsed.confidence,
         missingFields: parsed.missingFields,
+        launchSource: source === 'home' ? undefined : source,
         parseSource: parsed.source,
         parsePath: parsed.parsePath,
         llmReason: parsed.llmReason,
@@ -769,9 +948,18 @@ export function HomeScreen({ navigation }: Props) {
     } catch {
       track('reminder parse failed', {
         entry_point: 'voice_home',
+        source,
         is_voice_flow: true,
         reason: 'parser_exception',
       });
+      if (source === 'siri_text') {
+        track('siri text parse completed', {
+          source: 'siri_text',
+          siri_mode: 'text',
+          parse_success: false,
+          reason: 'parser_exception',
+        });
+      }
       setErrorMessage(copy.home.parseFailure);
     } finally {
       setProcessing(false);
@@ -783,6 +971,7 @@ export function HomeScreen({ navigation }: Props) {
     sourceTranscript: string,
     options?: {
       confirmationMode?: 'auto' | 'inline';
+      source?: VoiceEntrySource;
       parseConfidence?: number;
       parseSource?: string;
       parsePath?: ParsePath;
@@ -793,9 +982,11 @@ export function HomeScreen({ navigation }: Props) {
     }
   ) {
     const validationIssue = validateDraft(draft);
+    const source = options?.source ?? voiceEntrySourceRef.current;
     if (validationIssue) {
       track('reminder create failed', {
         entry_point: 'voice_home',
+        source,
         ...buildReminderAnalyticsProperties({
           draft,
           entryPoint: 'voice_home',
@@ -822,6 +1013,7 @@ export function HomeScreen({ navigation }: Props) {
     if (!result.ok) {
       track('reminder create failed', {
         entry_point: 'voice_home',
+        source,
         ...buildReminderAnalyticsProperties({
           draft,
           entryPoint: 'voice_home',
@@ -846,6 +1038,7 @@ export function HomeScreen({ navigation }: Props) {
 
     track('reminder create succeeded', {
       entry_point: 'voice_home',
+      source,
       notification_status: result.warning ? 'warning' : 'ok',
       ...buildReminderAnalyticsProperties({
         draft,
@@ -869,6 +1062,7 @@ export function HomeScreen({ navigation }: Props) {
     setTranscript('');
     setErrorMessage('');
     setConfirmNeedsReview(false);
+    setQuickCaptureMode(false);
     setToastTone(result.warning ? 'warning' : 'success');
     setToastMessage(result.warning ?? copy.home.savedToast);
     setUndoAction(
@@ -965,13 +1159,20 @@ export function HomeScreen({ navigation }: Props) {
     }
   }
 
-  async function toggleRecording() {
+  async function toggleRecording(source: VoiceEntrySource = 'home') {
     if (processing) {
+      if (source !== 'home') {
+        setErrorMessage(
+          source === 'widget_mic' ? copy.home.widgetStartFallback : copy.home.siriStartFallback
+        );
+        trackExternalFallback(source, 'start_failed');
+      }
       return;
     }
 
+    voiceEntrySourceRef.current = source;
     track('microphone tapped', {
-      source: 'home',
+      source,
       action: isListening ? 'stop' : 'start',
     });
 
@@ -990,12 +1191,25 @@ export function HomeScreen({ navigation }: Props) {
     transcriptRef.current = '';
     setPendingParse(null);
     setErrorMessage('');
-    const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-    if (!permission.granted) {
+    const microphonePermission =
+      await ExpoSpeechRecognitionModule.requestMicrophonePermissionsAsync();
+    if (!microphonePermission.granted) {
       setBusy(false);
       setProcessing(false);
       shouldProcessOnEndRef.current = false;
-      setErrorMessage(copy.home.speechPermissionNeeded);
+      setErrorMessage(getPermissionFallbackMessage(source, 'microphone_permission'));
+      trackExternalFallback(source, 'microphone_permission');
+      return;
+    }
+
+    const speechPermission =
+      await ExpoSpeechRecognitionModule.requestSpeechRecognizerPermissionsAsync();
+    if (!speechPermission.granted) {
+      setBusy(false);
+      setProcessing(false);
+      shouldProcessOnEndRef.current = false;
+      setErrorMessage(getPermissionFallbackMessage(source, 'speech_permission'));
+      trackExternalFallback(source, 'speech_permission');
       return;
     }
 
@@ -1005,22 +1219,41 @@ export function HomeScreen({ navigation }: Props) {
       setProcessing(false);
       shouldProcessOnEndRef.current = false;
       setErrorMessage(
-        Platform.OS === 'ios'
-          ? copy.home.enableArabicIos
-          : copy.home.arabicUnavailable
+        source === 'widget_mic'
+          ? copy.home.widgetLocaleFallback
+          : source === 'siri_record'
+            ? copy.home.siriLocaleFallback
+          : Platform.OS === 'ios'
+            ? copy.home.enableArabicIos
+            : copy.home.arabicUnavailable
       );
+      trackExternalFallback(source, 'locale_unavailable');
       return;
     }
 
     setSpeechLocale(resolvedLocale);
     shouldProcessOnEndRef.current = true;
-    ExpoSpeechRecognitionModule.start({
-      lang: resolvedLocale,
-      interimResults: true,
-      continuous: false,
-      addsPunctuation: false,
-      maxAlternatives: 1,
-    });
+    try {
+      ExpoSpeechRecognitionModule.start({
+        lang: resolvedLocale,
+        interimResults: true,
+        continuous: false,
+        addsPunctuation: false,
+        maxAlternatives: 1,
+      });
+    } catch {
+      setBusy(false);
+      setProcessing(false);
+      shouldProcessOnEndRef.current = false;
+      setErrorMessage(
+        source === 'widget_mic'
+          ? copy.home.widgetStartFallback
+          : source === 'siri_record'
+            ? copy.home.siriStartFallback
+          : copy.home.parseFailure
+      );
+      trackExternalFallback(source, 'start_failed');
+    }
   }
 
   return (
@@ -1028,26 +1261,28 @@ export function HomeScreen({ navigation }: Props) {
       <View pointerEvents="none" style={styles.backgroundOrbTop} />
       <View pointerEvents="none" style={styles.backgroundOrbBottom} />
       <View style={styles.content}>
-        <View style={styles.voiceTopBar}>
-          <NavIconButton
-            label={copy.common.settings}
-            onPress={() => navigation.navigate('Settings')}
-            variant="settings"
-            showLabel={false}
-          />
-          <View style={styles.voiceBrand}>
-            <Text style={styles.voiceBrandTitle}>Fakarni</Text>
-            <Text style={styles.voiceBrandSubtitle}>{copy.home.brandSubtitle}</Text>
+        {!isExternalQuickCapture ? (
+          <View style={styles.voiceTopBar}>
+            <NavIconButton
+              label={copy.common.settings}
+              onPress={() => navigation.navigate('Settings')}
+              variant="settings"
+              showLabel={false}
+            />
+            <View style={styles.voiceBrand}>
+              <Text style={styles.voiceBrandTitle}>Fakarni</Text>
+              <Text style={styles.voiceBrandSubtitle}>{copy.home.brandSubtitle}</Text>
+            </View>
+            <NavIconButton
+              label={copy.common.reminders}
+              onPress={() => navigation.navigate('ReminderList')}
+              variant="reminders"
+              showLabel={false}
+            />
           </View>
-          <NavIconButton
-            label={copy.common.reminders}
-            onPress={() => navigation.navigate('ReminderList')}
-            variant="reminders"
-            showLabel={false}
-          />
-        </View>
+        ) : null}
 
-        {permissionHealth ? (
+        {!isExternalQuickCapture && permissionHealth ? (
           <GlassSurface
             style={styles.trustStrip}
             intensity={42}
@@ -1113,7 +1348,9 @@ export function HomeScreen({ navigation }: Props) {
                 <View style={[styles.micRingInner, compact && styles.micRingInnerCompact]}>
                   <Pressable
                     accessibilityRole="button"
-                    onPress={toggleRecording}
+                    onPress={() => {
+                      void toggleRecording();
+                    }}
                     style={[styles.micButton, compact && styles.micButtonCompact]}
                   >
                     {isListening ? <View style={styles.stopSquare} /> : <MicGlyph />}
@@ -1185,7 +1422,7 @@ export function HomeScreen({ navigation }: Props) {
                 <Pressable
                   onPress={() => {
                     setErrorMessage('');
-                    void toggleRecording();
+                    void toggleRecording(getExternalRetrySource());
                   }}
                   style={styles.inlineErrorAction}
                 >
@@ -1196,7 +1433,7 @@ export function HomeScreen({ navigation }: Props) {
           ) : null}
         </View>
 
-        {urgentReminder && urgentReminderSnapshot ? (
+        {!quickCaptureMode && urgentReminder && urgentReminderSnapshot ? (
           <GlassSurface
             style={styles.urgentCard}
             contentStyle={styles.urgentCardContent}

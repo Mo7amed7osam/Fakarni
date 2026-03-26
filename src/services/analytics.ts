@@ -10,7 +10,10 @@ import {
   ParsePath,
   Reminder,
   ReminderDraft,
+  SiriFallbackReason,
+  SiriLaunchSource,
   SettingsState,
+  WidgetFallbackReason,
 } from '../types';
 
 type AnalyticsPrimitive = string | number | boolean | null;
@@ -60,6 +63,16 @@ export type AnalyticsEventName =
   | 'google calendar connected'
   | 'google calendar disconnected'
   | 'settings changed'
+  | 'widget opened'
+  | 'widget mic launch attempted'
+  | 'widget mic launch succeeded'
+  | 'widget mic fallback shown'
+  | 'siri shortcut invoked'
+  | 'siri record launch attempted'
+  | 'siri record launch succeeded'
+  | 'siri text launch attempted'
+  | 'siri text parse completed'
+  | 'siri fallback shown'
   | 'paywall viewed'
   | 'paywall plan selected'
   | 'trial started'
@@ -104,6 +117,36 @@ interface BuildReminderAnalyticsInput {
   confirmationMode?: 'inline' | 'full' | 'auto';
   editedFieldsCount?: number;
   resultReason?: string;
+}
+
+export function trackWidgetMicFallback(
+  reason: WidgetFallbackReason,
+  properties?: Record<string, AnalyticsPropertyInput>
+) {
+  track(
+    'widget mic fallback shown',
+    compactProperties({
+      widget_source: 'widget_mic',
+      fallback_reason: reason,
+      ...properties,
+    })
+  );
+}
+
+export function trackSiriFallback(
+  reason: SiriFallbackReason,
+  source: SiriLaunchSource,
+  properties?: Record<string, AnalyticsPropertyInput>
+) {
+  track(
+    'siri fallback shown',
+    compactProperties({
+      source,
+      siri_mode: source === 'siri_record' ? 'record' : 'text',
+      fallback_reason: reason,
+      ...properties,
+    })
+  );
 }
 
 const posthogApiKey = process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '';

@@ -8,6 +8,22 @@ export type ParsePath =
   | 'strong_model'
   | 'review_required';
 export type ParseModelTier = 'none' | 'mini' | 'strong';
+export type WidgetLaunchSource = 'widget_mic';
+export type SiriLaunchSource = 'siri_record' | 'siri_text';
+export type ExternalLaunchSource = WidgetLaunchSource | SiriLaunchSource;
+export type ExternalLaunchAction = 'start_recording' | 'process_text';
+export type VoiceEntrySource = 'home' | ExternalLaunchSource;
+export type WidgetFallbackReason =
+  | 'microphone_permission'
+  | 'speech_permission'
+  | 'locale_unavailable'
+  | 'start_failed';
+export type SiriFallbackReason =
+  | 'microphone_permission'
+  | 'speech_permission'
+  | 'locale_unavailable'
+  | 'start_failed'
+  | 'empty_text';
 export type ParseLLMReason =
   | 'missing_fields'
   | 'low_confidence'
@@ -161,7 +177,14 @@ export interface ReminderDraft {
 export type RootStackParamList = {
   Splash: undefined;
   Onboarding: undefined;
-  Home: undefined;
+  Home:
+    | {
+        launchAction?: ExternalLaunchAction;
+        launchSource?: ExternalLaunchSource;
+        launchNonce?: string;
+        spokenText?: string;
+      }
+    | undefined;
   Confirmation: {
     mode: 'create' | 'edit';
     draft: ReminderDraft;
