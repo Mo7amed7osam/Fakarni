@@ -51,6 +51,18 @@ export function toArabicDateLabel(date: string | Date, language: UiLanguage = 'a
   }).format(new Date(date));
 }
 
+export function toCompactDateLabel(date: string | Date, language: UiLanguage = 'ar-EG') {
+  const target = new Date(date);
+  const isSameYear = target.getFullYear() === new Date().getFullYear();
+
+  return new Intl.DateTimeFormat(resolveLocale(language), {
+    weekday: language === 'en' ? 'short' : 'long',
+    day: 'numeric',
+    month: language === 'en' ? 'short' : 'long',
+    ...(isSameYear ? {} : { year: 'numeric' }),
+  }).format(target);
+}
+
 export function toArabicTimeLabel(date: string | Date, language: UiLanguage = 'ar-EG') {
   return new Intl.DateTimeFormat(resolveLocale(language), {
     hour: 'numeric',

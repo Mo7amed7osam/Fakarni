@@ -30,6 +30,7 @@ import {
   relativeReminderLabel,
   toArabicDateLabel,
   toArabicTimeLabel,
+  toCompactDateLabel,
 } from '../utils/arabic';
 import { getReminderCategoryLabel } from '../utils/categorization';
 import { getRecurrenceLabel } from '../utils/reminders';
@@ -70,6 +71,12 @@ export function ConfirmationScreen({ navigation, route }: Props) {
   const [showMode, setShowMode] = useState<'date' | 'time' | null>(null);
   const [saving, setSaving] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [showMoreOptions, setShowMoreOptions] = useState(
+    isEdit &&
+      (draft.category !== 'personal' ||
+        draft.recurrence !== 'none' ||
+        Boolean(draft.addToCalendar))
+  );
   const showAndroidCalendarToggle = !isEdit && Platform.OS === 'android';
   const showAppleCalendarSyncHint =
     !isEdit && Platform.OS === 'ios' && settings.appleCalendar.autoSyncEnabled;
@@ -314,7 +321,11 @@ export function ConfirmationScreen({ navigation, route }: Props) {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.title}>
         {isEdit
           ? copy.confirmation.titleEdit
@@ -330,33 +341,29 @@ export function ConfirmationScreen({ navigation, route }: Props) {
             : copy.confirmation.subtitleVoice}
       </Text>
 
-      <GlassSurface
-        style={styles.heroCard}
-        contentStyle={styles.heroCardContent}
-        intensity={52}
-        overlayColor="rgba(255,255,255,0.24)"
-        borderColor="rgba(255,255,255,0.5)"
-      >
-        <Text style={styles.heroLabel}>
-          {isEdit
-            ? copy.confirmation.heroEdit
-            : isManualCreate
-              ? copy.confirmation.heroManual
-              : copy.confirmation.heroVoice}
-        </Text>
-        <Text style={styles.heroValue}>{confidenceLabel}</Text>
-        <Text style={styles.heroCaption}>
-          {isEdit
-            ? copy.confirmation.heroEditCaption
-            : isManualCreate
-              ? copy.confirmation.heroManualCaption
-            : missingFields.length
-              ? settings.uiLanguage === 'en'
-                ? `Review: ${missingFields.join(' / ')}`
-                : `راجع: ${missingFields.join(' / ')}`
-              : copy.confirmation.heroVoiceCaptionNoMissing}
-        </Text>
-      </GlassSurface>
+      {!isManualCreate ? (
+        <GlassSurface
+          style={styles.heroCard}
+          contentStyle={styles.heroCardContent}
+          intensity={52}
+          overlayColor="rgba(255,255,255,0.24)"
+          borderColor="rgba(255,255,255,0.5)"
+        >
+          <Text style={styles.heroLabel}>
+            {isEdit ? copy.confirmation.heroEdit : copy.confirmation.heroVoice}
+          </Text>
+          <Text style={styles.heroValue}>{confidenceLabel}</Text>
+          <Text style={styles.heroCaption}>
+            {isEdit
+              ? copy.confirmation.heroEditCaption
+              : missingFields.length
+                ? settings.uiLanguage === 'en'
+                  ? `Review: ${missingFields.join(' / ')}`
+                  : `راجع: ${missingFields.join(' / ')}`
+                : copy.confirmation.heroVoiceCaptionNoMissing}
+          </Text>
+        </GlassSurface>
+      ) : null}
 
       {transcript.trim() ? (
         <SectionCard title={isEdit ? copy.confirmation.originalText : copy.confirmation.heardText}>
@@ -364,177 +371,390 @@ export function ConfirmationScreen({ navigation, route }: Props) {
         </SectionCard>
       ) : null}
 
-      <SectionCard title={copy.confirmation.taskName}>
-        <TextInput
-          value={title}
-          onChangeText={setTitle}
-          placeholder={
-            settings.uiLanguage === 'en' ? 'Example: Doctor appointment' : 'مثال: ميعاد الدكتور'
-          }
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          textAlign="right"
-        />
-      </SectionCard>
-
-      <SectionCard title={copy.confirmation.schedule}>
-        <View style={styles.row}>
-          <Pressable onPress={() => setShowMode('time')} style={styles.fieldChip}>
-            <Text style={styles.fieldChipLabel}>{copy.confirmation.time}</Text>
-            <Text style={styles.fieldChipValue}>
-              {toArabicTimeLabel(eventDate, settings.uiLanguage)}
-            </Text>
-          </Pressable>
-          <Pressable onPress={() => setShowMode('date')} style={styles.fieldChip}>
-            <Text style={styles.fieldChipLabel}>{copy.confirmation.day}</Text>
-            <Text style={styles.fieldChipValue}>
-              {toArabicDateLabel(eventDate, settings.uiLanguage)}
-            </Text>
-          </Pressable>
-        </View>
-
-        {showMode ? (
-          <DateTimePicker
-            mode={showMode}
-            value={eventDate}
-            is24Hour={false}
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleDateTimeChange}
-          />
-        ) : null}
-      </SectionCard>
-
-      <SectionCard title={copy.confirmation.reminderTime}>
-        <View style={styles.choiceRow}>
-          {offsetOptions.map((value) => (
-            <Pressable
-              key={value}
-              onPress={() => setOffsetMinutes(value)}
-              style={[
-                styles.choiceChip,
-                value === offsetMinutes && styles.choiceChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.choiceText,
-                  value === offsetMinutes && styles.choiceTextActive,
-                ]}
-              >
-                {relativeReminderLabel(value, settings.uiLanguage)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        <Text style={styles.bodyText}>
-          {copy.confirmation.reminderWillArriveAt(
-            toArabicDateLabel(reminderAt, settings.uiLanguage),
-            toArabicTimeLabel(reminderAt, settings.uiLanguage)
-          )}
-        </Text>
-      </SectionCard>
-
-      <SectionCard title={copy.confirmation.recurrence}>
-        <View style={styles.choiceRow}>
-          {recurrenceOptions.map((value) => (
-            <Pressable
-              key={value}
-              onPress={() => setRecurrence(value)}
-              style={[
-                styles.choiceChip,
-                value === recurrence && styles.choiceChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.choiceText,
-                  value === recurrence && styles.choiceTextActive,
-                ]}
-              >
-                {getRecurrenceLabel(value, settings.uiLanguage)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </SectionCard>
-
-      <SectionCard
-        title={copy.confirmation.taskCategory}
-        subtitle={copy.confirmation.taskCategorySubtitle}
-      >
-        <View style={styles.choiceRow}>
-          {categoryOptions.map((value) => (
-            <Pressable
-              key={value}
-              onPress={() => setCategory(value)}
-              style={[
-                styles.choiceChip,
-                value === category && styles.choiceChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.choiceText,
-                  value === category && styles.choiceTextActive,
-                ]}
-              >
-                {getReminderCategoryLabel(value, settings.uiLanguage)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </SectionCard>
-
-      {showAppleCalendarSyncHint ? (
-        <View style={styles.inlineCalendarHint}>
-          <Text style={styles.inlineCalendarHintText}>
-            {copy.confirmation.iosCalendarHint}
-          </Text>
-        </View>
-      ) : null}
-
-      {showAndroidCalendarToggle ? (
-        <SectionCard title={copy.confirmation.calendar} subtitle={calendarSubtitle}>
-          <View style={styles.calendarRow}>
-            <Pressable
-              onPress={() => setAddToCalendar((current) => !current)}
-              style={[styles.calendarToggle, addToCalendar && styles.calendarToggleActive]}
-            >
-              <View
-                style={[
-                  styles.calendarToggleKnob,
-                  addToCalendar && styles.calendarToggleKnobActive,
-                ]}
+      {isManualCreate ? (
+        <>
+          <GlassSurface
+            style={styles.compactCard}
+            contentStyle={styles.compactCardContent}
+            intensity={48}
+            overlayColor="rgba(255,255,255,0.24)"
+            borderColor="rgba(255,255,255,0.5)"
+          >
+            <View style={styles.compactBlock}>
+              <Text style={styles.compactLabel}>{copy.confirmation.taskName}</Text>
+              <TextInput
+                value={title}
+                onChangeText={setTitle}
+                placeholder={
+                  settings.uiLanguage === 'en'
+                    ? 'Example: Doctor appointment'
+                    : 'مثال: ميعاد الدكتور'
+                }
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                textAlign="right"
               />
-            </Pressable>
-            <View style={styles.calendarText}>
-              <Text style={styles.calendarTitle}>{copy.confirmation.addToCalendar}</Text>
-              <Text style={styles.calendarHint}>{copy.confirmation.calendarHint}</Text>
             </View>
-          </View>
-        </SectionCard>
-      ) : null}
+
+            <View style={styles.compactBlock}>
+              <Text style={styles.compactLabel}>{copy.confirmation.schedule}</Text>
+              <View style={styles.row}>
+                <Pressable onPress={() => setShowMode('time')} style={styles.fieldChip}>
+                  <Text style={styles.fieldChipLabel}>{copy.confirmation.time}</Text>
+                  <Text style={styles.fieldChipValue}>
+                    {toArabicTimeLabel(eventDate, settings.uiLanguage)}
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => setShowMode('date')} style={styles.fieldChip}>
+                  <Text style={styles.fieldChipLabel}>{copy.confirmation.day}</Text>
+                  <Text style={styles.fieldChipValue}>
+                    {toCompactDateLabel(eventDate, settings.uiLanguage)}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.compactBlock}>
+              <Text style={styles.compactLabel}>{copy.confirmation.reminderTime}</Text>
+              <View style={styles.choiceRow}>
+                {offsetOptions.map((value) => (
+                  <Pressable
+                    key={value}
+                    onPress={() => setOffsetMinutes(value)}
+                    style={[
+                      styles.choiceChip,
+                      styles.choiceChipCompact,
+                      value === offsetMinutes && styles.choiceChipActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.choiceText,
+                        value === offsetMinutes && styles.choiceTextActive,
+                      ]}
+                    >
+                      {relativeReminderLabel(value, settings.uiLanguage)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.compactSummary}>
+              <Text style={styles.compactSummaryLabel}>{copy.confirmation.quickSummary}</Text>
+              <Text style={styles.compactSummaryText}>
+                {copy.confirmation.reminderWillArriveAt(
+                  toCompactDateLabel(reminderAt, settings.uiLanguage),
+                  toArabicTimeLabel(reminderAt, settings.uiLanguage)
+                )}
+              </Text>
+            </View>
+
+            {showMode ? (
+              <DateTimePicker
+                mode={showMode}
+                value={eventDate}
+                is24Hour={false}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateTimeChange}
+              />
+            ) : null}
+          </GlassSurface>
+
+          <Pressable
+            onPress={() => setShowMoreOptions((current) => !current)}
+            style={styles.moreOptionsToggle}
+          >
+            <Text style={styles.moreOptionsToggleText}>
+              {showMoreOptions
+                ? copy.confirmation.hideMoreOptions
+                : copy.confirmation.showMoreOptions}
+            </Text>
+          </Pressable>
+
+          {showMoreOptions ? (
+            <SectionCard title={copy.confirmation.moreOptions}>
+              <View style={styles.optionGroup}>
+                <Text style={styles.optionLabel}>{copy.confirmation.recurrence}</Text>
+                <View style={styles.choiceRow}>
+                  {recurrenceOptions.map((value) => (
+                    <Pressable
+                      key={value}
+                      onPress={() => setRecurrence(value)}
+                      style={[
+                        styles.choiceChip,
+                        value === recurrence && styles.choiceChipActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.choiceText,
+                          value === recurrence && styles.choiceTextActive,
+                        ]}
+                      >
+                        {getRecurrenceLabel(value, settings.uiLanguage)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.optionGroup}>
+                <Text style={styles.optionLabel}>{copy.confirmation.taskCategory}</Text>
+                <View style={styles.choiceRow}>
+                  {categoryOptions.map((value) => (
+                    <Pressable
+                      key={value}
+                      onPress={() => setCategory(value)}
+                      style={[
+                        styles.choiceChip,
+                        value === category && styles.choiceChipActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.choiceText,
+                          value === category && styles.choiceTextActive,
+                        ]}
+                      >
+                        {getReminderCategoryLabel(value, settings.uiLanguage)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {showAppleCalendarSyncHint ? (
+                <View style={styles.inlineCalendarHint}>
+                  <Text style={styles.inlineCalendarHintText}>
+                    {copy.confirmation.iosCalendarHint}
+                  </Text>
+                </View>
+              ) : null}
+
+              {showAndroidCalendarToggle ? (
+                <View style={styles.optionGroup}>
+                  <Text style={styles.optionLabel}>{copy.confirmation.calendar}</Text>
+                  <View style={styles.calendarRow}>
+                    <Pressable
+                      onPress={() => setAddToCalendar((current) => !current)}
+                      style={[
+                        styles.calendarToggle,
+                        addToCalendar && styles.calendarToggleActive,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.calendarToggleKnob,
+                          addToCalendar && styles.calendarToggleKnobActive,
+                        ]}
+                      />
+                    </Pressable>
+                    <View style={styles.calendarText}>
+                      <Text style={styles.calendarTitle}>
+                        {copy.confirmation.addToCalendar}
+                      </Text>
+                      <Text style={styles.calendarHint}>{copy.confirmation.calendarHint}</Text>
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+            </SectionCard>
+          ) : null}
+        </>
+      ) : (
+        <>
+          <SectionCard title={copy.confirmation.taskName}>
+            <TextInput
+              value={title}
+              onChangeText={setTitle}
+              placeholder={
+                settings.uiLanguage === 'en'
+                  ? 'Example: Doctor appointment'
+                  : 'مثال: ميعاد الدكتور'
+              }
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              textAlign="right"
+            />
+          </SectionCard>
+
+          <SectionCard title={copy.confirmation.schedule}>
+            <View style={styles.row}>
+              <Pressable onPress={() => setShowMode('time')} style={styles.fieldChip}>
+                <Text style={styles.fieldChipLabel}>{copy.confirmation.time}</Text>
+                <Text style={styles.fieldChipValue}>
+                  {toArabicTimeLabel(eventDate, settings.uiLanguage)}
+                </Text>
+              </Pressable>
+              <Pressable onPress={() => setShowMode('date')} style={styles.fieldChip}>
+                <Text style={styles.fieldChipLabel}>{copy.confirmation.day}</Text>
+                <Text style={styles.fieldChipValue}>
+                  {toCompactDateLabel(eventDate, settings.uiLanguage)}
+                </Text>
+              </Pressable>
+            </View>
+
+            {showMode ? (
+              <DateTimePicker
+                mode={showMode}
+                value={eventDate}
+                is24Hour={false}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateTimeChange}
+              />
+            ) : null}
+          </SectionCard>
+
+          <SectionCard title={copy.confirmation.reminderTime}>
+            <View style={styles.choiceRow}>
+              {offsetOptions.map((value) => (
+                <Pressable
+                  key={value}
+                  onPress={() => setOffsetMinutes(value)}
+                  style={[
+                    styles.choiceChip,
+                    value === offsetMinutes && styles.choiceChipActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.choiceText,
+                      value === offsetMinutes && styles.choiceTextActive,
+                    ]}
+                  >
+                    {relativeReminderLabel(value, settings.uiLanguage)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.bodyText}>
+              {copy.confirmation.reminderWillArriveAt(
+                toCompactDateLabel(reminderAt, settings.uiLanguage),
+                toArabicTimeLabel(reminderAt, settings.uiLanguage)
+              )}
+            </Text>
+          </SectionCard>
+
+          <SectionCard title={copy.confirmation.recurrence}>
+            <View style={styles.choiceRow}>
+              {recurrenceOptions.map((value) => (
+                <Pressable
+                  key={value}
+                  onPress={() => setRecurrence(value)}
+                  style={[
+                    styles.choiceChip,
+                    value === recurrence && styles.choiceChipActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.choiceText,
+                      value === recurrence && styles.choiceTextActive,
+                    ]}
+                  >
+                    {getRecurrenceLabel(value, settings.uiLanguage)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </SectionCard>
+
+          <SectionCard
+            title={copy.confirmation.taskCategory}
+            subtitle={copy.confirmation.taskCategorySubtitle}
+          >
+            <View style={styles.choiceRow}>
+              {categoryOptions.map((value) => (
+                <Pressable
+                  key={value}
+                  onPress={() => setCategory(value)}
+                  style={[
+                    styles.choiceChip,
+                    value === category && styles.choiceChipActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.choiceText,
+                      value === category && styles.choiceTextActive,
+                    ]}
+                  >
+                    {getReminderCategoryLabel(value, settings.uiLanguage)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </SectionCard>
+
+          {showAppleCalendarSyncHint ? (
+            <View style={styles.inlineCalendarHint}>
+              <Text style={styles.inlineCalendarHintText}>
+                {copy.confirmation.iosCalendarHint}
+              </Text>
+            </View>
+          ) : null}
+
+          {showAndroidCalendarToggle ? (
+            <SectionCard title={copy.confirmation.calendar} subtitle={calendarSubtitle}>
+              <View style={styles.calendarRow}>
+                <Pressable
+                  onPress={() => setAddToCalendar((current) => !current)}
+                  style={[
+                    styles.calendarToggle,
+                    addToCalendar && styles.calendarToggleActive,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.calendarToggleKnob,
+                      addToCalendar && styles.calendarToggleKnobActive,
+                    ]}
+                  />
+                </Pressable>
+                <View style={styles.calendarText}>
+                  <Text style={styles.calendarTitle}>{copy.confirmation.addToCalendar}</Text>
+                  <Text style={styles.calendarHint}>{copy.confirmation.calendarHint}</Text>
+                </View>
+              </View>
+            </SectionCard>
+          ) : null}
+        </>
+      )}
 
       {validationError ? <Text style={styles.errorText}>{validationError}</Text> : null}
 
-      <View style={styles.footer}>
-        <GhostButton
-          label={
-            saving
-              ? copy.confirmation.saving
-              : isEdit
-                ? copy.confirmation.saveEdit
-                : copy.confirmation.saveReminder
-          }
-          onPress={handleSave}
-          disabled={saving}
-        />
-        <GhostButton
-          label={copy.common.back}
-          variant="secondary"
-          onPress={() => navigation.goBack()}
-        />
-      </View>
+      {isManualCreate ? (
+        <View style={styles.manualFooter}>
+          <GhostButton
+            label={saving ? copy.confirmation.saving : copy.confirmation.saveReminder}
+            onPress={handleSave}
+            disabled={saving}
+          />
+          <Pressable onPress={() => navigation.goBack()} style={styles.inlineBackAction}>
+            <Text style={styles.inlineBackText}>{copy.common.back}</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.footer}>
+          <GhostButton
+            label={
+              saving
+                ? copy.confirmation.saving
+                : isEdit
+                  ? copy.confirmation.saveEdit
+                  : copy.confirmation.saveReminder
+            }
+            onPress={handleSave}
+            disabled={saving}
+          />
+          <GhostButton
+            label={copy.common.back}
+            variant="secondary"
+            onPress={() => navigation.goBack()}
+          />
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -597,6 +817,72 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     writingDirection: 'rtl',
   },
+  compactCard: {
+    borderRadius: radii.lg,
+  },
+  compactCardContent: {
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  compactBlock: {
+    gap: spacing.xs,
+  },
+  compactLabel: {
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  compactSummary: {
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(255,255,255,0.68)',
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: 4,
+  },
+  compactSummaryLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  compactSummaryText: {
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    color: colors.text,
+    textAlign: 'right',
+    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+  moreOptionsToggle: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: colors.cardMuted,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  moreOptionsToggleText: {
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    color: colors.primaryDark,
+    writingDirection: 'rtl',
+  },
+  optionGroup: {
+    gap: spacing.sm,
+  },
+  optionLabel: {
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    color: colors.text,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   bodyText: {
     fontFamily: fonts.regular,
     fontSize: 15,
@@ -618,9 +904,11 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   row: {
+    flexDirection: 'row-reverse',
     gap: spacing.sm,
   },
   fieldChip: {
+    flex: 1,
     backgroundColor: colors.white,
     borderRadius: radii.md,
     borderWidth: 1,
@@ -657,6 +945,10 @@ const styles = StyleSheet.create({
   choiceChipActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+  },
+  choiceChipCompact: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
   },
   choiceText: {
     fontFamily: fonts.semibold,
@@ -735,5 +1027,21 @@ const styles = StyleSheet.create({
   },
   footer: {
     gap: spacing.md,
+  },
+  manualFooter: {
+    gap: spacing.sm,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.md,
+  },
+  inlineBackAction: {
+    alignSelf: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  inlineBackText: {
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    color: colors.textMuted,
+    writingDirection: 'rtl',
   },
 });

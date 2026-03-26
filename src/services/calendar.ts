@@ -119,14 +119,11 @@ function buildDeviceCalendarEvent(input: CalendarEventInput) {
     endDate,
     notes: 'Created by Fakarni',
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    alarms:
-      input.reminderOffset > 0
-        ? [
-            {
-              relativeOffset: -input.reminderOffset,
-            },
-          ]
-        : [],
+    alarms: [
+      {
+        relativeOffset: -input.reminderOffset,
+      },
+    ],
   };
 }
 
@@ -177,6 +174,7 @@ async function createDeviceCalendarEvent(
         status: 'synced',
         provider,
         eventId,
+        alertConfigured: true,
       };
     }
 
@@ -201,6 +199,7 @@ async function createDeviceCalendarEvent(
       status: 'synced',
       provider,
       eventId,
+      alertConfigured: true,
     };
   } catch {
     return {
@@ -293,15 +292,12 @@ async function createGoogleCalendarEvent(
           },
           reminders: {
             useDefault: false,
-            overrides:
-              input.reminderOffset > 0
-                ? [
-                    {
-                      method: 'popup',
-                      minutes: input.reminderOffset,
-                    },
-                  ]
-                : [],
+            overrides: [
+              {
+                method: 'popup',
+                minutes: input.reminderOffset,
+              },
+            ],
           },
         }),
       }
@@ -322,6 +318,7 @@ async function createGoogleCalendarEvent(
       status: 'synced',
       provider: 'google',
       eventId: json.id,
+      alertConfigured: true,
     };
   } catch {
     return {
@@ -341,14 +338,28 @@ export async function createCalendarEvent(
     input.googleCalendar?.connected &&
     isGoogleCalendarConfigured()
   ) {
-    return createGoogleCalendarEvent({
+    const result = await createGoogleCalendarEvent({
       ...input,
       platform,
     });
+    if (__DEV__ && result.status === 'synced' && !result.alertConfigured) {
+      console.warn('Calendar event synced without alert', {
+        provider: result.provider,
+        reminderOffset: input.reminderOffset,
+      });
+    }
+    return result;
   }
 
-  return createDeviceCalendarEvent({
+  const result = await createDeviceCalendarEvent({
     ...input,
     platform,
   });
+  if (__DEV__ && result.status === 'synced' && !result.alertConfigured) {
+    console.warn('Calendar event synced without alert', {
+      provider: result.provider,
+      reminderOffset: input.reminderOffset,
+    });
+  }
+  return result;
 }

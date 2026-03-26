@@ -33,6 +33,7 @@ import {
   ParseLLMReason,
   ParseModelTier,
   ParsePath,
+  Reminder,
   ReminderDraft,
   RootStackParamList,
 } from '../types';
@@ -63,6 +64,10 @@ type PendingParse = {
   modelTier?: ParseModelTier;
   requiresManualConfirmation: boolean;
 };
+
+type UndoAction =
+  | { kind: 'remove_created'; reminderId: string }
+  | { kind: 'restore_snapshot'; reminder: Reminder };
 
 function RemindersGlyph() {
   return (
@@ -215,6 +220,9 @@ export function HomeScreen({ navigation }: Props) {
     reminders,
     createReminder,
     removeReminder,
+    restoreReminder,
+    completeReminder,
+    snoozeReminder,
     settings,
     notificationPermission,
     pendingPermissionReminders,
@@ -234,7 +242,7 @@ export function HomeScreen({ navigation }: Props) {
   const [showPickerMode, setShowPickerMode] = useState<'date' | 'time' | null>(null);
   const [toastMessage, setToastMessage] = useState('');
   const [toastTone, setToastTone] = useState<'success' | 'warning'>('success');
-  const [undoReminderId, setUndoReminderId] = useState<string | null>(null);
+  const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
   const [exampleIndex, setExampleIndex] = useState(0);
   const pulse = useRef(new Animated.Value(1)).current;
   const confirmOpacity = useRef(new Animated.Value(0)).current;
@@ -246,10 +254,19 @@ export function HomeScreen({ navigation }: Props) {
   const latestPendingParseRef = useRef<PendingParse | null>(null);
   const { height } = useWindowDimensions();
   const compact = height < 780;
-  const notificationActionLabel =
-    notificationPermission === 'blocked'
-      ? copy.settings.notificationActionBlocked
-      : copy.settings.notificationActionAsk;
+  const now = dayjs();
+  const appleCalendarNeedsAttention =
+    Platform.OS === 'ios' &&
+    (settings.appleCalendar.permissionStatus === 'denied' ||
+      settings.appleCalendar.permissionStatus === 'restricted');
+  const googleCalendarNeedsAttention =
+    Platform.OS === 'android' &&
+    !settings.googleCalendar.connected &&
+    reminders.some(
+      (reminder) =>
+        reminder.calendarProvider === 'google' ||
+        reminder.calendarSyncStatus === 'failed'
+    );
   const isHighConfidenceCard = Boolean(
     pendingParse &&
       pendingParse.confidence >= 0.9 &&
@@ -337,7 +354,7 @@ export function HomeScreen({ navigation }: Props) {
 
     const timeout = setTimeout(() => {
       setToastMessage('');
-      setUndoReminderId(null);
+      setUndoAction(null);
     }, 3000);
     return () => clearTimeout(timeout);
   }, [toastMessage]);
@@ -498,9 +515,19 @@ export function HomeScreen({ navigation }: Props) {
 
   const nextDueReminder = getNextDueReminder(reminders);
   const overdueCount = getOverdueReminderCount(reminders);
+  const urgentReminder = reminders.find((reminder) => {
+    const snapshot = getReminderTimelineSnapshot(reminder, now);
+    return (
+      snapshot.bucket !== 'done' &&
+      dayjs(snapshot.activeReminderAt).isBefore(now.add(1, 'minute'))
+    );
+  });
+  const urgentReminderSnapshot = urgentReminder
+    ? getReminderTimelineSnapshot(urgentReminder, now)
+    : null;
   const showVoiceStatePill = Boolean(isListening || processing || pendingParse || busy);
   const showTranscriptCard = Boolean(pendingParse || processing || transcript.trim());
-  const showNextReminderCard = Boolean(nextDueReminder || overdueCount > 0);
+  const showNextReminderCard = !urgentReminder && Boolean(nextDueReminder || overdueCount > 0);
   const reminderTimingLabel =
     settings.uiLanguage === 'en' ? 'Reminder timing' : 'موعد التنبيه';
   const transcriptPreview = pendingParse
@@ -525,6 +552,37 @@ export function HomeScreen({ navigation }: Props) {
         : settings.uiLanguage === 'en'
           ? 'Ready'
           : 'جاهز';
+  const permissionHealth =
+    notificationPermission !== 'granted'
+      ? {
+          title: copy.home.trustStripNotificationsTitle,
+          body:
+            pendingPermissionReminders > 0
+              ? pendingPermissionReminders === 1
+                ? copy.home.pendingOne
+                : copy.home.pendingMany(pendingPermissionReminders)
+              : copy.home.trustStripNotificationsBody,
+          actionLabel:
+            notificationPermission === 'blocked'
+              ? copy.home.trustStripOpenSettings
+              : copy.home.trustStripEnableNotifications,
+          onPress: handleNotificationAction,
+        }
+      : appleCalendarNeedsAttention
+        ? {
+            title: copy.home.trustStripCalendarTitle,
+            body: copy.home.trustStripCalendarBody,
+            actionLabel: copy.home.trustStripOpenSettings,
+            onPress: openNotificationSettings,
+          }
+        : googleCalendarNeedsAttention
+          ? {
+              title: copy.home.trustStripGoogleCalendarTitle,
+              body: copy.home.trustStripGoogleCalendarBody,
+              actionLabel: copy.home.trustStripOpenSettings,
+              onPress: () => navigation.navigate('Settings'),
+            }
+          : null;
 
   function buildDraftFromParse(parsed: Awaited<ReturnType<typeof parseReminderText>>) {
     const normalizedTitle =
@@ -813,16 +871,28 @@ export function HomeScreen({ navigation }: Props) {
     setConfirmNeedsReview(false);
     setToastTone(result.warning ? 'warning' : 'success');
     setToastMessage(result.warning ?? copy.home.savedToast);
-    setUndoReminderId(result.reminderId ?? null);
+    setUndoAction(
+      result.reminderId
+        ? {
+            kind: 'remove_created',
+            reminderId: result.reminderId,
+          }
+        : null
+    );
   }
 
-  async function handleUndoCreate() {
-    if (!undoReminderId) {
+  async function handleUndoAction() {
+    if (!undoAction) {
       return;
     }
 
-    await removeReminder(undoReminderId);
-    setUndoReminderId(null);
+    if (undoAction.kind === 'remove_created') {
+      await removeReminder(undoAction.reminderId);
+    } else {
+      await restoreReminder(undoAction.reminder, 'home_undo');
+    }
+
+    setUndoAction(null);
     setToastMessage('');
   }
 
@@ -833,6 +903,34 @@ export function HomeScreen({ navigation }: Props) {
     }
 
     await requestNotificationAccess('home_banner');
+  }
+
+  async function handleUrgentDone() {
+    if (!urgentReminder) {
+      return;
+    }
+
+    await completeReminder(urgentReminder.id, 'home_due_card');
+    setToastTone('success');
+    setToastMessage(copy.home.urgentDoneToast);
+    setUndoAction({
+      kind: 'restore_snapshot',
+      reminder: urgentReminder,
+    });
+  }
+
+  async function handleUrgentSnooze() {
+    if (!urgentReminder) {
+      return;
+    }
+
+    await snoozeReminder(urgentReminder.id, 10, 'home_due_card');
+    setToastTone('success');
+    setToastMessage(copy.home.urgentSnoozeToast);
+    setUndoAction({
+      kind: 'restore_snapshot',
+      reminder: urgentReminder,
+    });
   }
 
   async function resolveSpeechLocale() {
@@ -949,20 +1047,26 @@ export function HomeScreen({ navigation }: Props) {
           />
         </View>
 
-        {pendingPermissionReminders > 0 ? (
-          <View style={styles.statusBanner}>
-            <Text style={styles.statusBannerText}>
-              {pendingPermissionReminders === 1
-                ? copy.home.pendingOne
-                : copy.home.pendingMany(pendingPermissionReminders)}
-            </Text>
+        {permissionHealth ? (
+          <GlassSurface
+            style={styles.trustStrip}
+            intensity={42}
+            overlayColor="rgba(255,255,255,0.24)"
+            borderColor="rgba(255,255,255,0.5)"
+          >
+            <View style={styles.trustStripCopy}>
+              <Text style={styles.trustStripTitle}>{permissionHealth.title}</Text>
+              <Text style={styles.trustStripBody}>{permissionHealth.body}</Text>
+            </View>
             <Pressable
-              onPress={() => void handleNotificationAction()}
-              style={styles.statusBannerAction}
+              onPress={() => void permissionHealth.onPress()}
+              style={styles.trustStripAction}
             >
-              <Text style={styles.statusBannerActionText}>{notificationActionLabel}</Text>
+              <Text style={styles.trustStripActionText}>
+                {permissionHealth.actionLabel}
+              </Text>
             </Pressable>
-          </View>
+          </GlassSurface>
         ) : null}
 
         <View style={styles.voiceCenter}>
@@ -1091,6 +1195,70 @@ export function HomeScreen({ navigation }: Props) {
             </View>
           ) : null}
         </View>
+
+        {urgentReminder && urgentReminderSnapshot ? (
+          <GlassSurface
+            style={styles.urgentCard}
+            contentStyle={styles.urgentCardContent}
+            intensity={50}
+            overlayColor="rgba(255,255,255,0.26)"
+            borderColor="rgba(255,255,255,0.56)"
+          >
+            <View style={styles.urgentCardHeader}>
+              <View
+                style={[
+                  styles.urgentStatusPill,
+                  urgentReminderSnapshot.isOverdue && styles.urgentStatusPillOverdue,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.urgentStatusPillText,
+                    urgentReminderSnapshot.isOverdue &&
+                      styles.urgentStatusPillTextOverdue,
+                  ]}
+                >
+                  {urgentReminderSnapshot.isOverdue
+                    ? copy.home.urgentStatusOverdue
+                    : copy.home.urgentStatusNow}
+                </Text>
+              </View>
+              <Text style={styles.urgentCardEyebrow}>{copy.home.urgentCardTitle}</Text>
+            </View>
+            <Text numberOfLines={2} style={styles.urgentCardTitle}>
+              {urgentReminder.title}
+            </Text>
+            <View style={styles.urgentMetaRow}>
+              <View style={styles.urgentMetaPill}>
+                <Text style={styles.urgentMetaPillLabel}>{copy.home.nearestNow}</Text>
+                <Text numberOfLines={1} style={styles.urgentMetaPillValue}>
+                  {toArabicDateTimeLabel(
+                    urgentReminderSnapshot.activeReminderAt,
+                    settings.uiLanguage
+                  )}
+                </Text>
+              </View>
+              <View style={[styles.categoryPill, styles.urgentCategoryPill]}>
+                <Text style={styles.categoryPillText}>
+                  {getReminderCategoryLabel(urgentReminder.category, settings.uiLanguage)}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.urgentActions}>
+              <Pressable onPress={() => void handleUrgentSnooze()} style={styles.urgentAction}>
+                <Text style={styles.urgentActionSecondaryText}>
+                  {copy.home.urgentSnoozeAction}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void handleUrgentDone()}
+                style={[styles.urgentAction, styles.urgentActionPrimary]}
+              >
+                <Text style={styles.urgentActionPrimaryText}>{copy.common.done}</Text>
+              </Pressable>
+            </View>
+          </GlassSurface>
+        ) : null}
 
         {showNextReminderCard ? (
           <Pressable
@@ -1357,10 +1525,10 @@ export function HomeScreen({ navigation }: Props) {
             ]}
           >
             <Text style={styles.toastText}>{toastMessage}</Text>
-            {undoReminderId ? (
+            {undoAction ? (
               <Pressable
                 onPress={() => {
-                  void handleUndoCreate();
+                  void handleUndoAction();
                 }}
                 style={styles.toastShare}
               >
@@ -1425,37 +1593,47 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     writingDirection: 'rtl',
   },
-  statusBanner: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    backgroundColor: colors.warningSoft,
+  trustStrip: {
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: 'rgba(154,107,0,0.12)',
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
+  trustStripCopy: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    gap: 4,
   },
-  statusBannerText: {
-    flex: 1,
-    fontFamily: fonts.medium,
+  trustStripTitle: {
+    fontFamily: fonts.semibold,
     fontSize: 13,
-    color: colors.warning,
+    color: colors.text,
     textAlign: 'right',
-    lineHeight: 20,
     writingDirection: 'rtl',
   },
-  statusBannerAction: {
-    backgroundColor: 'rgba(255,255,255,0.72)',
+  trustStripBody: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.textMuted,
+    textAlign: 'right',
+    lineHeight: 18,
+    writingDirection: 'rtl',
+  },
+  trustStripAction: {
+    alignSelf: 'flex-end',
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    backgroundColor: 'rgba(108,92,231,0.12)',
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
-  statusBannerActionText: {
+  trustStripActionText: {
     fontFamily: fonts.semibold,
     fontSize: 12,
-    color: colors.warning,
+    color: colors.primaryDark,
     writingDirection: 'rtl',
   },
   voiceCenter: {
@@ -1582,6 +1760,126 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 12,
     color: colors.danger,
+    writingDirection: 'rtl',
+  },
+  urgentCard: {
+    borderRadius: radii.lg,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.26,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
+  urgentCardContent: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  urgentCardHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  urgentCardEyebrow: {
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    color: colors.primaryDark,
+    writingDirection: 'rtl',
+  },
+  urgentStatusPill: {
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: 'rgba(108,92,231,0.12)',
+  },
+  urgentStatusPillOverdue: {
+    backgroundColor: 'rgba(199,75,67,0.12)',
+  },
+  urgentStatusPillText: {
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    color: colors.primaryDark,
+    writingDirection: 'rtl',
+  },
+  urgentStatusPillTextOverdue: {
+    color: colors.danger,
+  },
+  urgentCardTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    color: colors.text,
+    textAlign: 'right',
+    lineHeight: 28,
+    writingDirection: 'rtl',
+  },
+  urgentMetaRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'stretch',
+    gap: spacing.sm,
+  },
+  urgentMetaPill: {
+    flex: 1,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(255,255,255,0.68)',
+    borderWidth: 1,
+    borderColor: 'rgba(108,92,231,0.12)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    gap: 2,
+  },
+  urgentMetaPillLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    color: colors.textMuted,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  urgentMetaPillValue: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.text,
+    textAlign: 'right',
+    lineHeight: 20,
+    writingDirection: 'rtl',
+  },
+  urgentCategoryPill: {
+    alignSelf: 'center',
+    minHeight: 42,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(108,92,231,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(108,92,231,0.12)',
+  },
+  urgentActions: {
+    flexDirection: 'row-reverse',
+    gap: spacing.sm,
+    marginTop: 2,
+  },
+  urgentAction: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(255,255,255,0.68)',
+    borderWidth: 1,
+    borderColor: 'rgba(108,92,231,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  urgentActionPrimary: {
+    backgroundColor: colors.primary,
+    borderColor: 'rgba(108,92,231,0.2)',
+  },
+  urgentActionSecondaryText: {
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    color: colors.primaryDark,
+    writingDirection: 'rtl',
+  },
+  urgentActionPrimaryText: {
+    fontFamily: fonts.bold,
+    fontSize: 15,
+    color: colors.white,
     writingDirection: 'rtl',
   },
   latestReminderPressable: {

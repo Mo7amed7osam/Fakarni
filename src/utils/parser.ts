@@ -408,6 +408,14 @@ function normalizeArabicTaskTitle(value: string) {
     .trim();
 }
 
+function ceilToMinute(value: dayjs.Dayjs) {
+  if (value.second() === 0 && value.millisecond() === 0) {
+    return value;
+  }
+
+  return value.add(1, 'minute').startOf('minute');
+}
+
 export function parseReminderRules(transcript: string): ParseResult {
   const normalized = normalizeTranscriptForRules(transcript);
   const language = detectRuleLanguage(transcript);
@@ -422,10 +430,7 @@ export function parseReminderRules(transcript: string): ParseResult {
   let eventAt: dayjs.Dayjs;
 
   if (relativeFutureMinutes !== null) {
-    eventAt = dayjs()
-      .add(relativeFutureMinutes, 'minute')
-      .second(0)
-      .millisecond(0);
+    eventAt = ceilToMinute(dayjs().add(relativeFutureMinutes, 'minute'));
     confidence += 0.4;
   } else {
     let eventDate = dayBase;

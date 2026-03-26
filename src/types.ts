@@ -90,6 +90,7 @@ export interface CalendarEventResult {
   status: CalendarSyncStatus;
   provider?: CalendarProvider;
   eventId?: string;
+  alertConfigured?: boolean;
 }
 
 export interface ParseResult {

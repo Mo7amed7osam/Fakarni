@@ -99,6 +99,7 @@ interface GhostContextValue {
     draft: ReminderDraft,
     originalTranscript: string
   ) => Promise<ReminderMutationResult>;
+  restoreReminder: (snapshot: Reminder, source?: string) => Promise<void>;
   removeReminder: (id: string) => Promise<void>;
   completeReminder: (id: string, source?: string) => Promise<void>;
   snoozeReminder: (id: string, minutes: number, source?: string) => Promise<void>;
@@ -505,6 +506,39 @@ export function GhostProvider({ children }: PropsWithChildren) {
     track('reminder snoozed', {
       source,
       snooze_minutes: minutes,
+      notification_permission_state: nextReminder.notificationStatus,
+      ...reminderPropertiesFromReminder(nextReminder),
+    });
+  }
+
+  async function restoreReminderInternal(snapshot: Reminder, source = 'undo') {
+    const existing = remindersRef.current.find((item) => item.id === snapshot.id);
+    if (existing) {
+      await cancelAllReminderNotifications(existing);
+    }
+
+    const permission = await getNotificationPermissionState();
+    const nextReminder = await scheduleReminderLifecycle(
+      {
+        ...snapshot,
+        completedAt: snapshot.completedAt,
+        snoozedUntil: snapshot.snoozedUntil,
+        lastTriggeredAt: snapshot.lastTriggeredAt,
+        followUpCount: snapshot.followUpCount,
+      },
+      permission
+    );
+
+    setReminders((current) => {
+      if (current.some((item) => item.id === snapshot.id)) {
+        return current.map((item) => (item.id === snapshot.id ? nextReminder : item));
+      }
+
+      return [...current, nextReminder];
+    });
+
+    track('reminder reopened', {
+      source,
       notification_permission_state: nextReminder.notificationStatus,
       ...reminderPropertiesFromReminder(nextReminder),
     });
@@ -1014,6 +1048,9 @@ export function GhostProvider({ children }: PropsWithChildren) {
           track('calendar sync attempted', {
             source: 'reminder_create',
             calendar_mode: calendarMode,
+            calendar_alert_offset_minutes: draft.offsetMinutes,
+            calendar_alert_timing:
+              draft.offsetMinutes === 0 ? 'same_time' : 'before_event',
             ...reminderPropertiesFromReminder(reminder),
           });
           void createCalendarEvent({
@@ -1034,6 +1071,10 @@ export function GhostProvider({ children }: PropsWithChildren) {
                     calendar_mode: calendarMode,
                     calendar_provider: calendarResult.provider,
                     calendar_status: calendarResult.status,
+                    calendar_alert_configured: Boolean(calendarResult.alertConfigured),
+                    calendar_alert_offset_minutes: draft.offsetMinutes,
+                    calendar_alert_timing:
+                      draft.offsetMinutes === 0 ? 'same_time' : 'before_event',
                     ...reminderPropertiesFromReminder(reminder),
                   }
                 );
@@ -1055,6 +1096,9 @@ export function GhostProvider({ children }: PropsWithChildren) {
               track('calendar sync failed', {
                 source: 'reminder_create',
                 calendar_mode: calendarMode,
+                calendar_alert_offset_minutes: draft.offsetMinutes,
+                calendar_alert_timing:
+                  draft.offsetMinutes === 0 ? 'same_time' : 'before_event',
                 ...reminderPropertiesFromReminder(reminder),
               });
               if (__DEV__) {
@@ -1185,6 +1229,9 @@ export function GhostProvider({ children }: PropsWithChildren) {
           ...reminderPropertiesFromReminder(target),
         });
         setReminders((current) => current.filter((item) => item.id !== id));
+      },
+      restoreReminder: async (snapshot, source = 'undo') => {
+        await restoreReminderInternal(snapshot, source);
       },
       completeReminder: async (id, source = 'list') => {
         await completeReminderInternal(id, source);

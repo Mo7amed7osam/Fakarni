@@ -96,6 +96,7 @@ export async function saveToAppleCalendar(
         status: 'synced',
         provider: 'apple',
         eventId: result.eventId ?? undefined,
+        alertConfigured: true,
       };
     }
 

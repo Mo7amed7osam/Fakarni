@@ -112,6 +112,15 @@ test('parses Arabic relative future phrases as event time, not offset', () => {
   expectNearFutureMinutes(result.eventAt, 1, 3);
 });
 
+test('parses Arabic one-minute relative future safely for auto-save', () => {
+  const result = parseReminderRules('فكرني اكلم احمد كمان دقيقه');
+
+  assert.equal(result.title, 'اكلم احمد');
+  assert.equal(result.offsetMinutes, 0);
+  assert.deepEqual(result.missingFields, []);
+  expectNearFutureMinutes(result.eventAt, 1, 2);
+});
+
 test('parses Arabic after-minutes phrasing as a future event time', () => {
   const result = parseReminderRules('بعد 10 دقايق ابعت الايميل');
 

@@ -43,6 +43,8 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 
 ## Current State
 - تجربة home أصبحت voice-first وواضحة بصريًا.
+- Home يحمل الآن `daily trust pack`: شريط صحة صلاحيات هادئ عند تعطل الإشعارات أو مزامنة التقويم، وبطاقة `محتاج حركة دلوقتي` للتذكير المستحق أو المتأخر مع `تم` و`غفوة` مباشرة.
+- بطاقة `محتاج حركة دلوقتي` نفسها أصبحت أقرب للغة Fakarni: hierarchy أوضح، timing pill أنظف، وتصنيف ظاهر بشكل أخف بدل كارت تشغيلية خشنة.
 - تم تنفيذ home-first trust redesign فعليًا: الشاشة الرئيسية الآن تركز بصريًا على البراند والمايك والمثال وأقرب تذكير فقط، مع تقليل العناصر الثانوية في وضع السكون.
 - تم إدخال `Apple glass` بشكل مقصود على السطوح العائمة الأساسية عبر BlurView reusable، خصوصًا الهوم وconfirmation والملخصات الصغيرة، بدل تحويل التطبيق كله إلى blur ثقيل.
 - Home الآن أخف بصريًا: الهيدر أخف، والمايك أوضح، ويوجد rotating example prompt قصير يشرح للمستخدم ماذا يقول بدون زحمة.
@@ -53,6 +55,7 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - إذا كان اليوم أو الوقت ناقصًا، يمكن إكماله الآن مباشرة من confirmation card عبر date/time pickers بدون فتح الشاشة الكاملة.
 - confirmation card نفسها أصبحت أقرب إلى decision sheet هادئة: أوضح في البنية، أقل warning-heavy، وتعرض reminder timing كجزء مستقل بدل خلطه بالنصوص.
 - بعد الحفظ من Home يظهر saved confirmation صغير مع `Undo` بدل feedback playful أو غامض.
+- الـ undo على Home لم يعد خاصًا بإنشاء التذكير فقط؛ صار يعيد أيضًا `Done` و`Snooze` إلى الحالة السابقة فعليًا بدل toast شكلي.
 - يوجد الآن `uiLanguage` داخل الإعدادات مع أساس جاهز للتبديل بين المصري والإنجليزي، مع توحيد جزء كبير من الشاشات الأساسية على نبرة مصرية أو English copy من مصدر واحد.
 - اللغة المختارة أصبحت تؤثر أيضًا على أجزاء تشغيلية مثل share message، ghost replies، وعناوين/أزرار الإشعارات الجديدة.
 - شاشة الإعدادات لم تعد تعرض `Internal tools` أو اختيار `Ghost personality` للمستخدم، وأي أدوات founder بقيت خلف المدخل المخفي فقط.
@@ -60,12 +63,15 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - Onboarding أصبح أقصر وأوضح: flow واحد `اتكلم -> نأكد -> نذكرك` مع مثال واحد بدل feature cards.
 - Onboarding أصبح الآن من نفس عائلة الهوم بصريًا: خلفية هادئة، brand واضح، وكارت واحد أنظف بدل الشاشة ذات الطابع المنفصل عن بقية التطبيق.
 - Copy الـ onboarding أصبحت أهدأ: لا يظهر `صوت أولًا` كشعار، والسطر تحت `Fakarni` صار `خليك فاكر`، وخطوة الـ flow الأخيرة أصبحت `نفكرك`.
+- شاشة الإضافة اليدوية أصبحت أكثر compact: الأساسيات فقط تظهر أولًا في card واحدة، بينما التكرار/التصنيف/التقويم انتقلوا إلى `خيارات إضافية` قابلة للفتح.
+- عرض التاريخ داخل حقول الإدخال وملخص وقت التنبيه أصبح مختصرًا وأهدأ مثل `الخميس 26 مارس` بدل الصيغة الطويلة الثقيلة.
 - قائمة التذكيرات أصبحت أكثر تشغيلية: manual CTA أخف، status strip أصغر وأهدأ، والمكتمل collapsed افتراضيًا.
 - active filter داخل شاشة التذكيرات لم يعد يعتمد على كتلة سوداء قاسية؛ صار يستخدم موف من نفس palette ليبقى أوضح وأكثر انسجامًا مع Fakarni.
 - الإعدادات أصبحت أكثر trust-first: بدون hero تسويقي، ومع قسم أخير واضح للخصوصية/الدعم/الإصدار، وكروت أكثر هدوءًا وأقل developer-feel.
 - parsing لم يعد عربي-first فقط: قواعد parser وspeech locale وLLM prompt صاروا يدعمون الإنجليزي بشكل أفضل، خصوصًا اليوم/الوقت/offset/recurrence.
 - parser العربي الآن يفهم بشكل أفضل الأوامر المصرية المختصرة مثل `كلم احمد` و`روح الجيم` ويطبع العنوان إلى task form أوضح بدل حفظه بصياغة clipped غير مريحة.
 - parser الآن يفهم أيضًا العبارات النسبية القريبة مثل `كمان دقيقتين` و`بعد 10 دقايق` ويفسرها كموعد الحدث نفسه في المستقبل، لا كـ offset قبل الحدث.
+- parser الآن يرفع العبارات النسبية القصيرة جدًا مثل `كمان دقيقة` إلى أقرب دقيقة آمنة للأعلى بدل قصّها لأسفل، حتى لا تصطدم بحد الحفظ/الجدولة وتظهر للمستخدم كأن التطبيق فريز.
 - إذا فشل auto-save داخل confirmation card، الكارت لم يعد يبدو متجمّدًا؛ يتحول فورًا إلى وضع مراجعة يدوي واضح بدل البقاء في حالة high-confidence مضللة.
 - parsing لم يعد LLM-by-default: يوجد الآن gating واضح، cache محلي، gateway contract اختياري، وmini/strong model routing عند غياب الـ gateway.
 - يوجد الآن parsing gateway فعلي داخل الريبو كخدمة Node صغيرة مع `/parse` و`/health` وserver-side cache وmini/strong model routing، بدل الاكتفاء بعقد توثيقي فقط.
@@ -78,12 +84,20 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - onboarding، home، settings، reminder list، وconfirmation متقاربين أكثر في النبرة والهدف.
 - retention loop مطبق حاليًا: Done / Snooze / Today-Upcoming-Overdue / weekdays / follow-up واحد.
 - Apple Calendar auto-save موجود على iOS.
+- Apple Calendar auto-save على iOS صار يضيف calendar alert حتى لو offset التذكير `0`، بحيث الحدث المتحفظ في التقويم لا يبقى صامتًا.
+- منطق calendar alerts أصبح موحدًا عبر Apple Calendar وdevice calendar وGoogle-backed calendar: `0` يعني alert في نفس الوقت، وأي offset موجب يعني alert قبل الحدث بنفس الدقائق التي اختارها المستخدم.
 - مسار Apple Calendar على iOS عاد يعتمد على native EventKit bridge فعلي داخل مشروع Xcode، بدل وجود JS layer وحدها بدون module مسجل.
 - founder analytics مع PostHog موجودة داخل التطبيق.
 - ما زال يحتاج تحققًا على جهاز حقيقي لسلوك notification actions، follow-up timing، وcalendar flows.
 - ما زالت بعض الأسطح الداخلية تحمل نبرة developer-first أكثر من اللازم، لكنها ليست ضمن المسار الأساسي للمستخدم.
 
 ## Recent Decisions
+- 2026-03-26: توحيد calendar alert semantics على كل providers بحيث `offsetMinutes` هو source of truth دائمًا، لأن بعض المسارات كانت تعتبر `0` كأنه بلا alert بينما المطلوب same-time alert.
+- 2026-03-26: ضغط شاشة الإضافة اليدوية إلى core card + more options لأن الـ scroll الطويل كان يضعف الإحساس بالسرعة والوضوح في المسار اليدوي.
+- 2026-03-26: اعتماد formatter مختصر للتاريخ في حقول التأكيد بدل الصيغة الكاملة، لأن التاريخ الطويل كان ثقيلًا بصريًا وغير رايق.
+- 2026-03-26: تقريب مواعيد relative-future القصيرة للأعلى لا للأسفل داخل parser، لأن `كمان دقيقة` كانت تفقد جزءًا من الدقيقة عند normalization ثم تفشل في auto-save.
+- 2026-03-26: جعل Apple Calendar event يضيف alarm عند نفس وقت الحدث عندما يكون reminder offset = 0، لأن الحفظ كان يتم أحيانًا كحدث صامت بلا alert داخل Calendar.
+- 2026-03-26: إضافة `daily trust pack` على Home عبر Due Now card وشريط صحة صلاحيات وundo حقيقي للـ quick actions، لأن الثقة اليومية تحتاج surface تشغيلية صغيرة أوضح من مجرد summary سلبي.
 - 2026-03-26: إعادة native bridge الخاص بـ Apple Calendar داخل مشروع iOS نفسه، لأن toggle الإعدادات كان يشير إلى module غير موجود وبالتالي لا يطلب الإذن أصلًا.
 - 2026-03-26: إضافة زر رجوع صغير أعلى شاشة التذكيرات، لأن المسار كان يحتاج affordance واضح وسريع للرجوع بدل الاعتماد على gesture أو stack فقط.
 - 2026-03-26: استبدال active state الأسود في فلاتر شاشة التذكيرات بموف من نفس palette، لأن الأسود كان حادًا ومقطوعًا عن بقية اللغة البصرية.
@@ -124,9 +138,8 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 ## Next Priorities
 - اختبار فعلي على جهاز حقيقي لـ notification actions وfollow-up timing وcalendar behavior.
 - نشر parsing gateway الجديد وربط `EXPO_PUBLIC_PARSE_GATEWAY_URL` به، حتى تخرج provider keys من التطبيق نهائيًا.
+- مراجعة Home وConfirmation على جهاز حقيقي لضبط الإحساس بالحجم والمسافات وسلوك Daily Trust Pack.
 - تنظيف اللغة المتبقية في الشاشات غير الأساسية وتوحيد tone of voice بالكامل.
-- مراجعة سريعة لـ Home وConfirmation على جهاز حقيقي لضبط الإحساس بالحجم والمسافات بعد redesign الثقة.
-- مراجعة onboarding مرة أخيرة بعد اختبار مستخدمين للتأكد أن الرسالة تُفهم خلال ثانيتين.
 - تجهيز App Store assets والنصوص وsubmission checklist.
 
 ## Founder Analytics
