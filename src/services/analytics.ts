@@ -5,6 +5,9 @@ import { PostHog, PostHogPersistedProperty } from 'posthog-react-native';
 import { Platform } from 'react-native';
 import {
   NotificationPermissionState,
+  ParseLLMReason,
+  ParseModelTier,
+  ParsePath,
   Reminder,
   ReminderDraft,
   SettingsState,
@@ -93,6 +96,10 @@ interface BuildReminderAnalyticsInput {
   calendarMode?: CalendarMode;
   parseConfidence?: number;
   parseSource?: string;
+  parsePath?: ParsePath;
+  llmReason?: ParseLLMReason;
+  cacheHit?: boolean;
+  modelTier?: ParseModelTier;
   missingFields?: string[];
   confirmationMode?: 'inline' | 'full' | 'auto';
   editedFieldsCount?: number;
@@ -273,6 +280,10 @@ export function buildReminderAnalyticsProperties({
   calendarMode = 'none',
   parseConfidence,
   parseSource,
+  parsePath,
+  llmReason,
+  cacheHit,
+  modelTier,
   missingFields = [],
   confirmationMode,
   editedFieldsCount,
@@ -290,6 +301,10 @@ export function buildReminderAnalyticsProperties({
     parse_confidence_bucket:
       parseConfidence === undefined ? undefined : getParseConfidenceBucket(parseConfidence),
     parse_source: parseSource,
+    parse_path: parsePath,
+    llm_reason: llmReason,
+    cache_hit: cacheHit,
+    model_tier: modelTier,
     missing_date: missingFields.includes('date'),
     missing_time: missingFields.includes('time'),
     confirmation_mode: confirmationMode,

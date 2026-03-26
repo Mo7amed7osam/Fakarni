@@ -1,11 +1,12 @@
 import dayjs from 'dayjs';
 import {
+  ParseLLMReason,
   ParseResult,
   Recurrence,
 } from '../types';
 import { normalizeArabicText } from './arabic';
 import { classifyReminderCategory } from './categorization';
-import { refineParseWithLLM } from '../services/llm';
+import { isLLMConfigured, refineParseWithLLM } from '../services/llm';
 
 type RuleLanguage = 'ar' | 'en';
 
@@ -486,16 +487,98 @@ export function parseReminderRules(transcript: string): ParseResult {
     missingFields,
     recurrenceSuggestion,
     source: 'rules',
+    llmUsed: false,
+    cacheHit: false,
+    modelTier: 'none',
+    parsePath: missingFields.length > 0 || confidence < 0.88 ? 'review_required' : 'rules_only',
   };
+}
+
+function hasMixedLanguageTranscript(transcript: string) {
+  return /[A-Za-z]/.test(transcript) && /[ء-ي]/.test(transcript);
+}
+
+function hasRelativeTimeAmbiguity(normalized: string) {
+  return /(?:\b(?:in|after)\b|(?:بعد|كمان))/.test(normalized);
+}
+
+function hasRecurrenceHintWithoutParse(normalized: string, recurrenceSuggestion: Recurrence) {
+  if (recurrenceSuggestion !== 'none') {
+    return false;
+  }
+
+  return /(?:\bevery\b|\bdaily\b|\bweekly\b|\bweekdays\b|(?:^|\s)كل(?:\s|$)|(?:^|\s)يومي(?:\s|$)|(?:^|\s)يوميا(?:\s|$)|(?:^|\s)اسبوعيا(?:\s|$)|(?:^|\s)اسبوعي(?:\s|$)|كل يوم|كل اسبوع|ايام العمل|أيام العمل)/.test(
+    normalized
+  );
+}
+
+function getLLMReason(transcript: string, ruleParse: ParseResult): ParseLLMReason | null {
+  const normalized = normalizeTranscriptForRules(transcript);
+
+  if (!ruleParse.title.trim() || ruleParse.title === 'تذكير جديد' || ruleParse.title === 'New reminder') {
+    return 'weak_title';
+  }
+
+  if (ruleParse.missingFields.length > 0) {
+    return 'missing_fields';
+  }
+
+  if (hasMixedLanguageTranscript(transcript)) {
+    return 'mixed_language';
+  }
+
+  if (hasRecurrenceHintWithoutParse(normalized, ruleParse.recurrenceSuggestion ?? 'none')) {
+    return 'recurrence_ambiguous';
+  }
+
+  if (hasRelativeTimeAmbiguity(normalized) && ruleParse.confidence < 0.9) {
+    return 'relative_time_ambiguous';
+  }
+
+  if (ruleParse.confidence < 0.88) {
+    return 'low_confidence';
+  }
+
+  return null;
 }
 
 export async function parseReminderText(transcript: string): Promise<ParseResult> {
   const ruleParse = parseReminderRules(transcript);
+  const llmReason = getLLMReason(transcript, ruleParse);
+
+  if (!llmReason) {
+    return {
+      ...ruleParse,
+      llmUsed: false,
+      llmReason: undefined,
+      cacheHit: false,
+      modelTier: 'none',
+      parsePath: 'rules_only',
+    };
+  }
+
+  if (!isLLMConfigured()) {
+    return {
+      ...ruleParse,
+      llmUsed: false,
+      llmReason,
+      cacheHit: false,
+      modelTier: 'none',
+      parsePath: 'review_required',
+    };
+  }
 
   try {
-    const llmParse = await refineParseWithLLM(transcript, ruleParse);
+    const llmParse = await refineParseWithLLM(transcript, ruleParse, llmReason);
     if (!llmParse) {
-      return ruleParse;
+      return {
+        ...ruleParse,
+        llmUsed: false,
+        llmReason,
+        cacheHit: false,
+        modelTier: 'none',
+        parsePath: 'review_required',
+      };
     }
 
     return {
@@ -503,8 +586,24 @@ export async function parseReminderText(transcript: string): Promise<ParseResult
       needsConfirmation:
         llmParse.missingFields.length > 0 || llmParse.confidence < 0.88,
       source: 'hybrid',
+      llmUsed: true,
+      llmReason,
+      cacheHit: Boolean(llmParse.cacheHit),
+      modelTier: llmParse.modelTier ?? 'mini',
+      parsePath:
+        llmParse.parsePath ??
+        (llmParse.missingFields.length > 0 || llmParse.confidence < 0.88
+          ? 'review_required'
+          : 'mini_model'),
     };
   } catch {
-    return ruleParse;
+    return {
+      ...ruleParse,
+      llmUsed: false,
+      llmReason,
+      cacheHit: false,
+      modelTier: 'none',
+      parsePath: 'review_required',
+    };
   }
 }

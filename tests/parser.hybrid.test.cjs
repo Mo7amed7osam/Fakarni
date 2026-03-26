@@ -10,6 +10,10 @@ function loadParserWithMock(refineImpl) {
   delete require.cache[parserPath];
 
   const llmModule = require(llmPath);
+  process.env.EXPO_PUBLIC_LLM_BASE_URL = 'https://example.com';
+  process.env.EXPO_PUBLIC_LLM_API_KEY = 'test-key';
+  process.env.EXPO_PUBLIC_LLM_MODEL = 'test-model';
+  llmModule.isLLMConfigured = () => true;
   llmModule.refineParseWithLLM = refineImpl;
 
   return require(parserPath);
@@ -22,7 +26,10 @@ test('parseReminderText falls back to rules when LLM returns null', async () => 
   const hybridResult = await parseReminderText(transcript);
   const ruleResult = parseReminderRules(transcript);
 
-  assert.deepEqual(hybridResult, ruleResult);
+  assert.equal(hybridResult.source, ruleResult.source);
+  assert.equal(hybridResult.title, ruleResult.title);
+  assert.equal(hybridResult.eventAt, ruleResult.eventAt);
+  assert.equal(hybridResult.parsePath, 'rules_only');
   assert.equal(hybridResult.source, 'rules');
 });
 
@@ -84,7 +91,10 @@ test('parseReminderText falls back to rules when LLM throws', async () => {
   const hybridResult = await parseReminderText(transcript);
   const ruleResult = parseReminderRules(transcript);
 
-  assert.deepEqual(hybridResult, ruleResult);
+  assert.equal(hybridResult.source, ruleResult.source);
+  assert.equal(hybridResult.title, ruleResult.title);
+  assert.equal(hybridResult.eventAt, ruleResult.eventAt);
+  assert.equal(hybridResult.parsePath, 'rules_only');
   assert.equal(hybridResult.source, 'rules');
 });
 
@@ -102,19 +112,18 @@ test('parseReminderText keeps colloquial Arabic rule parsing usable when LLM is 
 });
 
 test('parseReminderText accepts colloquial Arabic normalization from LLM refinement', async () => {
-  const { parseReminderText } = loadParserWithMock(async (_transcript, baseParse) => ({
-    ...baseParse,
-    title: 'اكلم احمد',
-    confidence: 0.94,
-    missingFields: [],
-    source: 'llm',
-    needsConfirmation: false,
-  }));
+  let llmCallCount = 0;
+  const { parseReminderText } = loadParserWithMock(async () => {
+    llmCallCount += 1;
+    return null;
+  });
 
   const result = await parseReminderText('كلم احمد بكرة 5');
 
-  assert.equal(result.source, 'hybrid');
+  assert.equal(result.source, 'rules');
   assert.equal(result.title, 'اكلم احمد');
+  assert.equal(result.parsePath, 'rules_only');
+  assert.equal(llmCallCount, 0);
   assert.equal(result.needsConfirmation, false);
 });
 
@@ -132,24 +141,19 @@ test('parseReminderText keeps relative-future rule parsing usable when LLM is un
 });
 
 test('parseReminderText preserves relative-future event semantics when LLM refines the result', async () => {
-  const targetEventAt = dayjs().add(2, 'minute').second(0).millisecond(0);
-  const { parseReminderText } = loadParserWithMock(async (_transcript, baseParse) => ({
-    ...baseParse,
-    title: 'اكلم احمد',
-    eventAt: targetEventAt.toISOString(),
-    remindAt: targetEventAt.toISOString(),
-    offsetMinutes: 0,
-    confidence: 0.96,
-    missingFields: [],
-    source: 'llm',
-    needsConfirmation: false,
-  }));
+  let llmCallCount = 0;
+  const { parseReminderText } = loadParserWithMock(async () => {
+    llmCallCount += 1;
+    return null;
+  });
 
   const result = await parseReminderText('اكلم احمد كمان دقيقتين');
 
-  assert.equal(result.source, 'hybrid');
+  assert.equal(result.source, 'rules');
   assert.equal(result.title, 'اكلم احمد');
   assert.equal(result.offsetMinutes, 0);
   assert.deepEqual(result.missingFields, []);
+  assert.equal(result.parsePath, 'rules_only');
+  assert.equal(llmCallCount, 0);
   assert.equal(result.needsConfirmation, false);
 });

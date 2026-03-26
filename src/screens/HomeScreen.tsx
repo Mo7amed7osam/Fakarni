@@ -29,7 +29,13 @@ import {
   track,
 } from '../services/analytics';
 import { colors, fonts, radii, spacing } from '../theme';
-import { ReminderDraft, RootStackParamList } from '../types';
+import {
+  ParseLLMReason,
+  ParseModelTier,
+  ParsePath,
+  ReminderDraft,
+  RootStackParamList,
+} from '../types';
 import { parseReminderText } from '../utils/parser';
 import { getReminderCategoryLabel } from '../utils/categorization';
 import {
@@ -51,6 +57,10 @@ type PendingParse = {
   confidence: number;
   missingFields: string[];
   parseSource?: string;
+  parsePath?: ParsePath;
+  llmReason?: ParseLLMReason;
+  cacheHit?: boolean;
+  modelTier?: ParseModelTier;
   requiresManualConfirmation: boolean;
 };
 
@@ -403,6 +413,10 @@ export function HomeScreen({ navigation }: Props) {
           calendarMode: getCalendarMode({ settings }),
           parseConfidence: pendingParse.confidence,
           parseSource: pendingParse.parseSource,
+          parsePath: pendingParse.parsePath,
+          llmReason: pendingParse.llmReason,
+          cacheHit: pendingParse.cacheHit,
+          modelTier: pendingParse.modelTier,
           missingFields: pendingParse.missingFields,
           confirmationMode: 'inline',
         }),
@@ -440,6 +454,10 @@ export function HomeScreen({ navigation }: Props) {
           calendarMode: getCalendarMode({ settings }),
           parseConfidence: pendingParse.confidence,
           parseSource: pendingParse.parseSource,
+          parsePath: pendingParse.parsePath,
+          llmReason: pendingParse.llmReason,
+          cacheHit: pendingParse.cacheHit,
+          modelTier: pendingParse.modelTier,
           missingFields: pendingParse.missingFields,
           confirmationMode: 'auto',
         }),
@@ -641,6 +659,10 @@ export function HomeScreen({ navigation }: Props) {
       confirmationMode: 'inline',
       parseConfidence: target.confidence,
       parseSource: target.parseSource,
+      parsePath: target.parsePath,
+      llmReason: target.llmReason,
+      cacheHit: target.cacheHit,
+      modelTier: target.modelTier,
       missingFields: target.missingFields,
     });
   }
@@ -660,8 +682,13 @@ export function HomeScreen({ navigation }: Props) {
           calendarMode: getCalendarMode({ settings }),
           parseConfidence: parsed.confidence,
           parseSource: parsed.source,
+          parsePath: parsed.parsePath,
+          llmReason: parsed.llmReason,
+          cacheHit: parsed.cacheHit,
+          modelTier: parsed.modelTier,
           missingFields: parsed.missingFields,
         }),
+        llm_used: Boolean(parsed.llmUsed),
       });
 
       const nextPending = {
@@ -670,6 +697,10 @@ export function HomeScreen({ navigation }: Props) {
         confidence: parsed.confidence,
         missingFields: parsed.missingFields,
         parseSource: parsed.source,
+        parsePath: parsed.parsePath,
+        llmReason: parsed.llmReason,
+        cacheHit: parsed.cacheHit,
+        modelTier: parsed.modelTier,
         requiresManualConfirmation:
           parsed.confidence < 0.9 || parsed.missingFields.length > 0,
       } satisfies PendingParse;
@@ -696,6 +727,10 @@ export function HomeScreen({ navigation }: Props) {
       confirmationMode?: 'auto' | 'inline';
       parseConfidence?: number;
       parseSource?: string;
+      parsePath?: ParsePath;
+      llmReason?: ParseLLMReason;
+      cacheHit?: boolean;
+      modelTier?: ParseModelTier;
       missingFields?: string[];
     }
   ) {
@@ -711,6 +746,10 @@ export function HomeScreen({ navigation }: Props) {
           calendarMode: getCalendarMode({ settings }),
           parseConfidence: options?.parseConfidence,
           parseSource: options?.parseSource,
+          parsePath: options?.parsePath,
+          llmReason: options?.llmReason,
+          cacheHit: options?.cacheHit,
+          modelTier: options?.modelTier,
           missingFields: options?.missingFields,
           confirmationMode: options?.confirmationMode,
           resultReason: validationIssue,
@@ -733,6 +772,10 @@ export function HomeScreen({ navigation }: Props) {
           calendarMode: getCalendarMode({ settings }),
           parseConfidence: options?.parseConfidence,
           parseSource: options?.parseSource,
+          parsePath: options?.parsePath,
+          llmReason: options?.llmReason,
+          cacheHit: options?.cacheHit,
+          modelTier: options?.modelTier,
           missingFields: options?.missingFields,
           confirmationMode: options?.confirmationMode,
           resultReason: result.reason,
@@ -754,9 +797,14 @@ export function HomeScreen({ navigation }: Props) {
         calendarMode: getCalendarMode({ settings }),
         parseConfidence: options?.parseConfidence,
         parseSource: options?.parseSource,
+        parsePath: options?.parsePath,
+        llmReason: options?.llmReason,
+        cacheHit: options?.cacheHit,
+        modelTier: options?.modelTier,
         missingFields: options?.missingFields,
         confirmationMode: options?.confirmationMode,
       }),
+      save_without_edit: options?.confirmationMode === 'inline',
     });
 
     setPendingParse(null);

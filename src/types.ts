@@ -1,6 +1,20 @@
 export type Recurrence = 'none' | 'daily' | 'weekly' | 'weekdays';
 export type ReminderStatus = 'scheduled' | 'done' | 'missed';
 export type ParseSource = 'rules' | 'hybrid' | 'llm';
+export type ParsePath =
+  | 'rules_only'
+  | 'cache_hit'
+  | 'mini_model'
+  | 'strong_model'
+  | 'review_required';
+export type ParseModelTier = 'none' | 'mini' | 'strong';
+export type ParseLLMReason =
+  | 'missing_fields'
+  | 'low_confidence'
+  | 'mixed_language'
+  | 'recurrence_ambiguous'
+  | 'relative_time_ambiguous'
+  | 'weak_title';
 export type GhostMode = 'sassy' | 'coach' | 'mom' | 'calm';
 export type UiLanguage = 'ar-EG' | 'en';
 export type ReminderNotificationStatus = 'scheduled' | 'permission_required';
@@ -89,6 +103,11 @@ export interface ParseResult {
   missingFields: string[];
   recurrenceSuggestion?: Recurrence;
   source: ParseSource;
+  llmUsed?: boolean;
+  llmReason?: ParseLLMReason;
+  cacheHit?: boolean;
+  modelTier?: ParseModelTier;
+  parsePath?: ParsePath;
 }
 
 export interface UsageState {

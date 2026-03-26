@@ -100,6 +100,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
   useEffect(() => {
     track('reminder confirmation shown', {
       entry_point: entryPoint,
+      manual_edit_after_parse: entryPoint === 'voice_home',
       ...buildReminderAnalyticsProperties({
         draft: {
           category,
@@ -181,6 +182,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
       if (!isEdit) {
         track('reminder create failed', {
           entry_point: entryPoint,
+          manual_edit_after_parse: entryPoint === 'voice_home',
           ...buildReminderAnalyticsProperties({
             draft: nextDraft,
             entryPoint,
@@ -203,6 +205,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
       if (!isEdit) {
         track('reminder create failed', {
           entry_point: entryPoint,
+          manual_edit_after_parse: entryPoint === 'voice_home',
           ...buildReminderAnalyticsProperties({
             draft: nextDraft,
             entryPoint,
@@ -232,6 +235,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
       if (!isEdit) {
         track('reminder create failed', {
           entry_point: entryPoint,
+          manual_edit_after_parse: entryPoint === 'voice_home',
           ...buildReminderAnalyticsProperties({
             draft: nextDraft,
             entryPoint,
@@ -254,6 +258,8 @@ export function ConfirmationScreen({ navigation, route }: Props) {
       track('reminder updated', {
         entry_point: entryPoint,
         notification_status: result.warning ? 'warning' : 'ok',
+        manual_edit_after_parse: entryPoint === 'voice_home',
+        save_without_edit: entryPoint === 'voice_home' ? editedFieldsCount === 0 : undefined,
         ...buildReminderAnalyticsProperties({
           draft: nextDraft,
           entryPoint,
@@ -270,6 +276,8 @@ export function ConfirmationScreen({ navigation, route }: Props) {
       track('reminder create succeeded', {
         entry_point: entryPoint,
         notification_status: result.warning ? 'warning' : 'ok',
+        manual_edit_after_parse: entryPoint === 'voice_home',
+        save_without_edit: entryPoint === 'voice_home' ? editedFieldsCount === 0 : undefined,
         ...buildReminderAnalyticsProperties({
           draft: nextDraft,
           entryPoint,

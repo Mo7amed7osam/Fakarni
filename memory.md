@@ -62,6 +62,7 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - parser العربي الآن يفهم بشكل أفضل الأوامر المصرية المختصرة مثل `كلم احمد` و`روح الجيم` ويطبع العنوان إلى task form أوضح بدل حفظه بصياغة clipped غير مريحة.
 - parser الآن يفهم أيضًا العبارات النسبية القريبة مثل `كمان دقيقتين` و`بعد 10 دقايق` ويفسرها كموعد الحدث نفسه في المستقبل، لا كـ offset قبل الحدث.
 - إذا فشل auto-save داخل confirmation card، الكارت لم يعد يبدو متجمّدًا؛ يتحول فورًا إلى وضع مراجعة يدوي واضح بدل البقاء في حالة high-confidence مضللة.
+- parsing لم يعد LLM-by-default: يوجد الآن gating واضح، cache محلي، gateway contract اختياري، وmini/strong model routing عند غياب الـ gateway.
 - يوجد الآن English parser test harness خفيف داخل المشروع للتحقق السريع من جودة parsing بدون إضافة test stack ثقيل.
 - يوجد الآن parser matrix بسيط للعربي والإنجليزي مع command واحد للتشغيل، ويغطي اليوم/الوقت/offset/recurrence وبعض حالات التصنيف.
 - parser tests الآن تغطي أيضًا مسار `hybrid` نفسه: fallback عند فشل الـ LLM، نجاح merge، وحالة low-confidence التي تبقي confirmation مطلوبًا.
@@ -75,6 +76,8 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - ما زالت بعض الأسطح الداخلية تحمل نبرة developer-first أكثر من اللازم، لكنها ليست ضمن المسار الأساسي للمستخدم.
 
 ## Recent Decisions
+- 2026-03-26: تحويل parsing إلى rules-first مع LLM gating واضح وcache محلي وgateway contract اختياري، لأن استدعاء الـ LLM بشكل شبه دائم كان يرفع التكلفة بدون قيمة مماثلة.
+- 2026-03-26: اعتماد `rules_only | cache_hit | mini_model | strong_model | review_required` كمسارات parse قابلة للقياس، حتى يصبح خفض التكلفة والدقة الفعلية قابلين للرصد لا للحدس فقط.
 - 2026-03-26: اعتماد تفسير `كمان دقيقتين` و`بعد 10 دقايق` كموعد حدث مستقبلي نفسه، وليس كتذكير قبل حدث ضمني، لأن هذا أقرب لفهم المستخدم ويمنع الانهيار في المواعيد القريبة جدًا.
 - 2026-03-26: جعل فشل inline auto-save ينزل confirmation card إلى review mode بدل الإحساس بالفريز، لأن المشكلة كانت في recovery state أكثر من كونها في الواجهة وحدها.
 - 2026-03-26: اعتماد glass treatment حقيقي عبر `expo-blur` في السطوح العائمة الأساسية فقط، لأن المطلوب كان Apple feel نظيفًا لا مؤثرًا زخرفيًا زائدًا على كل الشاشات.
@@ -104,6 +107,7 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 
 ## Next Priorities
 - اختبار فعلي على جهاز حقيقي لـ notification actions وfollow-up timing وcalendar behavior.
+- توصيل parsing gateway حقيقي على backend حتى تخرج provider keys من التطبيق ويبدأ server-side cache فعليًا.
 - تنظيف اللغة المتبقية في الشاشات غير الأساسية وتوحيد tone of voice بالكامل.
 - مراجعة سريعة لـ Home وConfirmation على جهاز حقيقي لضبط الإحساس بالحجم والمسافات بعد redesign الثقة.
 - مراجعة onboarding مرة أخيرة بعد اختبار مستخدمين للتأكد أن الرسالة تُفهم خلال ثانيتين.
