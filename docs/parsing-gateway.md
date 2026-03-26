@@ -25,6 +25,51 @@ If the gateway URL is not configured, the app falls back to direct provider call
 - `EXPO_PUBLIC_LLM_MODEL`
 - `EXPO_PUBLIC_LLM_API_KEY`
 
+## In-Repo Gateway Service
+
+The repo now ships a small Node gateway at:
+
+- `gateway/server.cjs`
+- `gateway/parse-gateway.cjs`
+
+Run it locally with:
+
+```bash
+npm run gateway:parse
+```
+
+Healthcheck:
+
+```bash
+GET /health
+```
+
+Parse endpoint:
+
+```bash
+POST /parse
+```
+
+## Gateway Environment Variables
+
+- `PARSE_GATEWAY_PORT`
+  - optional
+  - default `8787`
+- `PARSE_GATEWAY_HOST`
+  - optional
+  - default `0.0.0.0`
+- `PARSE_GATEWAY_BASE_URL`
+  - required for live model calls
+  - OpenAI-compatible base URL, for example `https://api.openai.com/v1`
+- `PARSE_GATEWAY_API_KEY`
+  - required for live model calls
+- `PARSE_GATEWAY_MINI_MODEL`
+  - required for live model calls
+  - cheap model used first
+- `PARSE_GATEWAY_STRONG_MODEL`
+  - optional
+  - stronger fallback model used only when the mini result is still weak
+
 ## Expected Gateway Request
 
 ```json
@@ -72,3 +117,9 @@ If the gateway URL is not configured, the app falls back to direct provider call
   - retries
   - provider secrets
 - The mobile client should treat the gateway as optional and continue working without it.
+- The shipped Node gateway currently provides:
+  - exact in-memory cache
+  - mini vs strong model routing
+  - `/health` status route
+  - OpenAI-compatible `/chat/completions` provider integration
+- If the gateway provider env is missing, `/parse` returns `503 provider_not_configured` and the mobile client falls back to local review mode.

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassSurface } from '../components/GlassSurface';
 import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
@@ -82,161 +83,167 @@ export function ReminderListScreen({ navigation }: Props) {
   ];
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{copy.reminderList.title}</Text>
-      <Text style={styles.subtitle}>{copy.reminderList.subtitle}</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>{copy.reminderList.title}</Text>
+        <Text style={styles.subtitle}>{copy.reminderList.subtitle}</Text>
 
-      <Pressable onPress={openManualCreate} style={styles.manualLink}>
-        <Text style={styles.manualLinkText}>{copy.reminderList.manualCta}</Text>
-      </Pressable>
+        <Pressable onPress={openManualCreate} style={styles.manualLink}>
+          <Text style={styles.manualLinkText}>{copy.reminderList.manualCta}</Text>
+        </Pressable>
 
-      <GlassSurface
-        style={styles.heroStrip}
-        contentStyle={styles.heroStripContent}
-        intensity={46}
-        overlayColor="rgba(255,255,255,0.22)"
-        borderColor="rgba(255,255,255,0.5)"
-      >
-        <View style={styles.heroStripMain}>
-          <Text style={styles.heroStripValue}>{counts.today}</Text>
-          <Text style={styles.heroStripLabel}>{copy.reminderList.compactDue}</Text>
-        </View>
-
-        <View style={styles.heroStripStats}>
-          <View style={[styles.heroMiniPill, counts.overdue > 0 && styles.heroMiniPillOverdue]}>
-            <Text
-              style={[
-                styles.heroMiniPillText,
-                counts.overdue > 0 && styles.heroMiniPillTextOverdue,
-              ]}
-            >
-              {counts.overdue} {copy.common.overdue}
-            </Text>
+        <GlassSurface
+          style={styles.heroStrip}
+          contentStyle={styles.heroStripContent}
+          intensity={46}
+          overlayColor="rgba(255,255,255,0.22)"
+          borderColor="rgba(255,255,255,0.5)"
+        >
+          <View style={styles.heroStripMain}>
+            <Text style={styles.heroStripValue}>{counts.today}</Text>
+            <Text style={styles.heroStripLabel}>{copy.reminderList.compactDue}</Text>
           </View>
-          <View style={styles.heroMiniPill}>
-            <Text style={styles.heroMiniPillText}>
-              {counts.done} {copy.reminderList.compactDone}
-            </Text>
-          </View>
-        </View>
-      </GlassSurface>
 
-      <View style={styles.filterRow}>
-        {filters.map((filter) => {
-          const isActive = filter.id === activeFilter;
-          const count = counts[filter.id];
-          return (
-            <Pressable
-              key={filter.id}
-              onPress={() => setActiveFilter(filter.id)}
-              style={[styles.filterChip, isActive && styles.filterChipActive]}
-            >
-              <Text style={[styles.filterChipLabel, isActive && styles.filterChipLabelActive]}>
-                {filter.label}
+          <View style={styles.heroStripStats}>
+            <View style={[styles.heroMiniPill, counts.overdue > 0 && styles.heroMiniPillOverdue]}>
+              <Text
+                style={[
+                  styles.heroMiniPillText,
+                  counts.overdue > 0 && styles.heroMiniPillTextOverdue,
+                ]}
+              >
+                {counts.overdue} {copy.common.overdue}
               </Text>
-              <Text style={[styles.filterChipCount, isActive && styles.filterChipCountActive]}>
-                {count}
+            </View>
+            <View style={styles.heroMiniPill}>
+              <Text style={styles.heroMiniPillText}>
+                {counts.done} {copy.reminderList.compactDone}
+              </Text>
+            </View>
+          </View>
+        </GlassSurface>
+
+        <View style={styles.filterRow}>
+          {filters.map((filter) => {
+            const isActive = filter.id === activeFilter;
+            const count = counts[filter.id];
+            return (
+              <Pressable
+                key={filter.id}
+                onPress={() => setActiveFilter(filter.id)}
+                style={[styles.filterChip, isActive && styles.filterChipActive]}
+              >
+                <Text style={[styles.filterChipLabel, isActive && styles.filterChipLabelActive]}>
+                  {filter.label}
+                </Text>
+                <Text style={[styles.filterChipCount, isActive && styles.filterChipCountActive]}>
+                  {count}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {reminders.length === 0 ? (
+          <SectionCard title={copy.reminderList.emptyTitle} subtitle={copy.reminderList.emptySubtitle}>
+            <GhostButton label={copy.reminderList.addFirstManual} onPress={openManualCreate} />
+            <GhostButton
+              label={copy.reminderList.backToVoice}
+              variant="secondary"
+              onPress={() => navigation.navigate('Home')}
+            />
+          </SectionCard>
+        ) : visibleReminders.length === 0 ? (
+          <SectionCard
+            title={copy.reminderList.filterQuietTitle}
+            subtitle={
+              activeFilter === 'today'
+                ? copy.reminderList.filterQuietToday
+                : activeFilter === 'upcoming'
+                  ? copy.reminderList.filterQuietUpcoming
+                  : copy.reminderList.filterQuietOverdue
+            }
+          >
+            <GhostButton
+              label={copy.reminderList.switchFilter}
+              variant="secondary"
+              onPress={() =>
+                setActiveFilter(
+                  activeFilter === 'today'
+                    ? 'upcoming'
+                    : activeFilter === 'upcoming'
+                      ? 'overdue'
+                      : 'today'
+                )
+              }
+            />
+          </SectionCard>
+        ) : (
+          visibleReminders.map((reminder) => (
+            <ReminderCard
+              key={reminder.id}
+              reminder={reminder}
+              onShare={() => {
+                void Share.share({
+                  message: buildShareMessage(reminder, settings.ghostMode, settings.uiLanguage),
+                });
+              }}
+              onEdit={() =>
+                navigation.navigate('Confirmation', {
+                  mode: 'edit',
+                  reminderId: reminder.id,
+                  draft: {
+                    title: reminder.title,
+                    category: reminder.category,
+                    eventAt: reminder.eventAt,
+                    offsetMinutes: reminder.offsetMinutes,
+                    recurrence: reminder.recurrence,
+                  },
+                  transcript: reminder.originalTranscript,
+                  confidence: 1,
+                  missingFields: [],
+                })
+              }
+              onDelete={() => {
+                void removeReminder(reminder.id);
+              }}
+              onComplete={() => {
+                void completeReminder(reminder.id, 'list');
+              }}
+              onSnooze10m={() => {
+                void snoozeReminder(reminder.id, 10, 'list');
+              }}
+              onSnooze1h={() => {
+                void snoozeReminder(reminder.id, 60, 'list');
+              }}
+            />
+          ))
+        )}
+
+        {doneReminders.length > 0 ? (
+          <SectionCard title={copy.reminderList.doneTitle} subtitle={copy.reminderList.doneSubtitle}>
+            <Pressable onPress={() => setShowDoneSummary((current) => !current)} style={styles.doneToggle}>
+              <Text style={styles.doneToggleText}>
+                {showDoneSummary ? copy.reminderList.hideDone : copy.reminderList.showDone}
               </Text>
             </Pressable>
-          );
-        })}
-      </View>
-
-      {reminders.length === 0 ? (
-        <SectionCard title={copy.reminderList.emptyTitle} subtitle={copy.reminderList.emptySubtitle}>
-          <GhostButton label={copy.reminderList.addFirstManual} onPress={openManualCreate} />
-          <GhostButton
-            label={copy.reminderList.backToVoice}
-            variant="secondary"
-            onPress={() => navigation.navigate('Home')}
-          />
-        </SectionCard>
-      ) : visibleReminders.length === 0 ? (
-        <SectionCard
-          title={copy.reminderList.filterQuietTitle}
-          subtitle={
-            activeFilter === 'today'
-              ? copy.reminderList.filterQuietToday
-              : activeFilter === 'upcoming'
-                ? copy.reminderList.filterQuietUpcoming
-                : copy.reminderList.filterQuietOverdue
-          }
-        >
-          <GhostButton
-            label={copy.reminderList.switchFilter}
-            variant="secondary"
-            onPress={() =>
-              setActiveFilter(
-                activeFilter === 'today'
-                  ? 'upcoming'
-                  : activeFilter === 'upcoming'
-                    ? 'overdue'
-                    : 'today'
-              )
-            }
-          />
-        </SectionCard>
-      ) : (
-        visibleReminders.map((reminder) => (
-          <ReminderCard
-            key={reminder.id}
-            reminder={reminder}
-            onShare={() => {
-              void Share.share({
-                message: buildShareMessage(reminder, settings.ghostMode, settings.uiLanguage),
-              });
-            }}
-            onEdit={() =>
-              navigation.navigate('Confirmation', {
-                mode: 'edit',
-                reminderId: reminder.id,
-                draft: {
-                  title: reminder.title,
-                  category: reminder.category,
-                  eventAt: reminder.eventAt,
-                  offsetMinutes: reminder.offsetMinutes,
-                  recurrence: reminder.recurrence,
-                },
-                transcript: reminder.originalTranscript,
-                confidence: 1,
-                missingFields: [],
-              })
-            }
-            onDelete={() => {
-              void removeReminder(reminder.id);
-            }}
-            onComplete={() => {
-              void completeReminder(reminder.id, 'list');
-            }}
-            onSnooze10m={() => {
-              void snoozeReminder(reminder.id, 10, 'list');
-            }}
-            onSnooze1h={() => {
-              void snoozeReminder(reminder.id, 60, 'list');
-            }}
-          />
-        ))
-      )}
-
-      {doneReminders.length > 0 ? (
-        <SectionCard title={copy.reminderList.doneTitle} subtitle={copy.reminderList.doneSubtitle}>
-          <Pressable onPress={() => setShowDoneSummary((current) => !current)} style={styles.doneToggle}>
-            <Text style={styles.doneToggleText}>
-              {showDoneSummary ? copy.reminderList.hideDone : copy.reminderList.showDone}
-            </Text>
-          </Pressable>
-          {showDoneSummary ? (
-            <Text style={styles.doneSummary}>
-              {copy.reminderList.doneSummary(doneReminders.length)}
-            </Text>
-          ) : null}
-        </SectionCard>
-      ) : null}
-    </ScrollView>
+            {showDoneSummary ? (
+              <Text style={styles.doneSummary}>
+                {copy.reminderList.doneSummary(doneReminders.length)}
+              </Text>
+            ) : null}
+          </SectionCard>
+        ) : null}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -344,8 +351,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   filterChipActive: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
+    backgroundColor: colors.primary,
+    borderColor: 'rgba(75,63,207,0.18)',
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.24,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
   filterChipLabel: {
     color: colors.text,
