@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, Share, StyleSheet, Text, View, Pressable } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FeedbackSheet } from '../components/FeedbackSheet';
 import { GlassSurface } from '../components/GlassSurface';
 import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
@@ -26,6 +27,12 @@ export function ReminderListScreen({ navigation }: Props) {
     completeReminder,
     settings,
     snoozeReminder,
+    feedbackPrompt,
+    dismissFeedbackPrompt,
+    respondToFeedbackPrompt,
+    submitFeedback,
+    requestFeedbackReview,
+    trackFeedbackShareSuggested,
   } = useGhost();
   const copy = getAppCopy(settings.uiLanguage);
   const [activeFilter, setActiveFilter] = useState<ReminderListFilter>('today');
@@ -249,6 +256,17 @@ export function ReminderListScreen({ navigation }: Props) {
           </SectionCard>
         ) : null}
       </ScrollView>
+
+      <FeedbackSheet
+        visible={Boolean(feedbackPrompt)}
+        language={settings.uiLanguage}
+        source={feedbackPrompt?.source ?? null}
+        onClose={dismissFeedbackPrompt}
+        onSentimentSelect={respondToFeedbackPrompt}
+        onSubmit={submitFeedback}
+        onRequestReview={requestFeedbackReview}
+        onShareSuggested={trackFeedbackShareSuggested}
+      />
     </SafeAreaView>
   );
 }

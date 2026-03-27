@@ -20,6 +20,7 @@ import {
   useSpeechRecognitionEvent,
 } from 'expo-speech-recognition';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FeedbackSheet } from '../components/FeedbackSheet';
 import { GlassSurface } from '../components/GlassSurface';
 import { getAppCopy } from '../content/appCopy';
 import { useGhost } from '../context/GhostContext';
@@ -234,6 +235,12 @@ export function HomeScreen({ navigation, route }: Props) {
     pendingPermissionReminders,
     requestNotificationAccess,
     openNotificationSettings,
+    feedbackPrompt,
+    dismissFeedbackPrompt,
+    respondToFeedbackPrompt,
+    submitFeedback,
+    requestFeedbackReview,
+    trackFeedbackShareSuggested,
   } = useGhost();
   const copy = getAppCopy(settings.uiLanguage);
   const [isListening, setIsListening] = useState(false);
@@ -285,6 +292,13 @@ export function HomeScreen({ navigation, route }: Props) {
   );
   const examplePrompts = [copy.home.exampleOne, copy.home.exampleTwo];
   const activeExample = examplePrompts[exampleIndex % examplePrompts.length];
+  const shouldShowFeedbackPrompt =
+    Boolean(feedbackPrompt) &&
+    !busy &&
+    !processing &&
+    !isListening &&
+    !pendingParse &&
+    !quickCaptureMode;
 
   useSpeechRecognitionEvent('start', () => {
     setIsListening(true);
@@ -1774,6 +1788,17 @@ export function HomeScreen({ navigation, route }: Props) {
             ) : null}
           </View>
         ) : null}
+
+        <FeedbackSheet
+          visible={shouldShowFeedbackPrompt}
+          language={settings.uiLanguage}
+          source={feedbackPrompt?.source ?? null}
+          onClose={dismissFeedbackPrompt}
+          onSentimentSelect={respondToFeedbackPrompt}
+          onSubmit={submitFeedback}
+          onRequestReview={requestFeedbackReview}
+          onShareSuggested={trackFeedbackShareSuggested}
+        />
       </View>
     </SafeAreaView>
   );

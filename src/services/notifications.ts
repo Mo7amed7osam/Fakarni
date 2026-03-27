@@ -278,6 +278,29 @@ export async function cancelReminderNotifications(notificationIds?: string[]) {
   );
 }
 
+export async function cancelScheduledNotificationsForReminder(reminderId?: string) {
+  if (!reminderId) {
+    return;
+  }
+
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const matchingIds = scheduled
+    .filter(
+      (request) => String(request.content.data?.reminderId ?? '') === reminderId
+    )
+    .map((request) => request.identifier);
+
+  if (!matchingIds.length) {
+    return;
+  }
+
+  await Promise.all(
+    [...new Set(matchingIds)].map((notificationId) =>
+      Notifications.cancelScheduledNotificationAsync(notificationId)
+    )
+  );
+}
+
 export function getReminderNotificationResponseDetails(
   response: Notifications.NotificationResponse
 ): ReminderNotificationResponseDetails | null {

@@ -528,6 +528,14 @@ export function SettingsScreen({ navigation }: Props) {
           <Text style={styles.linkMeta}>{copy.settings.supportSubtitle}</Text>
         </Pressable>
 
+        <Pressable
+          onPress={() => navigation.navigate('HelpFaq', { openFeedback: true })}
+          style={styles.linkCard}
+        >
+          <Text style={styles.linkLabel}>{copy.settings.feedbackTitle}</Text>
+          <Text style={styles.linkMeta}>{copy.settings.feedbackSubtitle}</Text>
+        </Pressable>
+
         <Pressable onPress={handleFounderTap} style={styles.versionRow}>
           <Text style={styles.versionLabel}>{copy.settings.versionLabel}</Text>
           <View style={styles.versionChip}>

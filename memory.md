@@ -50,6 +50,11 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - مسار Siri يعيد استخدام نفس quick-capture والـ parser والـ confirmation الحالية: `siri_record` يبدأ التسجيل فور فتح التطبيق، و`siri_text` يمرر النص مباشرة إلى parse/save/review بدل اختراع flow جديد. في Siri text shortcut نفسه، Siri يطلب جملة التذكير كـ parameter بعد invocation بدل الاعتماد على phrase interpolation بنص حر.
 - analytics الآن تميّز بين `siri_record` و`siri_text` عبر `siri shortcut invoked / launch attempted / launch succeeded / text parse completed / fallback shown`.
 - تم إصلاح أخطاء Swift الأولية في Siri/App Intents وEventKit (`AppShortcutsProvider` و`EKAuthorizationStatus`)؛ المتبقي الآن في البناء المحلي مرتبط ببيئة Xcode/Storyboard والصلاحيات، لا بمنطق Siri نفسه.
+- يوجد الآن feedback loop خفيف داخل التطبيق: prompt صغير بعد لحظات النجاح المهمة، يفرّق بين happy path وneeds-work path بدل رمي كل المستخدمين مباشرة على App Store review.
+- الــ feedback prompt يظهر بعد نجاحات حقيقية فقط: بعد 3 reminder saves ناجحة أو بعد completion ناجح، مع cooldown محلي حتى لا يتحول إلى إزعاج.
+- المسار الإيجابي أصبح يطلب in-app review أو مشاركة التطبيق، بينما المسار السلبي يفتح feedback sheet قصيرة بأسباب منظمة + optional note.
+- يوجد manual feedback entry دائم داخل Settings/Help، ويعيد استخدام نفس الـ feedback sheet بدل خلق نموذج ثانٍ.
+- analytics الآن تغطي feedback loop كاملًا: `feedback prompt shown / answered / sentiment selected / submitted / app review requested / share suggested`.
 - Home يحمل الآن `daily trust pack`: شريط صحة صلاحيات هادئ عند تعطل الإشعارات أو مزامنة التقويم، وبطاقة `محتاج حركة دلوقتي` للتذكير المستحق أو المتأخر مع `تم` و`غفوة` مباشرة.
 - بطاقة `محتاج حركة دلوقتي` نفسها أصبحت أقرب للغة Fakarni: hierarchy أوضح، timing pill أنظف، وتصنيف ظاهر بشكل أخف بدل كارت تشغيلية خشنة.
 - تم تنفيذ home-first trust redesign فعليًا: الشاشة الرئيسية الآن تركز بصريًا على البراند والمايك والمثال وأقرب تذكير فقط، مع تقليل العناصر الثانوية في وضع السكون.
@@ -90,6 +95,7 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - أصول البراند الأساسية الآن تحمل حرف `F` واضح لـ `Fakarni` عبر app icon وsplash وadaptive icons وfavicon، بدل العلامة القديمة التي لم تكن تلتقط الاسم الجديد بصريًا.
 - onboarding، home، settings، reminder list، وconfirmation متقاربين أكثر في النبرة والهدف.
 - retention loop مطبق حاليًا: Done / Snooze / Today-Upcoming-Overdue / weekdays / follow-up واحد.
+- مسار جدولة الإشعارات أصبح الآن يمر عبر lock تسلسلي واحد، مع إلغاء أي scheduled notifications orphan بالاعتماد على `reminderId` داخل النظام نفسه، لتقليل تكرار نفس الإشعار عند resync أو app-active refresh.
 - Apple Calendar auto-save موجود على iOS.
 - Apple Calendar auto-save على iOS صار يستخدم same-time alarm مطلق عند `startDate` نفسه عندما يكون offset التذكير `0`، لأن `relativeOffset = 0` لم يكن يظهر دائمًا كـ visible alert داخل الحدث.
 - منطق calendar alerts أصبح موحدًا عبر Apple Calendar وdevice calendar وGoogle-backed calendar: `0` يعني alert في نفس الوقت، وأي offset موجب يعني alert قبل الحدث بنفس الدقائق التي اختارها المستخدم.
@@ -97,9 +103,14 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - founder analytics مع PostHog موجودة داخل التطبيق.
 - ما زال يحتاج تحققًا على جهاز حقيقي لسلوك notification actions، follow-up timing، وcalendar flows.
 - ما زال يحتاج تحققًا على iPhone حقيقي لسلوك Siri shortcuts الفعلي من Siri وShortcuts app، خصوصًا handoff بين App Intents وفتح التطبيق والبدء الفوري للتسجيل.
+- ما زال يحتاج tuning على جهاز حقيقي لتوقيت feedback prompt وإحساسه البصري حتى يبقى خفيفًا فعلًا ولا يقطع flow النجاح.
 - ما زالت بعض الأسطح الداخلية تحمل نبرة developer-first أكثر من اللازم، لكنها ليست ضمن المسار الأساسي للمستخدم.
 
 ## Recent Decisions
+- 2026-03-27: تحويل lifecycle scheduling للإشعارات إلى مسار serial locked مع system-level cancellation حسب `reminderId`، لأن resync المتكرر كان قادرًا على ترك scheduled notifications يتيمة لنفس التذكير فتظهر للمستخدم كنسخ مكررة.
+- 2026-03-27: إضافة feedback loop صغير بعد النجاح بدل survey كبير أو prompt عشوائي، لأن المطلوب startup signal سريع من غير تلويث core voice flow.
+- 2026-03-27: استخدام sentiment gate قبل review request، حتى لا يتحول المستخدم المحبط مباشرة إلى App Store review سلبي بدل أن يرسل pain point داخل التطبيق.
+- 2026-03-27: إبقاء feedback backend في v1 analytics-only مع structured reason + optional note، لأن قيمة المرحلة الحالية هي التعلم السريع لا بناء inbox أو admin surface جديدة.
 - 2026-03-26: إصلاح صياغة `AppShortcutsProvider` وتغطية حالة `authorized` القديمة في EventKit، لأن أول build محلي توقف على أخطاء compile مباشرة في Siri وApple Calendar bridge.
 - 2026-03-26: إضافة Siri entry على iOS عبر App Intents + App Shortcuts بدل أي SiriKit legacy path، لأن المطلوب surface حديثة وخفيفة تعيد استخدام منطق التطبيق نفسه بدل خلق مسار native منفصل.
 - 2026-03-26: إبقاء Siri v1 thin layer فقط: `open and record` و`pass spoken text to app`، لأن القيمة هنا في تسريع الدخول للصوت لا في تكرار parser أو reminder logic داخل Swift.
@@ -151,6 +162,8 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - 2026-03-25: تحويل قائمة التذكيرات إلى view تشغيلية بدل أرشيف عام، لدعم follow-through اليومي.
 
 ## Next Priorities
+- التحقق على جهاز حقيقي أن duplicate notifications لنفس التذكير اختفت بعد serial scheduling fix، خصوصًا عند فتح التطبيق وإغلاقه عدة مرات قبل موعد التذكير.
+- ضبط feedback prompt على جهاز حقيقي: التوقيت، الـ copy، وهل الإحساس خفيف فعلًا بعد success moments.
 - اختبار Siri shortcuts على iPhone حقيقي: invocation phrases، فتح التطبيق، auto-start للتسجيل، وتمرير النص إلى parse/review path.
 - اختبار widget على iPhone حقيقي: launch من Home Screen، auto-start، وسلوك fallback عند غياب الأذونات.
 - اختبار فعلي على جهاز حقيقي لـ notification actions وfollow-up timing وcalendar behavior.

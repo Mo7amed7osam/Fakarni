@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { FeedbackSheet } from '../components/FeedbackSheet';
 import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
 import { SectionCard } from '../components/SectionCard';
@@ -53,7 +55,7 @@ const faqEnglish = [
   },
 ];
 
-export function HelpFaqScreen({ navigation }: Props) {
+export function HelpFaqScreen({ navigation, route }: Props) {
   const {
     settings,
     notificationPermission,
@@ -61,6 +63,13 @@ export function HelpFaqScreen({ navigation }: Props) {
     requestNotificationAccess,
     openNotificationSettings,
     resetAppData,
+    feedbackPrompt,
+    openManualFeedback,
+    dismissFeedbackPrompt,
+    respondToFeedbackPrompt,
+    submitFeedback,
+    requestFeedbackReview,
+    trackFeedbackShareSuggested,
   } = useGhost();
   const copy = getAppCopy(settings.uiLanguage);
   const faq = settings.uiLanguage === 'en' ? faqEnglish : faqArabic;
@@ -69,6 +78,15 @@ export function HelpFaqScreen({ navigation }: Props) {
     notificationPermission === 'blocked'
       ? copy.settings.notificationActionBlocked
       : copy.settings.notificationActionAsk;
+
+  useEffect(() => {
+    if (!route.params?.openFeedback) {
+      return;
+    }
+
+    openManualFeedback();
+    navigation.setParams({ openFeedback: undefined });
+  }, [navigation, openManualFeedback, route.params?.openFeedback]);
 
   function handleResetData() {
     Alert.alert(
@@ -182,6 +200,17 @@ export function HelpFaqScreen({ navigation }: Props) {
         />
       </SectionCard>
 
+      <SectionCard
+        title={copy.help.feedbackTitle}
+        subtitle={copy.help.feedbackSubtitle}
+      >
+        <GhostButton
+          label={copy.help.feedbackAction}
+          variant="secondary"
+          onPress={openManualFeedback}
+        />
+      </SectionCard>
+
       <SectionCard title={copy.help.deviceDataTitle}>
         <Text style={styles.answer}>
           {settings.uiLanguage === 'en'
@@ -200,6 +229,17 @@ export function HelpFaqScreen({ navigation }: Props) {
           </View>
         </SectionCard>
       ))}
+
+      <FeedbackSheet
+        visible={feedbackPrompt?.source === 'settings_manual'}
+        language={settings.uiLanguage}
+        source={feedbackPrompt?.source ?? null}
+        onClose={dismissFeedbackPrompt}
+        onSentimentSelect={respondToFeedbackPrompt}
+        onSubmit={submitFeedback}
+        onRequestReview={requestFeedbackReview}
+        onShareSuggested={trackFeedbackShareSuggested}
+      />
     </ScrollView>
   );
 }

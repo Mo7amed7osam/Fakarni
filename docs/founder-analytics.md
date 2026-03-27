@@ -64,6 +64,12 @@ Implemented now:
 - `google calendar connected`
 - `google calendar disconnected`
 - `settings changed`
+- `feedback prompt shown`
+- `feedback prompt answered`
+- `feedback sentiment selected`
+- `feedback submitted`
+- `app review requested`
+- `share suggested`
 
 Reserved for later subscriptions:
 

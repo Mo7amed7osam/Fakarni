@@ -11,6 +11,9 @@ import * as Notifications from 'expo-notifications';
 import dayjs from 'dayjs';
 import { AppState, Platform } from 'react-native';
 import {
+  FeedbackReason,
+  FeedbackSentiment,
+  FeedbackTriggerSource,
   NotificationPermissionState,
   PersistedState,
   Reminder,
@@ -28,6 +31,7 @@ import {
 import {
   cancelReminderNotification,
   cancelReminderNotifications,
+  cancelScheduledNotificationsForReminder,
   clearLastNotificationResponse,
   configureNotifications,
   getLastNotificationResponse,
@@ -60,6 +64,7 @@ import {
   reminderPropertiesFromReminder,
   track,
 } from '../services/analytics';
+import { requestInAppReview } from '../services/review';
 import { toDayKey } from '../utils/arabic';
 import {
   getReminderBaseNextOccurrence,
@@ -75,6 +80,7 @@ interface GhostContextValue {
   remainingFreeReminders: number;
   notificationPermission: NotificationPermissionState;
   pendingPermissionReminders: number;
+  feedbackPrompt: { source: FeedbackTriggerSource } | null;
   completeOnboarding: () => void;
   acknowledgeAnalyticsNotice: () => void;
   updateSettings: (patch: Partial<SettingsState>) => void;
@@ -103,6 +109,16 @@ interface GhostContextValue {
   removeReminder: (id: string) => Promise<void>;
   completeReminder: (id: string, source?: string) => Promise<void>;
   snoozeReminder: (id: string, minutes: number, source?: string) => Promise<void>;
+  openManualFeedback: () => void;
+  dismissFeedbackPrompt: () => void;
+  respondToFeedbackPrompt: (sentiment: FeedbackSentiment) => void;
+  submitFeedback: (input: {
+    source: FeedbackTriggerSource;
+    reason: FeedbackReason;
+    note?: string;
+  }) => Promise<void>;
+  requestFeedbackReview: (source: FeedbackTriggerSource) => Promise<boolean>;
+  trackFeedbackShareSuggested: (source: FeedbackTriggerSource) => void;
 }
 
 const defaultUsageState: UsageState = {
@@ -110,6 +126,11 @@ const defaultUsageState: UsageState = {
   createdCount: 0,
   isProMock: true,
   installAt: new Date().toISOString(),
+  feedback: {
+    totalSuccessfulCreates: 0,
+    totalCompletedReminders: 0,
+    promptCount: 0,
+  },
 };
 
 const defaultSettings: SettingsState = {
@@ -176,6 +197,15 @@ function normalizeUsageState(usageState: UsageState) {
     createdCount: usageState.dateKey === today ? usageState.createdCount : 0,
     isProMock: true,
     installAt: usageState.installAt ?? new Date().toISOString(),
+    feedback: {
+      totalSuccessfulCreates: usageState.feedback?.totalSuccessfulCreates ?? 0,
+      totalCompletedReminders: usageState.feedback?.totalCompletedReminders ?? 0,
+      promptCount: usageState.feedback?.promptCount ?? 0,
+      lastPromptAt: usageState.feedback?.lastPromptAt,
+      lastDismissedAt: usageState.feedback?.lastDismissedAt,
+      lastSubmittedAt: usageState.feedback?.lastSubmittedAt,
+      lastReviewRequestedAt: usageState.feedback?.lastReviewRequestedAt,
+    },
   };
 }
 
@@ -227,9 +257,14 @@ export function GhostProvider({ children }: PropsWithChildren) {
   const [usageState, setUsageState] = useState<UsageState>(defaultUsageState);
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>('undetermined');
+  const [feedbackPrompt, setFeedbackPrompt] = useState<{
+    source: FeedbackTriggerSource;
+  } | null>(null);
   const remindersRef = useRef<Reminder[]>([]);
   const settingsRef = useRef<SettingsState>(defaultSettings);
+  const usageStateRef = useRef<UsageState>(defaultUsageState);
   const handledNotificationResponsesRef = useRef<Set<string>>(new Set());
+  const notificationLifecycleQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     remindersRef.current = reminders;
@@ -238,6 +273,93 @@ export function GhostProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+
+  useEffect(() => {
+    usageStateRef.current = usageState;
+  }, [usageState]);
+
+  function getFeedbackCountBucket(count: number) {
+    if (count <= 1) {
+      return '1';
+    }
+
+    if (count <= 3) {
+      return '2_3';
+    }
+
+    if (count <= 7) {
+      return '4_7';
+    }
+
+    return '8_plus';
+  }
+
+  function buildFeedbackProperties(source: FeedbackTriggerSource, feedback = usageStateRef.current.feedback) {
+    const calendarMode = getCalendarMode({
+      settings: settingsRef.current,
+    });
+
+    return {
+      trigger_source: source,
+      reminder_count_bucket: getFeedbackCountBucket(feedback.totalSuccessfulCreates),
+      successful_create_count: feedback.totalSuccessfulCreates,
+      completed_reminder_count: feedback.totalCompletedReminders,
+      language: settingsRef.current.uiLanguage,
+      calendar_mode: calendarMode,
+      calendar_enabled: calendarMode !== 'none',
+    };
+  }
+
+  function canShowFeedbackPrompt(source: Exclude<FeedbackTriggerSource, 'settings_manual'>, feedback = usageStateRef.current.feedback) {
+    if (feedbackPrompt) {
+      return false;
+    }
+
+    const now = dayjs();
+
+    if (feedback.lastReviewRequestedAt && now.diff(dayjs(feedback.lastReviewRequestedAt), 'day') < 60) {
+      return false;
+    }
+
+    if (feedback.lastPromptAt && now.diff(dayjs(feedback.lastPromptAt), 'day') < 14) {
+      return false;
+    }
+
+    if (source === 'save_success') {
+      return feedback.totalSuccessfulCreates >= 3;
+    }
+
+    return feedback.totalCompletedReminders >= 1;
+  }
+
+  function showFeedbackPrompt(source: FeedbackTriggerSource, feedbackOverride?: UsageState['feedback']) {
+    const feedback = feedbackOverride ?? usageStateRef.current.feedback;
+
+    if (source !== 'settings_manual' && !canShowFeedbackPrompt(source, feedback)) {
+      return;
+    }
+
+    if (source === 'settings_manual') {
+      track('feedback prompt shown', buildFeedbackProperties(source, feedback));
+      setFeedbackPrompt({ source });
+      return;
+    }
+
+    const shownAt = new Date().toISOString();
+    const nextUsage = normalizeUsageState({
+      ...usageStateRef.current,
+      feedback: {
+        ...feedback,
+        promptCount: feedback.promptCount + 1,
+        lastPromptAt: shownAt,
+      },
+    });
+
+    usageStateRef.current = nextUsage;
+    setUsageState(nextUsage);
+    track('feedback prompt shown', buildFeedbackProperties(source, nextUsage.feedback));
+    setFeedbackPrompt({ source });
+  }
 
   async function refreshNotificationPermission() {
     const nextPermission = await getNotificationPermissionState();
@@ -273,12 +395,22 @@ export function GhostProvider({ children }: PropsWithChildren) {
     return nextStatus;
   }
 
+  function withNotificationLifecycleLock<T>(task: () => Promise<T>) {
+    const taskPromise = notificationLifecycleQueueRef.current.then(task, task);
+    notificationLifecycleQueueRef.current = taskPromise.then(
+      () => undefined,
+      () => undefined
+    );
+    return taskPromise;
+  }
+
   async function cancelAllReminderNotifications(reminder: Reminder) {
     await Promise.all([
       cancelReminderNotifications(reminder.notificationIds),
       cancelReminderNotification(reminder.notificationId),
       cancelReminderNotification(reminder.snoozedNotificationId),
       cancelReminderNotification(reminder.followUpNotificationId),
+      cancelScheduledNotificationsForReminder(reminder.id),
     ]);
   }
 
@@ -286,114 +418,117 @@ export function GhostProvider({ children }: PropsWithChildren) {
     reminder: Reminder,
     permissionOverride?: NotificationPermissionState
   ) {
-    const now = dayjs();
-    const needsBaseNotification =
-      reminder.recurrence !== 'none' ||
-      (!reminder.snoozedUntil &&
-        reminder.recurrence === 'none' &&
-        reminder.status !== 'done' &&
-        !reminder.completedAt &&
-        dayjs(reminder.remindAt).isAfter(now.add(1, 'minute')));
-    const needsSnoozedNotification = Boolean(
-      reminder.snoozedUntil && dayjs(reminder.snoozedUntil).isAfter(now.add(1, 'minute'))
-    );
-    const requiresNotification = needsBaseNotification || needsSnoozedNotification;
-
-    await cancelAllReminderNotifications(reminder);
-
-    const permission =
-      permissionOverride ?? (requiresNotification ? await requestNotificationPermission() : null);
-
-    let nextReminder: Reminder = {
-      ...reminder,
-      notificationId: undefined,
-      notificationIds: undefined,
-      snoozedNotificationId: undefined,
-      followUpNotificationId: undefined,
-      followUpForAt: undefined,
-      followUpCount: 0,
-      notificationStatus:
-        permission === 'granted'
-          ? 'scheduled'
-          : requiresNotification
-            ? 'permission_required'
-            : reminder.notificationStatus,
-    };
-
-    if (permission !== 'granted') {
-      return nextReminder;
-    }
-
-    let scheduledAnything = false;
-
-    if (needsBaseNotification) {
-      const scheduledBase = await scheduleReminderNotification(
-        nextReminder,
-        settingsRef.current.uiLanguage
+    return withNotificationLifecycleLock(async () => {
+      const now = dayjs();
+      const needsBaseNotification =
+        reminder.recurrence !== 'none' ||
+        (!reminder.snoozedUntil &&
+          reminder.recurrence === 'none' &&
+          reminder.status !== 'done' &&
+          !reminder.completedAt &&
+          dayjs(reminder.remindAt).isAfter(now.add(1, 'minute')));
+      const needsSnoozedNotification = Boolean(
+        reminder.snoozedUntil && dayjs(reminder.snoozedUntil).isAfter(now.add(1, 'minute'))
       );
-      nextReminder = {
-        ...nextReminder,
-        notificationId: scheduledBase.notificationId,
-        notificationIds: scheduledBase.notificationIds,
-        notificationStatus: scheduledBase.status,
-      };
-      scheduledAnything =
-        scheduledBase.status === 'scheduled' &&
-        Boolean(
-          scheduledBase.notificationId || scheduledBase.notificationIds?.length
-        );
-    }
+      const requiresNotification = needsBaseNotification || needsSnoozedNotification;
 
-    if (needsSnoozedNotification && nextReminder.snoozedUntil) {
-      nextReminder = {
-        ...nextReminder,
-        snoozedNotificationId: await scheduleSnoozedReminderNotification(
+      await cancelAllReminderNotifications(reminder);
+
+      const permission =
+        permissionOverride ??
+        (requiresNotification ? await requestNotificationPermission() : null);
+
+      let nextReminder: Reminder = {
+        ...reminder,
+        notificationId: undefined,
+        notificationIds: undefined,
+        snoozedNotificationId: undefined,
+        followUpNotificationId: undefined,
+        followUpForAt: undefined,
+        followUpCount: 0,
+        notificationStatus:
+          permission === 'granted'
+            ? 'scheduled'
+            : requiresNotification
+              ? 'permission_required'
+              : reminder.notificationStatus,
+      };
+
+      if (permission !== 'granted') {
+        return nextReminder;
+      }
+
+      let scheduledAnything = false;
+
+      if (needsBaseNotification) {
+        const scheduledBase = await scheduleReminderNotification(
           nextReminder,
-          nextReminder.snoozedUntil,
           settingsRef.current.uiLanguage
-        ),
-        notificationStatus: 'scheduled',
-      };
-      scheduledAnything = true;
-    }
+        );
+        nextReminder = {
+          ...nextReminder,
+          notificationId: scheduledBase.notificationId,
+          notificationIds: scheduledBase.notificationIds,
+          notificationStatus: scheduledBase.status,
+        };
+        scheduledAnything =
+          scheduledBase.status === 'scheduled' &&
+          Boolean(
+            scheduledBase.notificationId || scheduledBase.notificationIds?.length
+          );
+      }
 
-    if (
-      settingsRef.current.followUpEnabled &&
-      !nextReminder.snoozedUntil &&
-      needsBaseNotification
-    ) {
-      const nextOccurrence = getReminderBaseNextOccurrence(nextReminder, now);
-      if (nextOccurrence) {
-        const followUpAt = nextOccurrence
-          .add(settingsRef.current.followUpDelayMinutes, 'minute')
-          .second(0)
-          .millisecond(0);
+      if (needsSnoozedNotification && nextReminder.snoozedUntil) {
+        nextReminder = {
+          ...nextReminder,
+          snoozedNotificationId: await scheduleSnoozedReminderNotification(
+            nextReminder,
+            nextReminder.snoozedUntil,
+            settingsRef.current.uiLanguage
+          ),
+          notificationStatus: 'scheduled',
+        };
+        scheduledAnything = true;
+      }
 
-        if (followUpAt.isAfter(now.add(1, 'minute'))) {
-          nextReminder = {
-            ...nextReminder,
-            followUpNotificationId: await scheduleFollowUpReminderNotification(
-              nextReminder,
-              followUpAt.toISOString(),
-              settingsRef.current.uiLanguage
-            ),
-            followUpForAt: nextOccurrence.toISOString(),
-            followUpCount: 1,
-            notificationStatus: 'scheduled',
-          };
-          scheduledAnything = true;
+      if (
+        settingsRef.current.followUpEnabled &&
+        !nextReminder.snoozedUntil &&
+        needsBaseNotification
+      ) {
+        const nextOccurrence = getReminderBaseNextOccurrence(nextReminder, now);
+        if (nextOccurrence) {
+          const followUpAt = nextOccurrence
+            .add(settingsRef.current.followUpDelayMinutes, 'minute')
+            .second(0)
+            .millisecond(0);
+
+          if (followUpAt.isAfter(now.add(1, 'minute'))) {
+            nextReminder = {
+              ...nextReminder,
+              followUpNotificationId: await scheduleFollowUpReminderNotification(
+                nextReminder,
+                followUpAt.toISOString(),
+                settingsRef.current.uiLanguage
+              ),
+              followUpForAt: nextOccurrence.toISOString(),
+              followUpCount: 1,
+              notificationStatus: 'scheduled',
+            };
+            scheduledAnything = true;
+          }
         }
       }
-    }
 
-    if (!scheduledAnything && !requiresNotification) {
-      nextReminder = {
-        ...nextReminder,
-        notificationStatus: reminder.notificationStatus,
-      };
-    }
+      if (!scheduledAnything && !requiresNotification) {
+        nextReminder = {
+          ...nextReminder,
+          notificationStatus: reminder.notificationStatus,
+        };
+      }
 
-    return nextReminder;
+      return nextReminder;
+    });
   }
 
   function maybeTrackNotificationScheduled(
@@ -470,6 +605,18 @@ export function GhostProvider({ children }: PropsWithChildren) {
       is_recurring: existing.recurrence !== 'none',
       ...reminderPropertiesFromReminder(nextReminder),
     });
+
+    const nextUsage = normalizeUsageState({
+      ...usageStateRef.current,
+      feedback: {
+        ...usageStateRef.current.feedback,
+        totalCompletedReminders: usageStateRef.current.feedback.totalCompletedReminders + 1,
+      },
+    });
+
+    usageStateRef.current = nextUsage;
+    setUsageState(nextUsage);
+    showFeedbackPrompt('reminder_completed', nextUsage.feedback);
   }
 
   async function snoozeReminderInternal(
@@ -514,7 +661,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
   async function restoreReminderInternal(snapshot: Reminder, source = 'undo') {
     const existing = remindersRef.current.find((item) => item.id === snapshot.id);
     if (existing) {
-      await cancelAllReminderNotifications(existing);
+      await withNotificationLifecycleLock(() => cancelAllReminderNotifications(existing));
     }
 
     const permission = await getNotificationPermissionState();
@@ -767,6 +914,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
       remainingFreeReminders,
       notificationPermission,
       pendingPermissionReminders,
+      feedbackPrompt,
       completeOnboarding: () => {
         track('onboarding completed');
         setSettings((current) => ({ ...current, hasSeenOnboarding: true }));
@@ -822,6 +970,87 @@ export function GhostProvider({ children }: PropsWithChildren) {
       },
       openNotificationSettings: async () => {
         await openSystemSettings();
+      },
+      openManualFeedback: () => {
+        showFeedbackPrompt('settings_manual');
+      },
+      dismissFeedbackPrompt: () => {
+        const currentPrompt = feedbackPrompt;
+        setFeedbackPrompt(null);
+
+        if (!currentPrompt || currentPrompt.source === 'settings_manual') {
+          return;
+        }
+
+        const nextUsage = normalizeUsageState({
+          ...usageStateRef.current,
+          feedback: {
+            ...usageStateRef.current.feedback,
+            lastDismissedAt: new Date().toISOString(),
+          },
+        });
+        usageStateRef.current = nextUsage;
+        setUsageState(nextUsage);
+      },
+      respondToFeedbackPrompt: (sentiment) => {
+        if (!feedbackPrompt) {
+          return;
+        }
+
+        track('feedback prompt answered', {
+          sentiment,
+          ...buildFeedbackProperties(feedbackPrompt.source),
+        });
+        track('feedback sentiment selected', {
+          sentiment,
+          ...buildFeedbackProperties(feedbackPrompt.source),
+        });
+      },
+      submitFeedback: async ({ source, reason, note }) => {
+        track('feedback submitted', {
+          feedback_reason: reason,
+          has_note: Boolean(note?.trim()),
+          note_length: note?.trim().length,
+          ...buildFeedbackProperties(source),
+        });
+
+        const nextUsage = normalizeUsageState({
+          ...usageStateRef.current,
+          feedback: {
+            ...usageStateRef.current.feedback,
+            lastSubmittedAt: new Date().toISOString(),
+          },
+        });
+        usageStateRef.current = nextUsage;
+        setUsageState(nextUsage);
+        setFeedbackPrompt(null);
+      },
+      requestFeedbackReview: async (source) => {
+        const requested = await requestInAppReview();
+
+        track('app review requested', {
+          review_available: requested,
+          ...buildFeedbackProperties(source),
+        });
+
+        if (requested) {
+          const nextUsage = normalizeUsageState({
+            ...usageStateRef.current,
+            feedback: {
+              ...usageStateRef.current.feedback,
+              lastReviewRequestedAt: new Date().toISOString(),
+            },
+          });
+          usageStateRef.current = nextUsage;
+          setUsageState(nextUsage);
+        }
+
+        setFeedbackPrompt(null);
+        return requested;
+      },
+      trackFeedbackShareSuggested: (source) => {
+        track('share suggested', buildFeedbackProperties(source));
+        setFeedbackPrompt(null);
       },
       setAppleCalendarAutoSync: async (enabled) => {
         if (Platform.OS !== 'ios') {
@@ -955,15 +1184,21 @@ export function GhostProvider({ children }: PropsWithChildren) {
         track('google calendar disconnected');
       },
       resetAppData: async () => {
-        await Promise.all(remindersRef.current.map((reminder) => cancelAllReminderNotifications(reminder)));
+        await withNotificationLifecycleLock(() =>
+          Promise.all(
+            remindersRef.current.map((reminder) => cancelAllReminderNotifications(reminder))
+          )
+        );
         await clearGoogleCalendarCredentials();
         setReminders([]);
         setSettings(defaultSettings);
         setUsageState(defaultUsageState);
+        usageStateRef.current = defaultUsageState;
+        setFeedbackPrompt(null);
         await clearPersistedState();
       },
       createReminder: async (draft, originalTranscript) => {
-        const normalizedUsage = normalizeUsageState(usageState);
+        const normalizedUsage = normalizeUsageState(usageStateRef.current);
         const title = draft.title.trim();
 
         if (!title) {
@@ -1033,7 +1268,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
         maybeTrackNotificationScheduled('reminder_create', reminder);
 
         setReminders((current) => [reminder, ...current]);
-        setUsageState({
+        const nextUsage = normalizeUsageState({
           ...normalizedUsage,
           createdCount: normalizedUsage.createdCount + 1,
           firstReminderCreatedAt:
@@ -1042,7 +1277,13 @@ export function GhostProvider({ children }: PropsWithChildren) {
             originalTranscript.trim()
               ? normalizedUsage.firstVoiceReminderCreatedAt ?? reminder.createdAt
               : normalizedUsage.firstVoiceReminderCreatedAt,
+          feedback: {
+            ...normalizedUsage.feedback,
+            totalSuccessfulCreates: normalizedUsage.feedback.totalSuccessfulCreates + 1,
+          },
         });
+        usageStateRef.current = nextUsage;
+        setUsageState(nextUsage);
 
         if (shouldSyncCalendar) {
           track('calendar sync attempted', {
@@ -1107,17 +1348,24 @@ export function GhostProvider({ children }: PropsWithChildren) {
             });
         }
 
-        return reminder.notificationStatus === 'permission_required' &&
+        const result =
+          reminder.notificationStatus === 'permission_required' &&
           reminderCanScheduleNotification(reminder)
-          ? {
-              ok: true,
-              reminderId: reminder.id,
-              warning:
-                settings.uiLanguage === 'en'
-                  ? 'The reminder was saved, but you need to enable notifications so it arrives on time.'
-                  : 'التذكير اتحفظ، لكن لازم تفعّل الإشعارات علشان يوصلك في وقته.',
-            }
-          : { ok: true, reminderId: reminder.id };
+            ? {
+                ok: true,
+                reminderId: reminder.id,
+                warning:
+                  settings.uiLanguage === 'en'
+                    ? 'The reminder was saved, but you need to enable notifications so it arrives on time.'
+                    : 'التذكير اتحفظ، لكن لازم تفعّل الإشعارات علشان يوصلك في وقته.',
+              }
+            : { ok: true, reminderId: reminder.id };
+
+        if (!result.warning) {
+          showFeedbackPrompt('save_success', nextUsage.feedback);
+        }
+
+        return result;
       },
       updateReminder: async (id, draft, originalTranscript) => {
         const existing = remindersRef.current.find((item) => item.id === id);
@@ -1222,7 +1470,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        await cancelAllReminderNotifications(target);
+        await withNotificationLifecycleLock(() => cancelAllReminderNotifications(target));
         track('reminder deleted', {
           entry_point: 'edit',
           notification_permission_state: target.notificationStatus,
@@ -1248,6 +1496,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
       remainingFreeReminders,
       notificationPermission,
       pendingPermissionReminders,
+      feedbackPrompt,
     ]
   );
 

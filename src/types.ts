@@ -24,6 +24,17 @@ export type SiriFallbackReason =
   | 'locale_unavailable'
   | 'start_failed'
   | 'empty_text';
+export type FeedbackTriggerSource =
+  | 'save_success'
+  | 'reminder_completed'
+  | 'settings_manual';
+export type FeedbackSentiment = 'helpful' | 'not_helpful';
+export type FeedbackReason =
+  | 'parsing'
+  | 'timing'
+  | 'notifications'
+  | 'calendar'
+  | 'other';
 export type ParseLLMReason =
   | 'missing_fields'
   | 'low_confidence'
@@ -134,6 +145,15 @@ export interface UsageState {
   installAt: string;
   firstReminderCreatedAt?: string;
   firstVoiceReminderCreatedAt?: string;
+  feedback: {
+    totalSuccessfulCreates: number;
+    totalCompletedReminders: number;
+    promptCount: number;
+    lastPromptAt?: string;
+    lastDismissedAt?: string;
+    lastSubmittedAt?: string;
+    lastReviewRequestedAt?: string;
+  };
 }
 
 export interface GoogleCalendarConnection {
@@ -196,7 +216,11 @@ export type RootStackParamList = {
   ReminderList: undefined;
   Settings: undefined;
   FounderDashboard: undefined;
-  HelpFaq: undefined;
+  HelpFaq:
+    | {
+        openFeedback?: boolean;
+      }
+    | undefined;
   SpeechFailed: {
     transcript?: string;
     reason: string;
