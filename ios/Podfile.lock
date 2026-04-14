@@ -242,6 +242,8 @@ PODS:
     - ExpoModulesCore
   - ExpoSpeechRecognition (3.1.1):
     - ExpoModulesCore
+  - ExpoStoreReview (55.0.9):
+    - ExpoModulesCore
   - ExpoWebBrowser (55.0.10):
     - ExpoModulesCore
   - EXUpdatesInterface (55.1.3):
@@ -2285,6 +2287,7 @@ DEPENDENCIES:
   - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
   - ExpoSpeech (from `../node_modules/expo-speech/ios`)
   - ExpoSpeechRecognition (from `../node_modules/expo-speech-recognition/ios`)
+  - ExpoStoreReview (from `../node_modules/expo-store-review/ios`)
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
   - EXUpdatesInterface (from `../node_modules/expo-updates-interface/ios`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
@@ -2425,6 +2428,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-speech/ios"
   ExpoSpeechRecognition:
     :path: "../node_modules/expo-speech-recognition/ios"
+  ExpoStoreReview:
+    :path: "../node_modules/expo-store-review/ios"
   ExpoWebBrowser:
     :path: "../node_modules/expo-web-browser/ios"
   EXUpdatesInterface:
@@ -2618,6 +2623,7 @@ SPEC CHECKSUMS:
   ExpoSecureStore: 83d31183fecaae7a084e88e29d14d5a02d90882a
   ExpoSpeech: 8a4d6d6fd3e41f2e0a8a8d3a17e37fc6dc31f680
   ExpoSpeechRecognition: 46c21b61638bcf3478066886b52579b2f9f56ab5
+  ExpoStoreReview: c6ddb6e357b67e2266bd075f790eccb26bf5d3b5
   ExpoWebBrowser: 04fdc3b0619d6708f931a9d0f8850903cc38d896
   EXUpdatesInterface: d48f288b92900bd95a27c6cf92a7b9aff826d49a
   FBLazyVector: 32e9ed0301d0fcbc1b2b341dd7fcbf291f51eb83

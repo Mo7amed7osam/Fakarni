@@ -215,7 +215,6 @@ export type RootStackParamList = {
   };
   ReminderList: undefined;
   Settings: undefined;
-  FounderDashboard: undefined;
   HelpFaq:
     | {
         openFeedback?: boolean;
