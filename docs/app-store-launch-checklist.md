@@ -11,8 +11,9 @@ Every `NO-GO` item must be cleared before submission.
 - `GO` The marketing landing page is no longer embedded in the Expo app shell. Any landing work now lives outside the app target in `landing/`.
 - `GO` Hidden founder diagnostics are removed from public navigation and settings entry points.
 - `GO` The app no longer ships Expo dev-client/dev-launcher configuration in the iOS target.
+- `GO` Device scope is now aligned to iPhone-only in both Expo config and Xcode target settings.
 - `GO` A draft metadata pack now exists in `docs/app-store-metadata-pack.md`.
-- `GO` Draft support and privacy pages now exist in `landing/support.html` and `landing/privacy-policy.html`.
+- `GO` Publishable support and privacy page drafts now exist in `landing/support.html` and `landing/privacy-policy.html`.
 - `NO-GO` A real public privacy policy URL must exist in App Store Connect.
 - `NO-GO` Support URL and App Store metadata still need to be completed outside the repo.
 - `NO-GO` Final screenshots, app description, keywords, and review notes still need to be prepared outside the repo.
@@ -20,6 +21,7 @@ Every `NO-GO` item must be cleared before submission.
 ## Security And Privacy
 
 - `GO` The app has an iOS privacy manifest at `ios/Fakarni/PrivacyInfo.xcprivacy`.
+- `GO` A draft App Privacy answer sheet now exists in `docs/app-store-privacy-answers.md`.
 - `GO` The app does not include ATT / IDFA tracking code.
 - `GO` Direct client-side LLM provider calls are disabled. Smart parsing now requires `EXPO_PUBLIC_PARSE_GATEWAY_URL`.
 - `NO-GO` Any previously exposed provider keys should be rotated before release if they were ever used in builds or commits.
@@ -38,13 +40,15 @@ Every `NO-GO` item must be cleared before submission.
 - `GO` `npm run typecheck`
 - `GO` `npm run test:parser`
 - `GO` `npm run test:gateway`
-- `NO-GO` A full Release archive build must succeed on the final signing setup.
+- `GO` The repo-side signing config is now set to team-based automatic signing for target `Fakarni`.
+- `GO` A full Release archive build now succeeds with `xcodebuild -allowProvisioningUpdates` on the configured owner machine.
 - `NO-GO` Final App Store upload validation must be run from Xcode Organizer or Transporter.
-- `NO-GO` Current archive blocker: Xcode reports `Signing for "Fakarni" requires a development team`.
+- `GO` Current archive state: Release archive completed successfully after enabling automatic signing and provisioning updates.
 
 ## Real Device Validation
 
 - `GO` A device validation runbook now exists in `docs/real-device-validation.md`.
+- `GO` An App Store screenshot runbook now exists in `docs/app-store-screenshot-runbook.md`.
 - `NO-GO` Test voice capture end-to-end on a real iPhone.
 - `NO-GO` Test reminder creation, edit, complete, snooze, and undo on a real iPhone.
 - `NO-GO` Test notification delivery, notification actions, and follow-up timing on a real iPhone.

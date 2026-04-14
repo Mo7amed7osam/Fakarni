@@ -20,6 +20,10 @@ body {
   color: var(--ink);
 }
 
+a {
+  color: inherit;
+}
+
 img {
   display: block;
   max-width: 100%;
@@ -249,6 +253,11 @@ h2 {
   color: var(--muted);
   font-size: 18px;
   line-height: 1.7;
+}
+
+.body-copy a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.14em;
 }
 
 .screens-grid {

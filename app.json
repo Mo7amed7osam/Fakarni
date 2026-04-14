@@ -15,7 +15,7 @@
     "ios": {
       "bundleIdentifier": "com.mohamedhosam.voiceghostapp",
       "buildNumber": "1",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "NSCalendarsUsageDescription": "يسمح Fakarni بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",
         "NSCalendarsFullAccessUsageDescription": "يسمح Fakarni بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",

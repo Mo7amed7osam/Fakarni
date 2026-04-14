@@ -43,6 +43,7 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 
 ## Current State
 - الويب لم يعد جزءًا من Expo app shell: أي landing page أصبحت الآن منفصلة في مجلد مستقل `landing/`، بينما `App.tsx` عاد يشغّل تجربة التطبيق نفسها فقط. هذا يبقي مشروع iOS أنظف قبل App Store submission ويمنع خلط التسويق مع target التطبيق.
+- نطاق iOS أصبح الآن iPhone-only داخل `app.json` وtarget `Fakarni` نفسه، بدل ترك iPad support مفتوحًا بلا نية product واضحة وما يستتبعه من تعقيد screenshots/review.
 - تجربة home أصبحت voice-first وواضحة بصريًا.
 - يوجد الآن iPhone Home Screen widget صغير للمايك فقط، يفتح Fakarni عبر deep link إلى Home ويطلب بدء التسجيل تلقائيًا بدل إجبار المستخدم على فتح التطبيق ثم الوصول للمايك يدويًا.
 - واجهة الـ widget نفسها أصبحت mic-only tile: بدون أي نص داخلها، فقط مايك مركزي واضح حتى تبدو أقرب لـ launch affordance نظيفة لا mini card.
@@ -51,6 +52,7 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - مسار Siri يعيد استخدام نفس quick-capture والـ parser والـ confirmation الحالية: `siri_record` يبدأ التسجيل فور فتح التطبيق، و`siri_text` يمرر النص مباشرة إلى parse/save/review بدل اختراع flow جديد. في Siri text shortcut نفسه، Siri يطلب جملة التذكير كـ parameter بعد invocation بدل الاعتماد على phrase interpolation بنص حر.
 - analytics الآن تميّز بين `siri_record` و`siri_text` عبر `siri shortcut invoked / launch attempted / launch succeeded / text parse completed / fallback shown`.
 - تم إصلاح أخطاء Swift الأولية في Siri/App Intents وEventKit (`AppShortcutsProvider` و`EKAuthorizationStatus`)؛ المتبقي الآن في البناء المحلي مرتبط ببيئة Xcode/Storyboard والصلاحيات، لا بمنطق Siri نفسه.
+- تم ضبط Xcode target على team-based automatic signing محليًا، ونجحت `Release archive` فعليًا عبر `xcodebuild -allowProvisioningUpdates`; المتبقي قبل الإرسال الآن لم يعد compile/signing blocker داخل الريبو.
 - يوجد الآن feedback loop خفيف داخل التطبيق: prompt صغير بعد لحظات النجاح المهمة، يفرّق بين happy path وneeds-work path بدل رمي كل المستخدمين مباشرة على App Store review.
 - الــ feedback prompt يظهر بعد نجاحات حقيقية فقط: بعد 3 reminder saves ناجحة أو بعد completion ناجح، مع cooldown محلي حتى لا يتحول إلى إزعاج.
 - المسار الإيجابي أصبح يطلب in-app review أو مشاركة التطبيق، بينما المسار السلبي يفتح feedback sheet قصيرة بأسباب منظمة + optional note.
@@ -88,6 +90,9 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - إذا فشل auto-save داخل confirmation card، الكارت لم يعد يبدو متجمّدًا؛ يتحول فورًا إلى وضع مراجعة يدوي واضح بدل البقاء في حالة high-confidence مضللة.
 - parsing لم يعد LLM-by-default: يوجد الآن gating واضح، cache محلي، gateway contract اختياري، وmini/strong model routing عند غياب الـ gateway.
 - يوجد الآن parsing gateway فعلي داخل الريبو كخدمة Node صغيرة مع `/parse` و`/health` وserver-side cache وmini/strong model routing، بدل الاكتفاء بعقد توثيقي فقط.
+- صفحات `support` و`privacy` داخل `landing/` لم تعد مجرد شرح placeholder؛ أصبحت draft publishable بــ copy متوافق مع سلوك التطبيق، ولم يتبقَّ فيها إلا بيانات المالك/الدومين/التواصل النهائية قبل الاستضافة.
+- يوجد الآن docs إضافية للإطلاق: `app-store-privacy-answers.md` لإجابات App Privacy و`app-store-screenshot-runbook.md` لخطة screenshots، حتى لا تبقى هذه الخطوات معرفة شفهية فقط.
+- يوجد الآن draft screenshot subset داخل `docs/app-store-screenshots-draft/` مأخوذ من iPhone simulator للحالات الأساسية: home، reminder list، manual create، وsettings/trust؛ المتبقي فقط هو صقل الـ final 5-shot set بالحجم النهائي وإضافة لقطة Siri/widget أنظف.
 - يوجد الآن English parser test harness خفيف داخل المشروع للتحقق السريع من جودة parsing بدون إضافة test stack ثقيل.
 - يوجد الآن parser matrix بسيط للعربي والإنجليزي مع command واحد للتشغيل، ويغطي اليوم/الوقت/offset/recurrence وبعض حالات التصنيف.
 - parser tests الآن تغطي أيضًا مسار `hybrid` نفسه: fallback عند فشل الـ LLM، نجاح merge، وحالة low-confidence التي تبقي confirmation مطلوبًا.
@@ -109,6 +114,10 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 
 ## Recent Decisions
 - 2026-04-14: فصل landing page تمامًا عن Expo app ووضعها داخل مجلد مستقل `landing/` مع placeholders بسيطة للشاشات الحقيقية، لأن الهدف الحالي هو إبقاء تطبيق Fakarni نفسه جاهزًا للتغليف وApp Store review بدون طبقة ويب أو marketing flow داخل target التطبيق.
+- 2026-04-14: تثبيت قرار iPhone-only داخل Expo config وXcode target، لأن توسيع النطاق إلى iPad قبل الإطلاق كان يضيف عبء screenshots/review بلا قيمة product مقابلة الآن.
+- 2026-04-14: إضافة `DEVELOPMENT_TEAM` وتفعيل automatic signing داخل target `Fakarni` ثم إثبات نجاح `Release archive` محليًا، حتى يخرج blocker البناء من قائمة ما قبل الإطلاق ويبقى المتبقي owner/review work فقط.
+- 2026-04-14: ترقية صفحات `support/privacy` من templates إلى draft publishable، وإضافة runbooks صريحة لـ App Privacy وApp Store screenshots، حتى ينكمش المتبقي قبل الإرسال إلى أعمال خارج الريبو فعلًا لا إلى نقص توثيق.
+- 2026-04-14: توليد draft screenshot subset فعلي من الـ simulator وحفظه داخل الريبو بدل ترك screenshots كعمل نظري بالكامل، حتى يصبح المتبقي إعادة تصدير/تنقيح لا اكتشافًا من الصفر.
 - 2026-04-14: إزالة `react-dom` و`react-native-web` وسكربت `web` من مشروع التطبيق نفسه، وإضافة `ios.buildNumber` و`android.versionCode` صراحة داخل `app.json` لتوضيح release identity بدل الاعتماد على إعدادات ناقصة قبل الإنتاج.
 - 2026-03-27: تحويل lifecycle scheduling للإشعارات إلى مسار serial locked مع system-level cancellation حسب `reminderId`، لأن resync المتكرر كان قادرًا على ترك scheduled notifications يتيمة لنفس التذكير فتظهر للمستخدم كنسخ مكررة.
 - 2026-03-27: إضافة feedback loop صغير بعد النجاح بدل survey كبير أو prompt عشوائي، لأن المطلوب startup signal سريع من غير تلويث core voice flow.

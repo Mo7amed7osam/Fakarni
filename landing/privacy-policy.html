@@ -16,70 +16,102 @@
       </header>
 
       <main class="section">
-        <p class="eyebrow">Privacy policy template</p>
+        <p class="eyebrow">App Store privacy page</p>
         <h1 style="font-size:56px;line-height:1.02;margin-bottom:18px;">Privacy Policy</h1>
         <p class="body-copy">
-          This page is a production template for the URL Apple requires in App Store Connect.
-          Replace the bracketed placeholders with your final business and contact details before publishing.
+          Effective date: <strong>April 14, 2026</strong>
+        </p>
+        <p class="body-copy">
+          This policy describes how Fakarni handles reminder data, optional analytics, permissions, and
+          optional calendar syncing. Replace the contact details and domain links below before publishing.
         </p>
 
         <div class="screen-card" style="margin-top:24px;">
           <h3>Publisher details</h3>
           <p class="body-copy">
-            Legal entity: <strong>[Replace with legal owner name]</strong><br />
-            Support email: <strong>[Replace with support email]</strong><br />
-            Support address: <strong>[Replace with legal or support mailing address]</strong><br />
-            Support phone: <strong>[Replace with support phone number]</strong>
+            Legal owner:
+            <strong>Mohamed Hosam or your legal publishing entity</strong><br />
+            Privacy email:
+            <strong><a href="mailto:privacy@your-domain.com">privacy@your-domain.com</a></strong><br />
+            Support email:
+            <strong><a href="mailto:support@your-domain.com">support@your-domain.com</a></strong><br />
+            Website:
+            <strong><a href="https://your-domain.com">https://your-domain.com</a></strong>
           </p>
         </div>
 
         <div class="screen-card" style="margin-top:18px;">
           <h3>What Fakarni does</h3>
           <p class="body-copy">
-            Fakarni is a voice-first reminder app. Users can speak a reminder, review the parsed result,
-            save it, and receive local notifications. The app may also optionally save reminders to the device
-            calendar or linked calendar providers, depending on user settings.
+            Fakarni is a voice-first reminder app. Users can speak a reminder, review the parsed result, save it,
+            receive local notifications, and optionally save reminders to a calendar provider when that feature is enabled.
           </p>
         </div>
 
         <div class="screen-card" style="margin-top:18px;">
-          <h3>Data the app may process</h3>
+          <h3>Data stored on the device</h3>
           <p class="body-copy">
-            The app may process reminder content, reminder schedule data, optional calendar data required to
-            create calendar events, optional anonymous analytics events, and optional voice transcript data
-            during smart parsing. Reminder data is primarily stored locally on the device.
+            Reminder titles, dates, times, completion state, recurrence details, and local app settings are primarily
+            stored on the device so the app can function without an account system.
           </p>
         </div>
 
         <div class="screen-card" style="margin-top:18px;">
           <h3>Permissions</h3>
           <p class="body-copy">
-            Fakarni may request access to the microphone, speech recognition, notifications, and calendar.
-            These permissions are used only for the related app features and are not required all at once.
+            Fakarni may request microphone access, speech recognition access, notification permission, and calendar access.
+            These permissions are requested only when the related feature is used. The app should not request all permissions
+            on first launch before user action.
           </p>
         </div>
 
         <div class="screen-card" style="margin-top:18px;">
-          <h3>Remote services</h3>
+          <h3>Analytics</h3>
           <p class="body-copy">
-            If smart parsing is enabled in production, reminder text may be sent to the configured parsing gateway
-            in order to improve reminder interpretation. If anonymous analytics are enabled, usage events may be sent
-            to the configured analytics service. Replace this paragraph with the final production vendors you actually use.
+            Fakarni can send anonymous product analytics to PostHog when analytics are enabled. According to the current app
+            behavior, raw speech transcripts and reminder titles are not sent in analytics events. Users can disable anonymous
+            analytics from the app settings.
+          </p>
+        </div>
+
+        <div class="screen-card" style="margin-top:18px;">
+          <h3>Parsing gateway</h3>
+          <p class="body-copy">
+            If a production parsing gateway is configured, reminder text may be sent to that gateway to improve reminder
+            interpretation. The mobile client does not ship provider secrets. If no gateway is configured, Fakarni falls back
+            to local parsing and review mode instead of sending data to a model provider directly.
+          </p>
+        </div>
+
+        <div class="screen-card" style="margin-top:18px;">
+          <h3>Calendar providers</h3>
+          <p class="body-copy">
+            Calendar writing is optional. When enabled, Fakarni may create calendar events with the reminder title and timing
+            needed for the selected event. If calendar permission is denied, the app continues to work without calendar sync.
+          </p>
+        </div>
+
+        <div class="screen-card" style="margin-top:18px;">
+          <h3>Notifications</h3>
+          <p class="body-copy">
+            Reminder delivery uses local notifications on the device. Notification scheduling and follow-up behavior are managed
+            locally so reminders can arrive on time without requiring an always-on account backend.
           </p>
         </div>
 
         <div class="screen-card" style="margin-top:18px;">
           <h3>User controls</h3>
           <p class="body-copy">
-            Users can disable analytics in the app settings. Users can also disable app permissions through iOS settings
-            and remove app data by deleting the app or using app reset flows you provide.
+            Users can disable analytics in Fakarni settings. Users can also revoke microphone, speech, notification, or calendar
+            permissions from iPhone Settings at any time. Removing the app also removes its locally stored data from the device.
           </p>
         </div>
 
         <div class="screen-card" style="margin-top:18px;">
           <h3>Contact</h3>
           <p class="body-copy">
-            For privacy questions, contact: <strong>[Replace with privacy contact email]</strong>
+            For privacy questions or deletion requests, contact
+            <strong><a href="mailto:privacy@your-domain.com">privacy@your-domain.com</a></strong>.
           </p>
         </div>
       </main>

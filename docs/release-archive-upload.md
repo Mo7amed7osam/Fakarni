@@ -94,10 +94,11 @@ Alternative:
 
 ## Submission Status
 
-Current status: `Blocked at signing`
+Current status: `Archive succeeded locally`
 
 Reason:
 
 - the archive/upload runbook is now in-repo
-- the actual archive command was attempted on 2026-04-14
-- current blocker: the `Fakarni` target has no `DEVELOPMENT_TEAM` configured, so Xcode cannot sign an iOS archive
+- the actual archive command was attempted on 2026-04-14 after enabling team-based automatic signing
+- `xcodebuild -allowProvisioningUpdates` completed a Release archive successfully on the configured owner machine
+- Organizer validation, upload, and App Store Connect submission steps still remain

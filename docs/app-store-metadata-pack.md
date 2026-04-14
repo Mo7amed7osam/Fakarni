@@ -130,7 +130,7 @@ Fakarni مناسب للمستخدم الذي يريد تسجيل التذكير 
 
 ## Marketing URL, Support URL, Privacy Policy URL
 
-These pages now have repo templates in `landing/`:
+These pages now have near-final repo drafts in `landing/`:
 
 - Marketing URL candidate: host `landing/index.html`
 - Support URL candidate: host `landing/support.html`
@@ -179,9 +179,11 @@ Recommended review path:
 
 ## Screenshot Plan
 
-The app currently sets `ios.supportsTablet` to `false`, so iPhone screenshots are the focus.
+The app now ships as `iPhone-only`, so only iPhone screenshots are required for submission.
 
 Apple currently requires iPhone screenshots, and if you do not provide a 6.9-inch set, a 6.5-inch set is required.
+
+The detailed capture workflow now lives in `docs/app-store-screenshot-runbook.md`.
 
 Recommended capture target:
 
