@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as AuthSession from 'expo-auth-session';
-import * as Application from 'expo-application';
 import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
 import { SectionCard } from '../components/SectionCard';
@@ -63,9 +62,6 @@ export function SettingsScreen({ navigation }: Props) {
   const [analyticsBusy, setAnalyticsBusy] = useState(false);
   const [calendarNotice, setCalendarNotice] = useState('');
   const lastHandledGoogleCodeRef = useRef<string | null>(null);
-  const founderTapCountRef = useRef(0);
-  const founderTapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const appVersion = Application.nativeApplicationVersion ?? 'dev';
   const [googleRequest, googleResponse, promptGoogleAuth] = AuthSession.useAuthRequest(
     {
       clientId: googleClientId ?? 'voiceghost-google-not-configured',
@@ -124,24 +120,6 @@ export function SettingsScreen({ navigation }: Props) {
     setAnalyticsBusy(true);
     await setAnalyticsEnabled(value);
     setAnalyticsBusy(false);
-  }
-
-  function handleFounderTap() {
-    founderTapCountRef.current += 1;
-    if (founderTapTimeoutRef.current) {
-      clearTimeout(founderTapTimeoutRef.current);
-    }
-
-    if (founderTapCountRef.current >= 7) {
-      founderTapCountRef.current = 0;
-      navigation.navigate('FounderDashboard');
-      return;
-    }
-
-    founderTapTimeoutRef.current = setTimeout(() => {
-      founderTapCountRef.current = 0;
-      founderTapTimeoutRef.current = null;
-    }, 1600);
   }
 
   const appleCalendarEnabled = settings.appleCalendar.autoSyncEnabled;
@@ -257,20 +235,12 @@ export function SettingsScreen({ navigation }: Props) {
     return () => clearTimeout(timeout);
   }, [calendarNotice]);
 
-  useEffect(() => {
-    return () => {
-      if (founderTapTimeoutRef.current) {
-        clearTimeout(founderTapTimeoutRef.current);
-      }
-    };
-  }, []);
-
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Pressable onPress={handleFounderTap} style={styles.titleWrap}>
+      <View style={styles.titleWrap}>
         <Text style={styles.title}>{copy.settings.title}</Text>
         <Text style={styles.subtitle}>{copy.settings.subtitle}</Text>
-      </Pressable>
+      </View>
 
       <SectionCard title={copy.settings.languageTitle} subtitle={copy.settings.languageSubtitle}>
         <View style={styles.followUpCard}>
@@ -536,12 +506,6 @@ export function SettingsScreen({ navigation }: Props) {
           <Text style={styles.linkMeta}>{copy.settings.feedbackSubtitle}</Text>
         </Pressable>
 
-        <Pressable onPress={handleFounderTap} style={styles.versionRow}>
-          <Text style={styles.versionLabel}>{copy.settings.versionLabel}</Text>
-          <View style={styles.versionChip}>
-            <Text style={styles.versionChipText}>v{appVersion}</Text>
-          </View>
-        </Pressable>
       </SectionCard>
     </ScrollView>
   );

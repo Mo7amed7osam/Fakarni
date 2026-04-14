@@ -10,20 +10,10 @@ Fakarni now uses a gated parsing flow:
 ## Client Environment Variables
 
 - `EXPO_PUBLIC_PARSE_GATEWAY_URL`
-  - optional
-  - if set, the app sends ambiguous parse requests to this endpoint instead of calling the model provider directly
-- `EXPO_PUBLIC_LLM_MINI_MODEL`
-  - optional
-  - cheap refinement model when no gateway is configured
-- `EXPO_PUBLIC_LLM_STRONG_MODEL`
-  - optional
-  - stronger fallback model used only if the mini model result still fails quality checks
+  - required for production builds
+  - the app sends ambiguous parse requests to this endpoint and does not ship provider credentials in the client
 
-If the gateway URL is not configured, the app falls back to direct provider calls using:
-
-- `EXPO_PUBLIC_LLM_BASE_URL`
-- `EXPO_PUBLIC_LLM_MODEL`
-- `EXPO_PUBLIC_LLM_API_KEY`
+If the gateway URL is not configured, the mobile client falls back to local rules plus review mode instead of calling a model provider directly.
 
 ## In-Repo Gateway Service
 

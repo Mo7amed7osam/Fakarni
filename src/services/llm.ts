@@ -50,21 +50,8 @@ function detectPromptLocale(transcript: string) {
   return englishMatches > arabicMatches ? 'en-US' : 'ar-EG';
 }
 
-function getMiniModel() {
-  return process.env.EXPO_PUBLIC_LLM_MINI_MODEL ?? process.env.EXPO_PUBLIC_LLM_MODEL ?? '';
-}
-
-function getStrongModel() {
-  return process.env.EXPO_PUBLIC_LLM_STRONG_MODEL ?? process.env.EXPO_PUBLIC_LLM_MODEL ?? '';
-}
-
 export function isLLMConfigured() {
-  return Boolean(
-    parseGatewayUrl ||
-      (process.env.EXPO_PUBLIC_LLM_API_KEY &&
-        process.env.EXPO_PUBLIC_LLM_BASE_URL &&
-        getMiniModel())
-  );
+  return Boolean(parseGatewayUrl);
 }
 
 function extractJSONString(content: unknown) {
@@ -221,94 +208,6 @@ function writeParseCache(cacheKey: string, transcript: string, result: ParseResu
   });
 }
 
-function needsStrongModel(result: ParseResult, baseParse: ParseResult) {
-  if (!result.title.trim() || !result.eventAt) {
-    return true;
-  }
-
-  if (result.confidence < 0.84) {
-    return true;
-  }
-
-  if (result.missingFields.length > 0 && baseParse.missingFields.length > 0) {
-    return true;
-  }
-
-  return false;
-}
-
-function buildSystemPrompt(llmReason?: ParseLLMReason) {
-  const reasonHint = llmReason ? `Focus area: ${llmReason}. ` : '';
-  return `${reasonHint}You parse reminder requests spoken in either Egyptian Arabic or English into reminder data. Return JSON only with keys: title, category, eventAt, offsetMinutes, recurrence, confidence, missingFields. category must be one of study|work|meeting|health|shopping|finance|personal|other. recurrence must be none|daily|weekly|weekdays. Use weekdays only for phrases such as weekdays, every work day, every working day, or from Monday to Friday. eventAt must be full ISO 8601 with a concrete date and time. Use the provided now, locale, and timezone as ground truth for phrases like today, tomorrow, next Thursday, after tomorrow, at 5 pm, one hour before, in 2 minutes, after 10 minutes, كمان دقيقتين, or بعد 5 دقايق. Relative future phrases such as in 2 minutes, after 10 minutes, كمان دقيقتين, and بعد 5 دقايق refer to the event time itself, so offsetMinutes should stay 0 unless the user explicitly asks for a before-reminder with phrases like before or قبل. Egyptian Arabic shorthand imperative phrases are valid reminder requests even when the user does not say formal lead-ins like فكرني or عايزك تفكرني. Treat clipped commands such as كلم, ابعت, روح, هات, ادفع, احجز, اشتر, افتح, راجع, and ذاكر as intended reminder tasks, not parser noise. Normalize the title into a clear task form when needed while preserving the user language and meaning, for example كلم احمد should become a clearer task title like اكلم احمد. Do not invent recurrence unless the user explicitly asks for repetition. If any field is ambiguous, keep the safest best guess, reduce confidence, and include that field in missingFields. Preserve the user language in the title when possible.`;
-}
-
-async function requestChatCompletion(
-  model: string,
-  transcript: string,
-  baseParse: ParseResult,
-  llmReason?: ParseLLMReason
-) {
-  const baseUrl = process.env.EXPO_PUBLIC_LLM_BASE_URL!;
-  const apiKey = process.env.EXPO_PUBLIC_LLM_API_KEY!;
-  const locale = detectPromptLocale(transcript);
-
-  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.1,
-      messages: [
-        {
-          role: 'system',
-          content: buildSystemPrompt(llmReason),
-        },
-        {
-          role: 'user',
-          content: JSON.stringify({
-            locale,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            now: new Date().toISOString(),
-            nowLocal: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-            transcript,
-            currentRuleParse: {
-              title: baseParse.title,
-              eventAt: baseParse.eventAt,
-              offsetMinutes: baseParse.offsetMinutes,
-              confidence: baseParse.confidence,
-              missingFields: baseParse.missingFields,
-              recurrenceSuggestion: baseParse.recurrenceSuggestion,
-            },
-            llmReason,
-          }),
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`LLM request failed with status ${response.status}`);
-  }
-
-  const json = await response.json();
-  const rawContent = json?.choices?.[0]?.message?.content;
-  const content =
-    typeof rawContent === 'string'
-      ? rawContent
-      : Array.isArray(rawContent)
-        ? rawContent.map((item) => item?.text ?? '').join('\n')
-        : '';
-  const jsonText = extractJSONString(content);
-  if (!jsonText) {
-    return null;
-  }
-
-  return JSON.parse(jsonText) as LLMParsePayload;
-}
-
 async function requestGatewayParse(
   transcript: string,
   baseParse: ParseResult,
@@ -369,61 +268,17 @@ export async function refineParseWithLLM(
     } satisfies ParseResult;
   }
 
-  const miniModel = getMiniModel();
-  const strongModel = getStrongModel();
-
   let normalizedResult: ParseResult | null = null;
 
   try {
-    if (parseGatewayUrl) {
-      const gatewayPayload = await requestGatewayParse(transcript, baseParse, llmReason);
-      if (gatewayPayload) {
-        normalizedResult = buildNormalizedParseResult(gatewayPayload, baseParse, {
-          modelTier: normalizeModelTier(gatewayPayload.modelTier, 'mini'),
-          cacheHit: Boolean(gatewayPayload.cacheHit),
-          parsePath: normalizeParsePath(gatewayPayload.parsePath, 'mini_model'),
-          llmReason,
-        });
-      }
-    } else if (miniModel) {
-      const miniPayload = await requestChatCompletion(
-        miniModel,
-        transcript,
-        baseParse,
-        llmReason
-      );
-
-      if (miniPayload) {
-        normalizedResult = buildNormalizedParseResult(miniPayload, baseParse, {
-          modelTier: 'mini',
-          cacheHit: false,
-          parsePath: 'mini_model',
-          llmReason,
-        });
-      }
-
-      if (
-        normalizedResult &&
-        needsStrongModel(normalizedResult, baseParse) &&
-        strongModel &&
-        strongModel !== miniModel
-      ) {
-        const strongPayload = await requestChatCompletion(
-          strongModel,
-          transcript,
-          baseParse,
-          llmReason
-        );
-
-        if (strongPayload) {
-          normalizedResult = buildNormalizedParseResult(strongPayload, baseParse, {
-            modelTier: 'strong',
-            cacheHit: false,
-            parsePath: 'strong_model',
-            llmReason,
-          });
-        }
-      }
+    const gatewayPayload = await requestGatewayParse(transcript, baseParse, llmReason);
+    if (gatewayPayload) {
+      normalizedResult = buildNormalizedParseResult(gatewayPayload, baseParse, {
+        modelTier: normalizeModelTier(gatewayPayload.modelTier, 'mini'),
+        cacheHit: Boolean(gatewayPayload.cacheHit),
+        parsePath: normalizeParsePath(gatewayPayload.parsePath, 'mini_model'),
+        llmReason,
+      });
     }
   } catch {
     return null;

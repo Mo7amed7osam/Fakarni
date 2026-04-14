@@ -143,8 +143,12 @@ export function HelpFaqScreen({ navigation, route }: Props) {
           </Text>
           <Text style={styles.answer}>
             {settings.uiLanguage === 'en'
-              ? `External smart parsing: ${llmEnabled ? 'enabled in this build.' : 'not enabled in this build.'}`
-              : `التحليل الذكي الخارجي: ${llmEnabled ? 'مفعّل في هذه النسخة.' : 'غير مفعّل في هذه النسخة.'}`}
+              ? llmEnabled
+                ? 'Smart parsing is enabled and routes through the configured Fakarni parsing gateway.'
+                : 'Smart parsing is not enabled in this build.'
+              : llmEnabled
+                ? 'التحليل الذكي مفعّل ويمر عبر بوابة التحليل الخاصة بـ Fakarni.'
+                : 'التحليل الذكي غير مفعّل في هذه النسخة.'}
           </Text>
           <Text style={styles.answer}>
             {settings.uiLanguage === 'en'

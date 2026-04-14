@@ -4,7 +4,6 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
-    "start:dev-client": "expo start --dev-client",
     "android": "expo run:android",
     "run:android": "expo run:android",
     "ios": "expo run:ios",
@@ -32,7 +31,6 @@
     "expo-blur": "~55.0.10",
     "expo-calendar": "~55.0.10",
     "expo-crypto": "~55.0.10",
-    "expo-dev-client": "~55.0.17",
     "expo-device": "~55.0.10",
     "expo-file-system": "~55.0.11",
     "expo-font": "^55.0.4",
