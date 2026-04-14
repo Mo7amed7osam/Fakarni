@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -23,6 +24,7 @@ import {
 } from '../services/calendar';
 import { colors, fonts, radii, spacing } from '../theme';
 import { RootStackParamList } from '../types';
+import { getResponsiveContentWidth, isTabletWidth } from '../utils/layout';
 
 const followUpDelayOptions = [10, 20, 30, 60];
 
@@ -43,6 +45,9 @@ export function SettingsScreen({ navigation }: Props) {
     disconnectGoogleCalendar,
   } = useGhost();
   const copy = getAppCopy(settings.uiLanguage);
+  const { width } = useWindowDimensions();
+  const tabletLayout = isTabletWidth(width);
+  const contentMaxWidth = getResponsiveContentWidth(width, 980);
   const notificationsReady = notificationPermission === 'granted';
   const notificationActionLabel =
     notificationPermission === 'blocked'
@@ -237,18 +242,23 @@ export function SettingsScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <View style={[styles.contentInner, { maxWidth: contentMaxWidth }]}>
       <View style={styles.titleWrap}>
-        <Text style={styles.title}>{copy.settings.title}</Text>
-        <Text style={styles.subtitle}>{copy.settings.subtitle}</Text>
+        <Text style={[styles.title, tabletLayout && styles.titleTablet]}>{copy.settings.title}</Text>
+        <Text style={[styles.subtitle, tabletLayout && styles.subtitleTablet]}>{copy.settings.subtitle}</Text>
       </View>
 
       <SectionCard title={copy.settings.languageTitle} subtitle={copy.settings.languageSubtitle}>
-        <View style={styles.followUpCard}>
-          <Text style={styles.followUpCardTitle}>{copy.settings.languageRowTitle}</Text>
-          <Text style={styles.followUpCardText}>{copy.settings.languageRowSubtitle}</Text>
+        <View style={[styles.followUpCard, tabletLayout && styles.infoCardTablet]}>
+          <Text style={[styles.followUpCardTitle, tabletLayout && styles.infoCardTitleTablet]}>
+            {copy.settings.languageRowTitle}
+          </Text>
+          <Text style={[styles.followUpCardText, tabletLayout && styles.infoCardTextTablet]}>
+            {copy.settings.languageRowSubtitle}
+          </Text>
         </View>
 
-        <View style={styles.followUpChipRow}>
+        <View style={[styles.followUpChipRow, tabletLayout && styles.followUpChipRowTablet]}>
           {[
             { id: 'ar-EG', label: copy.settings.egyptianArabic },
             { id: 'en', label: copy.settings.english },
@@ -258,12 +268,14 @@ export function SettingsScreen({ navigation }: Props) {
               onPress={() => updateSettings({ uiLanguage: option.id as 'ar-EG' | 'en' })}
               style={[
                 styles.followUpChip,
+                tabletLayout && styles.followUpChipTablet,
                 settings.uiLanguage === option.id && styles.followUpChipActive,
               ]}
             >
               <Text
                 style={[
                   styles.followUpChipText,
+                  tabletLayout && styles.followUpChipTextTablet,
                   settings.uiLanguage === option.id && styles.followUpChipTextActive,
                 ]}
               >
@@ -282,18 +294,18 @@ export function SettingsScreen({ navigation }: Props) {
             trackColor={{ false: '#D9D2C5', true: colors.primary }}
           />
           <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>{copy.settings.ttsTitle}</Text>
-            <Text style={styles.rowSubtitle}>{copy.settings.ttsSubtitle}</Text>
+            <Text style={[styles.rowTitle, tabletLayout && styles.rowTitleTablet]}>{copy.settings.ttsTitle}</Text>
+            <Text style={[styles.rowSubtitle, tabletLayout && styles.rowSubtitleTablet]}>{copy.settings.ttsSubtitle}</Text>
           </View>
         </View>
 
-        <View style={styles.notificationStatusCard}>
-          <Text style={styles.notificationStatusTitle}>
+        <View style={[styles.notificationStatusCard, tabletLayout && styles.infoCardTablet]}>
+          <Text style={[styles.notificationStatusTitle, tabletLayout && styles.infoCardTitleTablet]}>
             {notificationsReady
               ? copy.settings.notificationReady
               : copy.settings.notificationNeedEnable}
           </Text>
-          <Text style={styles.notificationStatusText}>
+          <Text style={[styles.notificationStatusText, tabletLayout && styles.infoCardTextTablet]}>
             {notificationsReady
               ? copy.settings.notificationsOn
               : pendingPermissionReminders > 0
@@ -322,31 +334,35 @@ export function SettingsScreen({ navigation }: Props) {
             trackColor={{ false: '#D9D2C5', true: colors.primary }}
           />
           <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>{copy.settings.oneNudge}</Text>
-            <Text style={styles.rowSubtitle}>{copy.settings.oneNudgeSubtitle}</Text>
+            <Text style={[styles.rowTitle, tabletLayout && styles.rowTitleTablet]}>{copy.settings.oneNudge}</Text>
+            <Text style={[styles.rowSubtitle, tabletLayout && styles.rowSubtitleTablet]}>{copy.settings.oneNudgeSubtitle}</Text>
           </View>
         </View>
 
-        <View style={styles.followUpCard}>
-          <Text style={styles.followUpCardTitle}>{copy.settings.followDelayTitle}</Text>
-          <Text style={styles.followUpCardText}>
+        <View style={[styles.followUpCard, tabletLayout && styles.infoCardTablet]}>
+          <Text style={[styles.followUpCardTitle, tabletLayout && styles.infoCardTitleTablet]}>
+            {copy.settings.followDelayTitle}
+          </Text>
+          <Text style={[styles.followUpCardText, tabletLayout && styles.infoCardTextTablet]}>
             {copy.settings.followDelayText(settings.followUpDelayMinutes)}
           </Text>
         </View>
 
-        <View style={styles.followUpChipRow}>
+        <View style={[styles.followUpChipRow, tabletLayout && styles.followUpChipRowTablet]}>
           {followUpDelayOptions.map((minutes) => (
             <Pressable
               key={minutes}
               onPress={() => updateSettings({ followUpDelayMinutes: minutes })}
               style={[
                 styles.followUpChip,
+                tabletLayout && styles.followUpChipTablet,
                 settings.followUpDelayMinutes === minutes && styles.followUpChipActive,
               ]}
             >
               <Text
                 style={[
                   styles.followUpChipText,
+                  tabletLayout && styles.followUpChipTextTablet,
                   settings.followUpDelayMinutes === minutes &&
                     styles.followUpChipTextActive,
                 ]}
@@ -379,19 +395,25 @@ export function SettingsScreen({ navigation }: Props) {
               trackColor={{ false: '#D9D2C5', true: colors.primary }}
             />
             <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>{copy.settings.appleCalendarTitle}</Text>
-              <Text style={styles.rowSubtitle}>{copy.settings.appleCalendarHint}</Text>
+              <Text style={[styles.rowTitle, tabletLayout && styles.rowTitleTablet]}>{copy.settings.appleCalendarTitle}</Text>
+              <Text style={[styles.rowSubtitle, tabletLayout && styles.rowSubtitleTablet]}>{copy.settings.appleCalendarHint}</Text>
             </View>
           </View>
 
-          <View style={styles.calendarStatusCard}>
-            <Text style={styles.calendarStatusTitle}>{appleCalendarStatusTitle}</Text>
-            <Text style={styles.calendarStatusText}>{appleCalendarStatusText}</Text>
+          <View style={[styles.calendarStatusCard, tabletLayout && styles.infoCardTablet]}>
+            <Text style={[styles.calendarStatusTitle, tabletLayout && styles.infoCardTitleTablet]}>
+              {appleCalendarStatusTitle}
+            </Text>
+            <Text style={[styles.calendarStatusText, tabletLayout && styles.infoCardTextTablet]}>
+              {appleCalendarStatusText}
+            </Text>
           </View>
 
           {calendarNotice ? (
-            <View style={styles.inlineNotice}>
-              <Text style={styles.inlineNoticeText}>{calendarNotice}</Text>
+            <View style={[styles.inlineNotice, tabletLayout && styles.inlineNoticeTablet]}>
+              <Text style={[styles.inlineNoticeText, tabletLayout && styles.inlineNoticeTextTablet]}>
+                {calendarNotice}
+              </Text>
             </View>
           ) : null}
 
@@ -410,8 +432,8 @@ export function SettingsScreen({ navigation }: Props) {
           title="Google Calendar"
           subtitle={copy.settings.googleCalendarSubtitle}
         >
-          <View style={styles.googleStatusCard}>
-            <Text style={styles.googleStatusTitle}>
+          <View style={[styles.googleStatusCard, tabletLayout && styles.infoCardTablet]}>
+            <Text style={[styles.googleStatusTitle, tabletLayout && styles.infoCardTitleTablet]}>
               {settings.googleCalendar.connected
                 ? settings.uiLanguage === 'en'
                   ? 'Account connected'
@@ -420,7 +442,7 @@ export function SettingsScreen({ navigation }: Props) {
                   ? 'Account not connected'
                   : 'الحساب غير متصل'}
             </Text>
-            <Text style={styles.googleStatusText}>
+            <Text style={[styles.googleStatusText, tabletLayout && styles.infoCardTextTablet]}>
               {settings.googleCalendar.connected
                 ? settings.googleCalendar.email ??
                   (settings.uiLanguage === 'en'
@@ -472,13 +494,13 @@ export function SettingsScreen({ navigation }: Props) {
             trackColor={{ false: '#D9D2C5', true: colors.primary }}
           />
           <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>{copy.settings.analyticsToggleTitle}</Text>
-            <Text style={styles.rowSubtitle}>{copy.settings.analyticsToggleSubtitle}</Text>
+            <Text style={[styles.rowTitle, tabletLayout && styles.rowTitleTablet]}>{copy.settings.analyticsToggleTitle}</Text>
+            <Text style={[styles.rowSubtitle, tabletLayout && styles.rowSubtitleTablet]}>{copy.settings.analyticsToggleSubtitle}</Text>
           </View>
         </View>
 
-        <View style={styles.analyticsCard}>
-          <Text style={styles.analyticsCardTitle}>
+        <View style={[styles.analyticsCard, tabletLayout && styles.infoCardTablet]}>
+          <Text style={[styles.analyticsCardTitle, tabletLayout && styles.infoCardTitleTablet]}>
             {settings.analytics.enabled
               ? settings.uiLanguage === 'en'
                 ? 'Analytics enabled'
@@ -487,26 +509,49 @@ export function SettingsScreen({ navigation }: Props) {
                 ? 'Analytics disabled'
                 : 'التحليلات متوقفة'}
           </Text>
-          <Text style={styles.analyticsCardText}>
+          <Text style={[styles.analyticsCardText, tabletLayout && styles.infoCardTextTablet]}>
             {settings.uiLanguage === 'en'
               ? 'Raw speech text and reminder titles are not sent. You can turn analytics off here at any time.'
               : 'لا يتم إرسال النص الخام أو اسم التذكير. ويمكنك إيقاف التحليلات في أي وقت من هنا.'}
           </Text>
         </View>
-        <Pressable onPress={() => navigation.navigate('HelpFaq')} style={styles.linkCard}>
-          <Text style={styles.linkLabel}>{copy.settings.supportTitle}</Text>
-          <Text style={styles.linkMeta}>{copy.settings.supportSubtitle}</Text>
+        <Pressable
+          onPress={() => navigation.navigate('HelpFaq')}
+          style={[styles.linkCard, tabletLayout && styles.linkCardTablet]}
+        >
+          <Text style={[styles.linkLabel, tabletLayout && styles.linkLabelTablet]}>
+            {copy.settings.supportTitle}
+          </Text>
+          <Text style={[styles.linkMeta, tabletLayout && styles.linkMetaTablet]}>
+            {copy.settings.supportSubtitle}
+          </Text>
         </Pressable>
 
         <Pressable
           onPress={() => navigation.navigate('HelpFaq', { openFeedback: true })}
-          style={styles.linkCard}
+          style={[styles.linkCard, tabletLayout && styles.linkCardTablet]}
         >
-          <Text style={styles.linkLabel}>{copy.settings.feedbackTitle}</Text>
-          <Text style={styles.linkMeta}>{copy.settings.feedbackSubtitle}</Text>
+          <Text style={[styles.linkLabel, tabletLayout && styles.linkLabelTablet]}>
+            {copy.settings.feedbackTitle}
+          </Text>
+          <Text style={[styles.linkMeta, tabletLayout && styles.linkMetaTablet]}>
+            {copy.settings.feedbackSubtitle}
+          </Text>
         </Pressable>
-
       </SectionCard>
+
+      <View style={[styles.signatureBlock, tabletLayout && styles.signatureBlockTablet]}>
+        <Text style={[styles.signatureLabel, tabletLayout && styles.signatureLabelTablet]}>
+          {copy.settings.signatureLabel}
+        </Text>
+        <Text style={[styles.signatureName, tabletLayout && styles.signatureNameTablet]}>
+          Mohamed Hosam
+        </Text>
+        <Text style={[styles.signatureCompany, tabletLayout && styles.signatureCompanyTablet]}>
+          Quantara Tech
+        </Text>
+      </View>
+      </View>
     </ScrollView>
   );
 }
@@ -518,8 +563,13 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    alignItems: 'center',
     gap: spacing.md,
     paddingBottom: 48,
+  },
+  contentInner: {
+    width: '100%',
+    gap: spacing.md,
   },
   titleWrap: {
     gap: 4,
@@ -532,6 +582,11 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  titleTablet: {
+    fontSize: 28,
+    lineHeight: 40,
+    maxWidth: 420,
+  },
   subtitle: {
     fontFamily: fonts.medium,
     fontSize: 13,
@@ -539,6 +594,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 20,
     writingDirection: 'rtl',
+  },
+  subtitleTablet: {
+    fontSize: 16,
+    lineHeight: 26,
   },
   row: {
     flexDirection: 'row-reverse',
@@ -557,12 +616,20 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  rowTitleTablet: {
+    fontSize: 20,
+    lineHeight: 30,
+  },
   rowSubtitle: {
     fontFamily: fonts.regular,
     fontSize: 13,
     color: colors.textMuted,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  rowSubtitleTablet: {
+    fontSize: 16,
+    lineHeight: 26,
   },
   notificationStatusCard: {
     backgroundColor: '#FFF9ED',
@@ -615,6 +682,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
+  followUpChipRowTablet: {
+    gap: spacing.md,
+  },
   followUpChip: {
     minWidth: 76,
     borderRadius: radii.pill,
@@ -626,6 +696,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  followUpChipTablet: {
+    minWidth: 108,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
   followUpChipActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
@@ -635,6 +710,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 13,
     writingDirection: 'rtl',
+  },
+  followUpChipTextTablet: {
+    fontSize: 17,
   },
   followUpChipTextActive: {
     color: colors.white,
@@ -716,6 +794,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(154,107,0,0.12)',
   },
+  inlineNoticeTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
   inlineNoticeText: {
     fontFamily: fonts.medium,
     fontSize: 13,
@@ -723,6 +805,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 20,
     writingDirection: 'rtl',
+  },
+  inlineNoticeTextTablet: {
+    fontSize: 16,
+    lineHeight: 26,
   },
   linkCard: {
     backgroundColor: colors.cardMuted,
@@ -732,6 +818,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.xs,
   },
+  linkCardTablet: {
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
   linkLabel: {
     fontFamily: fonts.semibold,
     fontSize: 16,
@@ -739,12 +829,20 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  linkLabelTablet: {
+    fontSize: 20,
+    lineHeight: 30,
+  },
   linkMeta: {
     fontFamily: fonts.medium,
     fontSize: 13,
     color: colors.textMuted,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  linkMetaTablet: {
+    fontSize: 16,
+    lineHeight: 26,
   },
   versionRow: {
     marginTop: spacing.sm,
@@ -772,5 +870,54 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 12,
     color: colors.textMuted,
+  },
+  signatureBlock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    gap: 4,
+  },
+  signatureBlockTablet: {
+    paddingVertical: spacing.xl,
+    gap: spacing.xs,
+  },
+  signatureLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.textMuted,
+    letterSpacing: 0.3,
+  },
+  signatureLabelTablet: {
+    fontSize: 14,
+  },
+  signatureName: {
+    fontFamily: fonts.bold,
+    fontSize: 16,
+    color: colors.text,
+  },
+  signatureNameTablet: {
+    fontSize: 22,
+    lineHeight: 32,
+  },
+  signatureCompany: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  signatureCompanyTablet: {
+    fontSize: 16,
+    lineHeight: 26,
+  },
+  infoCardTablet: {
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  infoCardTitleTablet: {
+    fontSize: 18,
+    lineHeight: 28,
+  },
+  infoCardTextTablet: {
+    fontSize: 16,
+    lineHeight: 26,
   },
 });

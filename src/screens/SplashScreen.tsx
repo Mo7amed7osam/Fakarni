@@ -1,15 +1,18 @@
 import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGhost } from '../context/GhostContext';
 import { RootStackParamList } from '../types';
 import { colors, fonts, spacing } from '../theme';
+import { isTabletWidth } from '../utils/layout';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
 export function SplashScreen({ navigation }: Props) {
   const { hydrated, settings } = useGhost();
+  const { width } = useWindowDimensions();
+  const tabletLayout = isTabletWidth(width);
   const opacity = useRef(new Animated.Value(0.2)).current;
 
   useEffect(() => {
@@ -35,11 +38,13 @@ export function SplashScreen({ navigation }: Props) {
   return (
     <LinearGradient
       colors={['#F4EFE6', '#E6D9C5', '#FCE7DA']}
-      style={styles.container}
+      style={[styles.container, tabletLayout && styles.containerTablet]}
     >
-      <Animated.View style={[styles.ghostOrb, { opacity }]} />
-      <Text style={styles.logo}>Fakarni</Text>
-      <Text style={styles.subtitle}>المهام اليومية بصوتك وبأقل خطوة ممكنة</Text>
+      <Animated.View style={[styles.ghostOrb, tabletLayout && styles.ghostOrbTablet, { opacity }]} />
+      <Text style={[styles.logo, tabletLayout && styles.logoTablet]}>Fakarni</Text>
+      <Text style={[styles.subtitle, tabletLayout && styles.subtitleTablet]}>
+        المهام اليومية بصوتك وبأقل خطوة ممكنة
+      </Text>
     </LinearGradient>
   );
 }
@@ -50,6 +55,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xxl,
+  },
+  containerTablet: {
+    padding: 72,
   },
   ghostOrb: {
     width: 140,
@@ -64,10 +72,20 @@ const styles = StyleSheet.create({
     elevation: 10,
     marginBottom: spacing.xl,
   },
+  ghostOrbTablet: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    marginBottom: 44,
+  },
   logo: {
     fontFamily: fonts.bold,
     fontSize: 36,
     color: colors.text,
+  },
+  logoTablet: {
+    fontSize: 52,
+    lineHeight: 64,
   },
   subtitle: {
     marginTop: spacing.sm,
@@ -76,5 +94,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textMuted,
     writingDirection: 'rtl',
+  },
+  subtitleTablet: {
+    fontSize: 24,
+    lineHeight: 34,
   },
 });

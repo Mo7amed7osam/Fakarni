@@ -1,5 +1,13 @@
 import { useEffect } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { FeedbackSheet } from '../components/FeedbackSheet';
 import { GhostButton } from '../components/GhostButton';
@@ -10,6 +18,7 @@ import { openSystemSettings } from '../services/notifications';
 import { isLLMConfigured } from '../services/llm';
 import { colors, fonts, radii, spacing } from '../theme';
 import { RootStackParamList } from '../types';
+import { getResponsiveContentWidth, isTabletWidth } from '../utils/layout';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HelpFaq'>;
 
@@ -72,6 +81,9 @@ export function HelpFaqScreen({ navigation, route }: Props) {
     trackFeedbackShareSuggested,
   } = useGhost();
   const copy = getAppCopy(settings.uiLanguage);
+  const { width } = useWindowDimensions();
+  const tabletLayout = isTabletWidth(width);
+  const contentMaxWidth = getResponsiveContentWidth(width, 980);
   const faq = settings.uiLanguage === 'en' ? faqEnglish : faqArabic;
   const llmEnabled = isLLMConfigured();
   const notificationActionLabel =
@@ -124,24 +136,25 @@ export function HelpFaqScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{copy.help.title}</Text>
+      <View style={[styles.contentInner, { maxWidth: contentMaxWidth }]}>
+      <Text style={[styles.title, tabletLayout && styles.titleTablet]}>{copy.help.title}</Text>
 
       <SectionCard
         title={copy.help.privacyTitle}
         subtitle={copy.help.privacySubtitle}
       >
         <View style={styles.copyBlock}>
-          <Text style={styles.answer}>
+          <Text style={[styles.answer, tabletLayout && styles.answerTablet]}>
             {settings.uiLanguage === 'en'
               ? 'Reminder data is stored locally on the device. The microphone only starts after you tap the record button.'
               : 'بيانات التذكيرات تُحفظ محليًا على الجهاز. الميكروفون لا يعمل إلا بعد ضغطك على زر التسجيل.'}
           </Text>
-          <Text style={styles.answer}>
+          <Text style={[styles.answer, tabletLayout && styles.answerTablet]}>
             {settings.uiLanguage === 'en'
               ? 'Speech recognition depends on system services on the device, not on always-on recording inside the app.'
               : 'التعرف على الكلام يعتمد على خدمات النظام في الجهاز، وليس على تسجيل صوت دائم داخل التطبيق.'}
           </Text>
-          <Text style={styles.answer}>
+          <Text style={[styles.answer, tabletLayout && styles.answerTablet]}>
             {settings.uiLanguage === 'en'
               ? llmEnabled
                 ? 'Smart parsing is enabled and routes through the configured Fakarni parsing gateway.'
@@ -150,12 +163,12 @@ export function HelpFaqScreen({ navigation, route }: Props) {
                 ? 'التحليل الذكي مفعّل ويمر عبر بوابة التحليل الخاصة بـ Fakarni.'
                 : 'التحليل الذكي غير مفعّل في هذه النسخة.'}
           </Text>
-          <Text style={styles.answer}>
+          <Text style={[styles.answer, tabletLayout && styles.answerTablet]}>
             {settings.uiLanguage === 'en'
               ? 'If you enable calendar saving, the app may create an event in the device calendar or Google Calendar based on your setup.'
               : 'وإذا فعّلت إضافة التذكير للتقويم، قد يُنشئ التطبيق حدثًا في تقويم الجهاز أو Google Calendar حسب إعداداتك.'}
           </Text>
-          <Text style={styles.answer}>
+          <Text style={[styles.answer, tabletLayout && styles.answerTablet]}>
             {settings.uiLanguage === 'en'
               ? `Anonymous analytics: ${settings.analytics.enabled ? 'enabled' : 'disabled'}, and raw transcripts or reminder titles are not sent.`
               : `التحليلات المجهولة: ${settings.analytics.enabled ? 'مفعّلة' : 'متوقفة'}، ولا ترسل transcript الخام أو أسماء التذكيرات.`}
@@ -164,8 +177,8 @@ export function HelpFaqScreen({ navigation, route }: Props) {
       </SectionCard>
 
       <SectionCard title={copy.help.permissionsTitle}>
-        <View style={styles.permissionCard}>
-          <Text style={styles.permissionTitle}>
+        <View style={[styles.permissionCard, tabletLayout && styles.permissionCardTablet]}>
+          <Text style={[styles.permissionTitle, tabletLayout && styles.permissionTitleTablet]}>
             {notificationPermission === 'granted'
               ? settings.uiLanguage === 'en'
                 ? 'Notifications enabled'
@@ -178,7 +191,7 @@ export function HelpFaqScreen({ navigation, route }: Props) {
                   ? 'Notifications are incomplete'
                   : 'الإشعارات غير مكتملة'}
           </Text>
-          <Text style={styles.answer}>
+          <Text style={[styles.answer, tabletLayout && styles.answerTablet]}>
             {pendingPermissionReminders > 0
               ? settings.uiLanguage === 'en'
                 ? `${pendingPermissionReminders} saved reminders will be linked to notifications after permission is granted.`
@@ -216,23 +229,29 @@ export function HelpFaqScreen({ navigation, route }: Props) {
       </SectionCard>
 
       <SectionCard title={copy.help.deviceDataTitle}>
-        <Text style={styles.answer}>
+        <Text style={[styles.answer, tabletLayout && styles.answerTablet]}>
           {settings.uiLanguage === 'en'
             ? 'You can delete all local reminders and settings from inside the app at any time.'
             : 'يمكنك حذف كل التذكيرات والإعدادات المحلية من داخل التطبيق في أي وقت.'}
         </Text>
-        <Pressable onPress={handleResetData} style={styles.dangerCard}>
-          <Text style={styles.dangerLabel}>{copy.help.resetAllData}</Text>
+        <Pressable
+          onPress={handleResetData}
+          style={[styles.dangerCard, tabletLayout && styles.dangerCardTablet]}
+        >
+          <Text style={[styles.dangerLabel, tabletLayout && styles.dangerLabelTablet]}>
+            {copy.help.resetAllData}
+          </Text>
         </Pressable>
       </SectionCard>
 
       {faq.map((item) => (
         <SectionCard key={item.question} title={item.question}>
           <View>
-            <Text style={styles.answer}>{item.answer}</Text>
+            <Text style={[styles.answer, tabletLayout && styles.answerTablet]}>{item.answer}</Text>
           </View>
         </SectionCard>
       ))}
+      </View>
 
       <FeedbackSheet
         visible={feedbackPrompt?.source === 'settings_manual'}
@@ -255,8 +274,13 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    alignItems: 'center',
     gap: spacing.md,
     paddingBottom: 48,
+  },
+  contentInner: {
+    width: '100%',
+    gap: spacing.md,
   },
   title: {
     fontFamily: fonts.bold,
@@ -264,6 +288,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  titleTablet: {
+    fontSize: 34,
+    lineHeight: 46,
   },
   copyBlock: {
     gap: spacing.xs,
@@ -276,6 +304,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     writingDirection: 'rtl',
   },
+  answerTablet: {
+    fontSize: 17,
+    lineHeight: 28,
+  },
   permissionCard: {
     backgroundColor: colors.warningSoft,
     borderRadius: radii.md,
@@ -284,12 +316,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(154,107,0,0.12)',
   },
+  permissionCardTablet: {
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
   permissionTitle: {
     fontFamily: fonts.bold,
     fontSize: 15,
     color: colors.warning,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  permissionTitleTablet: {
+    fontSize: 18,
+    lineHeight: 28,
   },
   dangerCard: {
     backgroundColor: '#FEE2E2',
@@ -298,11 +338,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(199,75,67,0.12)',
   },
+  dangerCardTablet: {
+    padding: spacing.lg,
+  },
   dangerLabel: {
     fontFamily: fonts.bold,
     fontSize: 15,
     color: colors.danger,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  dangerLabelTablet: {
+    fontSize: 18,
+    lineHeight: 28,
   },
 });

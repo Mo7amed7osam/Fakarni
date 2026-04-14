@@ -3,9 +3,11 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { colors, fonts, radii, spacing } from '../theme';
+import { isTabletWidth } from '../utils/layout';
 
 interface GhostButtonProps {
   label: string;
@@ -22,6 +24,9 @@ export function GhostButton({
   variant = 'primary',
   disabled,
 }: GhostButtonProps) {
+  const { width } = useWindowDimensions();
+  const tabletLayout = isTabletWidth(width);
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -29,6 +34,7 @@ export function GhostButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
+        tabletLayout && styles.baseTablet,
         variant === 'primary' && styles.primary,
         variant === 'secondary' && styles.secondary,
         variant === 'ghost' && styles.ghost,
@@ -36,11 +42,12 @@ export function GhostButton({
         pressed && !disabled && styles.pressed,
       ]}
     >
-      <View style={styles.content}>
+      <View style={[styles.content, tabletLayout && styles.contentTablet]}>
         {icon}
         <Text
           style={[
             styles.label,
+            tabletLayout && styles.labelTablet,
             variant === 'secondary' && styles.secondaryLabel,
             variant === 'ghost' && styles.ghostLabel,
           ]}
@@ -63,6 +70,10 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
+  },
+  baseTablet: {
+    minHeight: 64,
+    paddingHorizontal: spacing.xl,
   },
   primary: {
     backgroundColor: colors.primary,
@@ -91,11 +102,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
   },
+  contentTablet: {
+    gap: spacing.md,
+  },
   label: {
     color: colors.white,
     fontFamily: fonts.bold,
     fontSize: 16,
     writingDirection: 'rtl',
+  },
+  labelTablet: {
+    fontSize: 20,
   },
   secondaryLabel: {
     color: colors.text,

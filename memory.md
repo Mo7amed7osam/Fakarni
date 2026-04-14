@@ -157,6 +157,10 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - 2026-03-26: إضافة hybrid parser smoke tests عبر mock للـ LLM module، حتى يصبح سلوك merge نفسه تحت الاختبار بدل الاكتفاء بـ rules parser.
 - 2026-03-26: إضافة ads config داخل settings بدل ربط الإعلانات مباشرة في الشاشات، حتى يظل التحكم في monetization behavior من عند المؤسس.
 - 2026-03-26: إضافة date/time pickers داخل confirmation card لإكمال اليوم أو الوقت الناقصين، حتى تبقى التجربة خفيفة ومألوفة مثل بقية التطبيقات بدون فرض الشاشة الكاملة.
+- 2026-04-14: فصل الـ landing page عن التطبيق نهائيًا ووضع صفحات `support` و`privacy` كقوالب مستقلة داخل `landing/`، لأن App Store target يجب أن يبقى نظيفًا ومفصولًا عن التسويق.
+- 2026-04-14: تجهيز App Store metadata pack وrelease runbooks داخل `docs/`، حتى يتحول الإطلاق من checklist عامة إلى مواد submission فعلية قابلة للتنفيذ.
+- 2026-04-14: توحيد native marketing version إلى `1.0.0` ليتطابق مع `app.json`، لأن أي اختلاف بين Xcode وExpo سيظهر كارتباك في الأرشفة أو App Store Connect.
+- 2026-04-14: إثبات أن simulator build ينجح على scheme `Fakarni` وتحديد blocker الأرشفة الحالي بدقة: غياب `DEVELOPMENT_TEAM` في target signing، بدل ترك مرحلة الإطلاق مبهمة.
 - 2026-03-25: اعتماد card-first confirmation دائم بعد الصوت بدل فتح الفورم تلقائيًا، حتى تبقى التجربة سريعة وغير مزعجة مع الحفاظ على طريق تعديل واضح.
 - 2026-03-25: اعتماد `Founder memory` كملف مرجعي دائم في الجذر بدل changelog طويل، حتى يبقى أي handoff سريع وواضح.
 - 2026-03-25: إبقاء الاشتراكات خارج الواجهة الحالية، لأن أولوية النسخة هي الاعتمادية والوضوح قبل monetization UI.
@@ -171,6 +175,9 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - اختبار widget على iPhone حقيقي: launch من Home Screen، auto-start، وسلوك fallback عند غياب الأذونات.
 - اختبار فعلي على جهاز حقيقي لـ notification actions وfollow-up timing وcalendar behavior.
 - نشر parsing gateway الجديد وربط `EXPO_PUBLIC_PARSE_GATEWAY_URL` به، حتى تخرج provider keys من التطبيق نهائيًا.
+- تعيين Apple development team داخل Xcode target `Fakarni` ثم إعادة تشغيل archive validation، لأن الأرشفة متوقفة حاليًا على signing فقط.
+- استضافة `support` و`privacy` على domain حقيقي وربطهما في App Store Connect، لأن القوالب وحدها لا تكفي للمراجعة.
+- تنفيذ checklist `docs/real-device-validation.md` على iPhone فعلي قبل أي محاولة submit.
 - مراجعة Home وConfirmation على جهاز حقيقي لضبط الإحساس بالحجم والمسافات وسلوك Daily Trust Pack.
 - تنظيف اللغة المتبقية في الشاشات غير الأساسية وتوحيد tone of voice بالكامل.
 

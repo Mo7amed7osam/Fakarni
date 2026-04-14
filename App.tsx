@@ -46,10 +46,6 @@ export default function App() {
     Cairo_600SemiBold,
     Cairo_700Bold,
   });
-
-  if (!fontsLoaded) {
-    return null;
-  }
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const routeNameRef = useRef<string | undefined>(undefined);
   const pendingExternalLaunchRef = useRef<RootStackParamList['Home'] | null>(null);
@@ -183,6 +179,10 @@ export default function App() {
       subscription.remove();
     };
   }, []);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

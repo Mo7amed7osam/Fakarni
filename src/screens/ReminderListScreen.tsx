@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, Share, StyleSheet, Text, View, Pressable } from 'react-native';
+import {
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+  Pressable,
+  useWindowDimensions,
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedbackSheet } from '../components/FeedbackSheet';
@@ -11,6 +19,7 @@ import { SectionCard } from '../components/SectionCard';
 import { useGhost } from '../context/GhostContext';
 import { colors, fonts, radii, spacing } from '../theme';
 import { RootStackParamList } from '../types';
+import { getResponsiveContentWidth, isTabletWidth } from '../utils/layout';
 import { buildShareMessage } from '../utils/ghostPersonality';
 import {
   buildManualReminderDraft,
@@ -35,6 +44,9 @@ export function ReminderListScreen({ navigation }: Props) {
     trackFeedbackShareSuggested,
   } = useGhost();
   const copy = getAppCopy(settings.uiLanguage);
+  const { width } = useWindowDimensions();
+  const tabletLayout = isTabletWidth(width);
+  const contentMaxWidth = getResponsiveContentWidth(width, 980);
   const [activeFilter, setActiveFilter] = useState<ReminderListFilter>('today');
   const [showDoneSummary, setShowDoneSummary] = useState(false);
 
@@ -101,28 +113,33 @@ export function ReminderListScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-        <Pressable onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backButtonLabel}>{copy.common.back}</Text>
+        <View style={[styles.contentInner, { maxWidth: contentMaxWidth }]}>
+        <Pressable onPress={handleBack} style={[styles.backButton, tabletLayout && styles.backButtonTablet]}>
+          <Text style={[styles.backButtonLabel, tabletLayout && styles.backButtonLabelTablet]}>{copy.common.back}</Text>
           <Text style={styles.backButtonIcon}>→</Text>
         </Pressable>
 
-        <Text style={styles.title}>{copy.reminderList.title}</Text>
-        <Text style={styles.subtitle}>{copy.reminderList.subtitle}</Text>
+        <Text style={[styles.title, tabletLayout && styles.titleTablet]}>{copy.reminderList.title}</Text>
+        <Text style={[styles.subtitle, tabletLayout && styles.subtitleTablet]}>{copy.reminderList.subtitle}</Text>
 
         <Pressable onPress={openManualCreate} style={styles.manualLink}>
-          <Text style={styles.manualLinkText}>{copy.reminderList.manualCta}</Text>
+          <Text style={[styles.manualLinkText, tabletLayout && styles.manualLinkTextTablet]}>{copy.reminderList.manualCta}</Text>
         </Pressable>
 
         <GlassSurface
           style={styles.heroStrip}
-          contentStyle={styles.heroStripContent}
+          contentStyle={[styles.heroStripContent, tabletLayout && styles.heroStripContentTablet]}
           intensity={46}
           overlayColor="rgba(255,255,255,0.22)"
           borderColor="rgba(255,255,255,0.5)"
         >
           <View style={styles.heroStripMain}>
-            <Text style={styles.heroStripValue}>{counts.today}</Text>
-            <Text style={styles.heroStripLabel}>{copy.reminderList.compactDue}</Text>
+            <Text style={[styles.heroStripValue, tabletLayout && styles.heroStripValueTablet]}>
+              {counts.today}
+            </Text>
+            <Text style={[styles.heroStripLabel, tabletLayout && styles.heroStripLabelTablet]}>
+              {copy.reminderList.compactDue}
+            </Text>
           </View>
 
           <View style={styles.heroStripStats}>
@@ -130,6 +147,7 @@ export function ReminderListScreen({ navigation }: Props) {
               <Text
                 style={[
                   styles.heroMiniPillText,
+                  tabletLayout && styles.heroMiniPillTextTablet,
                   counts.overdue > 0 && styles.heroMiniPillTextOverdue,
                 ]}
               >
@@ -137,7 +155,7 @@ export function ReminderListScreen({ navigation }: Props) {
               </Text>
             </View>
             <View style={styles.heroMiniPill}>
-              <Text style={styles.heroMiniPillText}>
+              <Text style={[styles.heroMiniPillText, tabletLayout && styles.heroMiniPillTextTablet]}>
                 {counts.done} {copy.reminderList.compactDone}
               </Text>
             </View>
@@ -154,10 +172,10 @@ export function ReminderListScreen({ navigation }: Props) {
                 onPress={() => setActiveFilter(filter.id)}
                 style={[styles.filterChip, isActive && styles.filterChipActive]}
               >
-                <Text style={[styles.filterChipLabel, isActive && styles.filterChipLabelActive]}>
+                <Text style={[styles.filterChipLabel, tabletLayout && styles.filterChipLabelTablet, isActive && styles.filterChipLabelActive]}>
                   {filter.label}
                 </Text>
-                <Text style={[styles.filterChipCount, isActive && styles.filterChipCountActive]}>
+                <Text style={[styles.filterChipCount, tabletLayout && styles.filterChipCountTablet, isActive && styles.filterChipCountActive]}>
                   {count}
                 </Text>
               </Pressable>
@@ -244,17 +262,18 @@ export function ReminderListScreen({ navigation }: Props) {
         {doneReminders.length > 0 ? (
           <SectionCard title={copy.reminderList.doneTitle} subtitle={copy.reminderList.doneSubtitle}>
             <Pressable onPress={() => setShowDoneSummary((current) => !current)} style={styles.doneToggle}>
-              <Text style={styles.doneToggleText}>
+              <Text style={[styles.doneToggleText, tabletLayout && styles.doneToggleTextTablet]}>
                 {showDoneSummary ? copy.reminderList.hideDone : copy.reminderList.showDone}
               </Text>
             </Pressable>
             {showDoneSummary ? (
-              <Text style={styles.doneSummary}>
+              <Text style={[styles.doneSummary, tabletLayout && styles.doneSummaryTablet]}>
                 {copy.reminderList.doneSummary(doneReminders.length)}
               </Text>
             ) : null}
           </SectionCard>
         ) : null}
+        </View>
       </ScrollView>
 
       <FeedbackSheet
@@ -282,8 +301,13 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    alignItems: 'center',
     gap: spacing.md,
     paddingBottom: 52,
+  },
+  contentInner: {
+    width: '100%',
+    gap: spacing.md,
   },
   backButton: {
     alignSelf: 'flex-end',
@@ -297,11 +321,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
+  backButtonTablet: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
   backButtonLabel: {
     fontFamily: fonts.semibold,
     fontSize: 12,
     color: colors.primaryDark,
     writingDirection: 'rtl',
+  },
+  backButtonLabelTablet: {
+    fontSize: 15,
   },
   backButtonIcon: {
     fontFamily: fonts.bold,
@@ -316,6 +347,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  titleTablet: {
+    fontSize: 28,
+    lineHeight: 40,
+  },
   subtitle: {
     fontFamily: fonts.medium,
     fontSize: 13,
@@ -323,6 +358,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 20,
     writingDirection: 'rtl',
+  },
+  subtitleTablet: {
+    fontSize: 16,
+    lineHeight: 26,
   },
   manualLink: {
     alignSelf: 'flex-end',
@@ -335,6 +374,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     writingDirection: 'rtl',
   },
+  manualLinkTextTablet: {
+    fontSize: 15,
+  },
   heroStrip: {
     borderRadius: radii.lg,
   },
@@ -346,6 +388,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
+  heroStripContentTablet: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
   heroStripMain: {
     alignItems: 'flex-end',
     gap: 2,
@@ -356,12 +402,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     textAlign: 'right',
   },
+  heroStripValueTablet: {
+    fontSize: 34,
+    lineHeight: 44,
+  },
   heroStripLabel: {
     color: colors.textMuted,
     fontFamily: fonts.medium,
     fontSize: 12,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  heroStripLabelTablet: {
+    fontSize: 15,
+    lineHeight: 24,
   },
   heroStripStats: {
     flexDirection: 'row-reverse',
@@ -387,6 +441,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 12,
     writingDirection: 'rtl',
+  },
+  heroMiniPillTextTablet: {
+    fontSize: 15,
   },
   heroMiniPillTextOverdue: {
     color: '#B91C1C',
@@ -420,6 +477,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 13,
   },
+  filterChipLabelTablet: {
+    fontSize: 16,
+  },
   filterChipLabelActive: {
     color: colors.white,
   },
@@ -427,6 +487,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: fonts.bold,
     fontSize: 15,
+  },
+  filterChipCountTablet: {
+    fontSize: 18,
   },
   filterChipCountActive: {
     color: colors.white,
@@ -438,6 +501,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  doneSummaryTablet: {
+    fontSize: 17,
+    lineHeight: 28,
+  },
   doneToggle: {
     alignSelf: 'flex-end',
     marginBottom: spacing.xs,
@@ -447,5 +514,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 12,
     writingDirection: 'rtl',
+  },
+  doneToggleTextTablet: {
+    fontSize: 15,
   },
 });

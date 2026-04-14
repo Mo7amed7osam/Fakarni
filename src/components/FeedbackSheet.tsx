@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { getAppCopy } from '../content/appCopy';
@@ -17,6 +18,7 @@ import {
   UiLanguage,
 } from '../types';
 import { colors, fonts, radii, spacing } from '../theme';
+import { getResponsiveContentWidth, isTabletWidth } from '../utils/layout';
 
 type FeedbackSheetStep = 'gate' | 'positive' | 'form';
 
@@ -53,6 +55,9 @@ export function FeedbackSheet({
   onRequestReview,
   onShareSuggested,
 }: FeedbackSheetProps) {
+  const { width } = useWindowDimensions();
+  const tabletLayout = isTabletWidth(width);
+  const sheetWidth = getResponsiveContentWidth(width, tabletLayout ? 720 : 520);
   const copy = getAppCopy(language);
   const [step, setStep] = useState<FeedbackSheetStep>('gate');
   const [selectedReason, setSelectedReason] = useState<FeedbackReason>('other');
@@ -125,9 +130,9 @@ export function FeedbackSheet({
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, tabletLayout && styles.sheetTablet, { maxWidth: sheetWidth }]}>
           <View style={styles.header}>
-            <Text style={styles.title}>
+            <Text style={[styles.title, tabletLayout && styles.titleTablet]}>
               {step === 'positive'
                 ? copy.feedback.happyTitle
                 : step === 'form'
@@ -139,7 +144,7 @@ export function FeedbackSheet({
             </Pressable>
           </View>
 
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, tabletLayout && styles.subtitleTablet]}>
             {step === 'positive'
               ? copy.feedback.happySubtitle
               : step === 'form'
@@ -194,9 +199,19 @@ export function FeedbackSheet({
                     <Pressable
                       key={reason}
                       onPress={() => setSelectedReason(reason)}
-                      style={[styles.reasonChip, active && styles.reasonChipActive]}
+                      style={[
+                        styles.reasonChip,
+                        tabletLayout && styles.reasonChipTablet,
+                        active && styles.reasonChipActive,
+                      ]}
                     >
-                      <Text style={[styles.reasonChipText, active && styles.reasonChipTextActive]}>
+                      <Text
+                        style={[
+                          styles.reasonChipText,
+                          tabletLayout && styles.reasonChipTextTablet,
+                          active && styles.reasonChipTextActive,
+                        ]}
+                      >
                         {reasonLabels[reason]}
                       </Text>
                     </Pressable>
@@ -211,7 +226,7 @@ export function FeedbackSheet({
                 onChangeText={setNote}
                 placeholder={copy.feedback.notePlaceholder}
                 placeholderTextColor={colors.textMuted}
-                style={styles.noteInput}
+                style={[styles.noteInput, tabletLayout && styles.noteInputTablet]}
               />
 
               <Pressable
@@ -251,6 +266,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
+  sheetTablet: {
+    alignSelf: 'center',
+    padding: spacing.xl,
+    gap: spacing.lg,
+  },
   header: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
@@ -265,6 +285,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  titleTablet: {
+    fontSize: 28,
+    lineHeight: 40,
+  },
   subtitle: {
     fontFamily: fonts.medium,
     fontSize: 14,
@@ -272,6 +296,10 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  subtitleTablet: {
+    fontSize: 17,
+    lineHeight: 28,
   },
   closeChip: {
     paddingHorizontal: spacing.md,
@@ -329,6 +357,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(108,92,231,0.14)',
   },
+  reasonChipTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
   reasonChipActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
@@ -338,6 +370,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primaryDark,
     writingDirection: 'rtl',
+  },
+  reasonChipTextTablet: {
+    fontSize: 16,
   },
   reasonChipTextActive: {
     color: '#FFFFFF',
@@ -355,6 +390,11 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  noteInputTablet: {
+    minHeight: 148,
+    fontSize: 17,
+    lineHeight: 28,
   },
   buttonDisabled: {
     opacity: 0.6,

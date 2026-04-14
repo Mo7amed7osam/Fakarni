@@ -1,9 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import dayjs from 'dayjs';
 import { getAppCopy } from '../content/appCopy';
 import { useGhost } from '../context/GhostContext';
 import { Reminder } from '../types';
 import { colors, fonts, radii, spacing } from '../theme';
+import { isTabletWidth } from '../utils/layout';
 import {
   relativeReminderLabel,
   toArabicDateTimeLabel,
@@ -102,6 +103,8 @@ export function ReminderCard({
   onSnooze10m,
   onSnooze1h,
 }: ReminderCardProps) {
+  const { width } = useWindowDimensions();
+  const tabletLayout = isTabletWidth(width);
   const { settings } = useGhost();
   const copy = getAppCopy(settings.uiLanguage);
   const snapshot = getReminderTimelineSnapshot(reminder);
@@ -119,16 +122,16 @@ export function ReminderCard({
     reminder.lastTriggeredAt && dayjs(reminder.lastTriggeredAt).isValid();
 
   return (
-    <Pressable onPress={onPress} style={styles.card}>
-      <View style={styles.header}>
+    <Pressable onPress={onPress} style={[styles.card, tabletLayout && styles.cardTablet]}>
+      <View style={[styles.header, tabletLayout && styles.headerTablet]}>
         <View style={styles.badgeRow}>
-          <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>
+          <View style={[styles.categoryBadge, tabletLayout && styles.badgeTablet]}>
+              <Text style={[styles.categoryBadgeText, tabletLayout && styles.badgeTextTablet]}>
               {getReminderCategoryLabel(reminder.category, settings.uiLanguage)}
               </Text>
             </View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
+          <View style={[styles.badge, tabletLayout && styles.badgeTablet]}>
+            <Text style={[styles.badgeText, tabletLayout && styles.badgeTextTablet]}>
               {getRecurrenceLabel(reminder.recurrence, settings.uiLanguage)}
             </Text>
           </View>
@@ -145,6 +148,7 @@ export function ReminderCard({
             <Text
               style={[
                 styles.stateBadgeText,
+                tabletLayout && styles.badgeTextTablet,
                 snapshot.bucket === 'overdue'
                   ? styles.stateBadgeTextOverdue
                   : snapshot.bucket === 'done'
@@ -156,8 +160,8 @@ export function ReminderCard({
             </Text>
           </View>
           {reminder.notificationStatus === 'permission_required' ? (
-            <View style={styles.warningBadge}>
-              <Text style={styles.warningBadgeText}>
+            <View style={[styles.warningBadge, tabletLayout && styles.badgeTablet]}>
+              <Text style={[styles.warningBadgeText, tabletLayout && styles.badgeTextTablet]}>
                 {settings.uiLanguage === 'en' ? 'Waiting for notifications' : 'بانتظار الإشعارات'}
               </Text>
             </View>
@@ -165,45 +169,45 @@ export function ReminderCard({
         </View>
         <View style={styles.actionsRow}>
           {onShare ? (
-            <Pressable onPress={onShare} style={styles.shareChip}>
-              <Text style={styles.shareText}>{copy.common.share}</Text>
+            <Pressable onPress={onShare} style={[styles.shareChip, tabletLayout && styles.iconChipTablet]}>
+              <Text style={[styles.shareText, tabletLayout && styles.shareTextTablet]}>{copy.common.share}</Text>
             </Pressable>
           ) : null}
           {onEdit ? (
-            <Pressable onPress={onEdit} style={styles.editChip}>
+            <Pressable onPress={onEdit} style={[styles.editChip, tabletLayout && styles.iconChipTablet]}>
               <PencilGlyph />
             </Pressable>
           ) : null}
           {onDelete ? (
-            <Pressable onPress={onDelete} style={styles.deleteChip}>
+            <Pressable onPress={onDelete} style={[styles.deleteChip, tabletLayout && styles.iconChipTablet]}>
               <TrashGlyph />
             </Pressable>
           ) : null}
         </View>
       </View>
 
-      <Text style={styles.title}>{reminder.title}</Text>
-      <Text style={styles.meta}>
+      <Text style={[styles.title, tabletLayout && styles.titleTablet]}>{reminder.title}</Text>
+      <Text style={[styles.meta, tabletLayout && styles.metaTablet]}>
         {reminderTimeLabel}: {toArabicDateTimeLabel(snapshot.activeReminderAt, settings.uiLanguage)}
       </Text>
-      <Text style={styles.metaSecondary}>
+      <Text style={[styles.metaSecondary, tabletLayout && styles.metaSecondaryTablet]}>
         {settings.uiLanguage === 'en' ? 'Event:' : 'المعاد:'}{' '}
         {toArabicDateTimeLabel(reminder.eventAt, settings.uiLanguage)}
       </Text>
-      <Text style={styles.metaSecondary}>
+      <Text style={[styles.metaSecondary, tabletLayout && styles.metaSecondaryTablet]}>
         {settings.uiLanguage === 'en' ? 'Offset:' : 'الفاصل:'}{' '}
         {relativeReminderLabel(reminder.offsetMinutes, settings.uiLanguage)}
       </Text>
 
       {showTriggeredMeta ? (
-        <Text style={styles.helperMeta}>
+        <Text style={[styles.helperMeta, tabletLayout && styles.helperMetaTablet]}>
           {settings.uiLanguage === 'en' ? 'Last alert:' : 'آخر تنبيه:'}{' '}
           {toArabicDateTimeLabel(reminder.lastTriggeredAt!, settings.uiLanguage)}
         </Text>
       ) : null}
 
       {reminder.notificationStatus === 'permission_required' ? (
-        <Text style={styles.warningMeta}>
+        <Text style={[styles.warningMeta, tabletLayout && styles.warningMetaTablet]}>
           {settings.uiLanguage === 'en'
             ? 'The reminder is saved, but notifications will not arrive until app notifications are enabled.'
             : 'التذكير محفوظ، لكن الإشعار مش هيوصل قبل ما تفعّل إشعارات التطبيق.'}
@@ -213,22 +217,24 @@ export function ReminderCard({
       {canAct ? (
         <View style={styles.quickActionsRow}>
           {onSnooze1h ? (
-            <Pressable onPress={onSnooze1h} style={styles.quickGhostAction}>
-              <Text style={styles.quickGhostActionText}>
+            <Pressable onPress={onSnooze1h} style={[styles.quickGhostAction, tabletLayout && styles.quickActionTablet]}>
+              <Text style={[styles.quickGhostActionText, tabletLayout && styles.quickActionTextTablet]}>
                 {settings.uiLanguage === 'en' ? '1h' : 'ساعة'}
               </Text>
             </Pressable>
           ) : null}
           {onSnooze10m ? (
-            <Pressable onPress={onSnooze10m} style={styles.quickGhostAction}>
-              <Text style={styles.quickGhostActionText}>
+            <Pressable onPress={onSnooze10m} style={[styles.quickGhostAction, tabletLayout && styles.quickActionTablet]}>
+              <Text style={[styles.quickGhostActionText, tabletLayout && styles.quickActionTextTablet]}>
                 {settings.uiLanguage === 'en' ? '10m' : '10 د'}
               </Text>
             </Pressable>
           ) : null}
           {onComplete ? (
-            <Pressable onPress={onComplete} style={styles.quickPrimaryAction}>
-              <Text style={styles.quickPrimaryActionText}>{copy.common.done}</Text>
+            <Pressable onPress={onComplete} style={[styles.quickPrimaryAction, tabletLayout && styles.quickActionTablet]}>
+              <Text style={[styles.quickPrimaryActionText, tabletLayout && styles.quickActionTextTablet]}>
+                {copy.common.done}
+              </Text>
             </Pressable>
           ) : null}
         </View>
@@ -251,11 +257,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 2,
   },
+  cardTablet: {
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
   header: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: spacing.sm,
+  },
+  headerTablet: {
+    gap: spacing.md,
   },
   badgeRow: {
     flexDirection: 'row-reverse',
@@ -328,6 +341,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     writingDirection: 'rtl',
   },
+  badgeTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  badgeTextTablet: {
+    fontSize: 15,
+  },
   actionsRow: {
     flexDirection: 'row-reverse',
     gap: spacing.xs,
@@ -359,6 +379,14 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     fontSize: 12,
     writingDirection: 'rtl',
+  },
+  shareTextTablet: {
+    fontSize: 15,
+  },
+  iconChipTablet: {
+    minWidth: 44,
+    height: 44,
+    borderRadius: 22,
   },
   pencilWrap: {
     width: 14,
@@ -431,12 +459,20 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  titleTablet: {
+    fontSize: 26,
+    lineHeight: 38,
+  },
   meta: {
     color: colors.text,
     fontFamily: fonts.semibold,
     fontSize: 14,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  metaTablet: {
+    fontSize: 18,
+    lineHeight: 28,
   },
   metaSecondary: {
     color: colors.textMuted,
@@ -445,12 +481,19 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  metaSecondaryTablet: {
+    fontSize: 15,
+    lineHeight: 24,
+  },
   helperMeta: {
     color: colors.primaryDark,
     fontFamily: fonts.semibold,
     fontSize: 12,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  helperMetaTablet: {
+    fontSize: 14,
   },
   warningMeta: {
     color: colors.warning,
@@ -459,6 +502,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  warningMetaTablet: {
+    fontSize: 15,
+    lineHeight: 24,
   },
   quickActionsRow: {
     flexDirection: 'row-reverse',
@@ -495,5 +542,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 13,
     writingDirection: 'rtl',
+  },
+  quickActionTablet: {
+    minHeight: 54,
+    minWidth: 96,
+  },
+  quickActionTextTablet: {
+    fontSize: 17,
   },
 });

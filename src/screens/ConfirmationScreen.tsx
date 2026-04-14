@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import DateTimePicker, {
@@ -26,6 +27,7 @@ import {
 } from '../services/analytics';
 import { colors, fonts, radii, spacing } from '../theme';
 import { Recurrence, ReminderCategory, RootStackParamList } from '../types';
+import { getResponsiveContentWidth, isTabletWidth } from '../utils/layout';
 import {
   relativeReminderLabel,
   toArabicDateLabel,
@@ -52,6 +54,9 @@ const categoryOptions: ReminderCategory[] = [
 
 export function ConfirmationScreen({ navigation, route }: Props) {
   const { createReminder, updateReminder, settings, notificationPermission } = useGhost();
+  const { width } = useWindowDimensions();
+  const tabletLayout = isTabletWidth(width);
+  const contentMaxWidth = getResponsiveContentWidth(width, 980);
   const copy = getAppCopy(settings.uiLanguage);
   const { draft, transcript, confidence, missingFields, mode, reminderId } = route.params;
   const isEdit = mode === 'edit';
@@ -326,14 +331,15 @@ export function ConfirmationScreen({ navigation, route }: Props) {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={styles.title}>
+      <View style={[styles.contentInner, { maxWidth: contentMaxWidth }]}>
+      <Text style={[styles.title, tabletLayout && styles.titleTablet]}>
         {isEdit
           ? copy.confirmation.titleEdit
           : isManualCreate
             ? copy.confirmation.titleManual
             : copy.confirmation.titleVoice}
       </Text>
-      <Text style={styles.subtitle}>
+      <Text style={[styles.subtitle, tabletLayout && styles.subtitleTablet]}>
         {isEdit
           ? copy.confirmation.subtitleEdit
           : isManualCreate
@@ -344,16 +350,16 @@ export function ConfirmationScreen({ navigation, route }: Props) {
       {!isManualCreate ? (
         <GlassSurface
           style={styles.heroCard}
-          contentStyle={styles.heroCardContent}
+          contentStyle={[styles.heroCardContent, tabletLayout && styles.heroCardContentTablet]}
           intensity={52}
           overlayColor="rgba(255,255,255,0.24)"
           borderColor="rgba(255,255,255,0.5)"
         >
-          <Text style={styles.heroLabel}>
+          <Text style={[styles.heroLabel, tabletLayout && styles.heroLabelTablet]}>
             {isEdit ? copy.confirmation.heroEdit : copy.confirmation.heroVoice}
           </Text>
-          <Text style={styles.heroValue}>{confidenceLabel}</Text>
-          <Text style={styles.heroCaption}>
+          <Text style={[styles.heroValue, tabletLayout && styles.heroValueTablet]}>{confidenceLabel}</Text>
+          <Text style={[styles.heroCaption, tabletLayout && styles.heroCaptionTablet]}>
             {isEdit
               ? copy.confirmation.heroEditCaption
               : missingFields.length
@@ -367,7 +373,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
 
       {transcript.trim() ? (
         <SectionCard title={isEdit ? copy.confirmation.originalText : copy.confirmation.heardText}>
-          <Text style={styles.bodyText}>{transcript}</Text>
+          <Text style={[styles.bodyText, tabletLayout && styles.bodyTextTablet]}>{transcript}</Text>
         </SectionCard>
       ) : null}
 
@@ -375,13 +381,18 @@ export function ConfirmationScreen({ navigation, route }: Props) {
         <>
           <GlassSurface
             style={styles.compactCard}
-            contentStyle={styles.compactCardContent}
+            contentStyle={[
+              styles.compactCardContent,
+              tabletLayout && styles.compactCardContentTablet,
+            ]}
             intensity={48}
             overlayColor="rgba(255,255,255,0.24)"
             borderColor="rgba(255,255,255,0.5)"
           >
             <View style={styles.compactBlock}>
-              <Text style={styles.compactLabel}>{copy.confirmation.taskName}</Text>
+              <Text style={[styles.compactLabel, tabletLayout && styles.compactLabelTablet]}>
+                {copy.confirmation.taskName}
+              </Text>
               <TextInput
                 value={title}
                 onChangeText={setTitle}
@@ -391,23 +402,35 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                     : 'مثال: ميعاد الدكتور'
                 }
                 placeholderTextColor={colors.textMuted}
-                style={styles.input}
+                style={[styles.input, tabletLayout && styles.inputTablet]}
                 textAlign="right"
               />
             </View>
 
             <View style={styles.compactBlock}>
-              <Text style={styles.compactLabel}>{copy.confirmation.schedule}</Text>
-              <View style={styles.row}>
-                <Pressable onPress={() => setShowMode('time')} style={styles.fieldChip}>
-                  <Text style={styles.fieldChipLabel}>{copy.confirmation.time}</Text>
-                  <Text style={styles.fieldChipValue}>
+              <Text style={[styles.compactLabel, tabletLayout && styles.compactLabelTablet]}>
+                {copy.confirmation.schedule}
+              </Text>
+              <View style={[styles.row, tabletLayout && styles.rowTablet]}>
+                <Pressable
+                  onPress={() => setShowMode('time')}
+                  style={[styles.fieldChip, tabletLayout && styles.fieldChipTablet]}
+                >
+                  <Text style={[styles.fieldChipLabel, tabletLayout && styles.fieldChipLabelTablet]}>
+                    {copy.confirmation.time}
+                  </Text>
+                  <Text style={[styles.fieldChipValue, tabletLayout && styles.fieldChipValueTablet]}>
                     {toArabicTimeLabel(eventDate, settings.uiLanguage)}
                   </Text>
                 </Pressable>
-                <Pressable onPress={() => setShowMode('date')} style={styles.fieldChip}>
-                  <Text style={styles.fieldChipLabel}>{copy.confirmation.day}</Text>
-                  <Text style={styles.fieldChipValue}>
+                <Pressable
+                  onPress={() => setShowMode('date')}
+                  style={[styles.fieldChip, tabletLayout && styles.fieldChipTablet]}
+                >
+                  <Text style={[styles.fieldChipLabel, tabletLayout && styles.fieldChipLabelTablet]}>
+                    {copy.confirmation.day}
+                  </Text>
+                  <Text style={[styles.fieldChipValue, tabletLayout && styles.fieldChipValueTablet]}>
                     {toCompactDateLabel(eventDate, settings.uiLanguage)}
                   </Text>
                 </Pressable>
@@ -415,14 +438,17 @@ export function ConfirmationScreen({ navigation, route }: Props) {
             </View>
 
             <View style={styles.compactBlock}>
-              <Text style={styles.compactLabel}>{copy.confirmation.reminderTime}</Text>
-              <View style={styles.choiceRow}>
+              <Text style={[styles.compactLabel, tabletLayout && styles.compactLabelTablet]}>
+                {copy.confirmation.reminderTime}
+              </Text>
+              <View style={[styles.choiceRow, tabletLayout && styles.choiceRowTablet]}>
                 {offsetOptions.map((value) => (
                   <Pressable
                     key={value}
                     onPress={() => setOffsetMinutes(value)}
                     style={[
                       styles.choiceChip,
+                      tabletLayout && styles.choiceChipTablet,
                       styles.choiceChipCompact,
                       value === offsetMinutes && styles.choiceChipActive,
                     ]}
@@ -430,6 +456,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                     <Text
                       style={[
                         styles.choiceText,
+                        tabletLayout && styles.choiceTextTablet,
                         value === offsetMinutes && styles.choiceTextActive,
                       ]}
                     >
@@ -440,9 +467,13 @@ export function ConfirmationScreen({ navigation, route }: Props) {
               </View>
             </View>
 
-            <View style={styles.compactSummary}>
-              <Text style={styles.compactSummaryLabel}>{copy.confirmation.quickSummary}</Text>
-              <Text style={styles.compactSummaryText}>
+            <View style={[styles.compactSummary, tabletLayout && styles.compactSummaryTablet]}>
+              <Text
+                style={[styles.compactSummaryLabel, tabletLayout && styles.compactSummaryLabelTablet]}
+              >
+                {copy.confirmation.quickSummary}
+              </Text>
+              <Text style={[styles.compactSummaryText, tabletLayout && styles.compactSummaryTextTablet]}>
                 {copy.confirmation.reminderWillArriveAt(
                   toCompactDateLabel(reminderAt, settings.uiLanguage),
                   toArabicTimeLabel(reminderAt, settings.uiLanguage)
@@ -463,9 +494,9 @@ export function ConfirmationScreen({ navigation, route }: Props) {
 
           <Pressable
             onPress={() => setShowMoreOptions((current) => !current)}
-            style={styles.moreOptionsToggle}
+            style={[styles.moreOptionsToggle, tabletLayout && styles.moreOptionsToggleTablet]}
           >
-            <Text style={styles.moreOptionsToggleText}>
+            <Text style={[styles.moreOptionsToggleText, tabletLayout && styles.moreOptionsToggleTextTablet]}>
               {showMoreOptions
                 ? copy.confirmation.hideMoreOptions
                 : copy.confirmation.showMoreOptions}
@@ -475,8 +506,10 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           {showMoreOptions ? (
             <SectionCard title={copy.confirmation.moreOptions}>
               <View style={styles.optionGroup}>
-                <Text style={styles.optionLabel}>{copy.confirmation.recurrence}</Text>
-                <View style={styles.choiceRow}>
+                <Text style={[styles.optionLabel, tabletLayout && styles.optionLabelTablet]}>
+                  {copy.confirmation.recurrence}
+                </Text>
+                <View style={[styles.choiceRow, tabletLayout && styles.choiceRowTablet]}>
                   {recurrenceOptions.map((value) => (
                     <Pressable
                       key={value}
@@ -488,8 +521,9 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                     >
                       <Text
                         style={[
-                          styles.choiceText,
-                          value === recurrence && styles.choiceTextActive,
+                        styles.choiceText,
+                        tabletLayout && styles.choiceTextTablet,
+                        value === recurrence && styles.choiceTextActive,
                         ]}
                       >
                         {getRecurrenceLabel(value, settings.uiLanguage)}
@@ -500,8 +534,10 @@ export function ConfirmationScreen({ navigation, route }: Props) {
               </View>
 
               <View style={styles.optionGroup}>
-                <Text style={styles.optionLabel}>{copy.confirmation.taskCategory}</Text>
-                <View style={styles.choiceRow}>
+                <Text style={[styles.optionLabel, tabletLayout && styles.optionLabelTablet]}>
+                  {copy.confirmation.taskCategory}
+                </Text>
+                <View style={[styles.choiceRow, tabletLayout && styles.choiceRowTablet]}>
                   {categoryOptions.map((value) => (
                     <Pressable
                       key={value}
@@ -513,8 +549,9 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                     >
                       <Text
                         style={[
-                          styles.choiceText,
-                          value === category && styles.choiceTextActive,
+                        styles.choiceText,
+                        tabletLayout && styles.choiceTextTablet,
+                        value === category && styles.choiceTextActive,
                         ]}
                       >
                         {getReminderCategoryLabel(value, settings.uiLanguage)}
@@ -525,8 +562,13 @@ export function ConfirmationScreen({ navigation, route }: Props) {
               </View>
 
               {showAppleCalendarSyncHint ? (
-                <View style={styles.inlineCalendarHint}>
-                  <Text style={styles.inlineCalendarHintText}>
+                <View style={[styles.inlineCalendarHint, tabletLayout && styles.inlineCalendarHintTablet]}>
+                  <Text
+                    style={[
+                      styles.inlineCalendarHintText,
+                      tabletLayout && styles.inlineCalendarHintTextTablet,
+                    ]}
+                  >
                     {copy.confirmation.iosCalendarHint}
                   </Text>
                 </View>
@@ -534,8 +576,10 @@ export function ConfirmationScreen({ navigation, route }: Props) {
 
               {showAndroidCalendarToggle ? (
                 <View style={styles.optionGroup}>
-                  <Text style={styles.optionLabel}>{copy.confirmation.calendar}</Text>
-                  <View style={styles.calendarRow}>
+                  <Text style={[styles.optionLabel, tabletLayout && styles.optionLabelTablet]}>
+                    {copy.confirmation.calendar}
+                  </Text>
+                  <View style={[styles.calendarRow, tabletLayout && styles.calendarRowTablet]}>
                     <Pressable
                       onPress={() => setAddToCalendar((current) => !current)}
                       style={[
@@ -551,10 +595,12 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                       />
                     </Pressable>
                     <View style={styles.calendarText}>
-                      <Text style={styles.calendarTitle}>
+                      <Text style={[styles.calendarTitle, tabletLayout && styles.calendarTitleTablet]}>
                         {copy.confirmation.addToCalendar}
                       </Text>
-                      <Text style={styles.calendarHint}>{copy.confirmation.calendarHint}</Text>
+                      <Text style={[styles.calendarHint, tabletLayout && styles.calendarHintTablet]}>
+                        {copy.confirmation.calendarHint}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -574,22 +620,32 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                   : 'مثال: ميعاد الدكتور'
               }
               placeholderTextColor={colors.textMuted}
-              style={styles.input}
+              style={[styles.input, tabletLayout && styles.inputTablet]}
               textAlign="right"
             />
           </SectionCard>
 
           <SectionCard title={copy.confirmation.schedule}>
-            <View style={styles.row}>
-              <Pressable onPress={() => setShowMode('time')} style={styles.fieldChip}>
-                <Text style={styles.fieldChipLabel}>{copy.confirmation.time}</Text>
-                <Text style={styles.fieldChipValue}>
+            <View style={[styles.row, tabletLayout && styles.rowTablet]}>
+              <Pressable
+                onPress={() => setShowMode('time')}
+                style={[styles.fieldChip, tabletLayout && styles.fieldChipTablet]}
+              >
+                <Text style={[styles.fieldChipLabel, tabletLayout && styles.fieldChipLabelTablet]}>
+                  {copy.confirmation.time}
+                </Text>
+                <Text style={[styles.fieldChipValue, tabletLayout && styles.fieldChipValueTablet]}>
                   {toArabicTimeLabel(eventDate, settings.uiLanguage)}
                 </Text>
               </Pressable>
-              <Pressable onPress={() => setShowMode('date')} style={styles.fieldChip}>
-                <Text style={styles.fieldChipLabel}>{copy.confirmation.day}</Text>
-                <Text style={styles.fieldChipValue}>
+              <Pressable
+                onPress={() => setShowMode('date')}
+                style={[styles.fieldChip, tabletLayout && styles.fieldChipTablet]}
+              >
+                <Text style={[styles.fieldChipLabel, tabletLayout && styles.fieldChipLabelTablet]}>
+                  {copy.confirmation.day}
+                </Text>
+                <Text style={[styles.fieldChipValue, tabletLayout && styles.fieldChipValueTablet]}>
                   {toCompactDateLabel(eventDate, settings.uiLanguage)}
                 </Text>
               </Pressable>
@@ -607,19 +663,21 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           </SectionCard>
 
           <SectionCard title={copy.confirmation.reminderTime}>
-            <View style={styles.choiceRow}>
+            <View style={[styles.choiceRow, tabletLayout && styles.choiceRowTablet]}>
               {offsetOptions.map((value) => (
                 <Pressable
                   key={value}
                   onPress={() => setOffsetMinutes(value)}
                   style={[
                     styles.choiceChip,
+                    tabletLayout && styles.choiceChipTablet,
                     value === offsetMinutes && styles.choiceChipActive,
                   ]}
                 >
                   <Text
                     style={[
                       styles.choiceText,
+                      tabletLayout && styles.choiceTextTablet,
                       value === offsetMinutes && styles.choiceTextActive,
                     ]}
                   >
@@ -628,7 +686,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                 </Pressable>
               ))}
             </View>
-            <Text style={styles.bodyText}>
+            <Text style={[styles.bodyText, tabletLayout && styles.bodyTextTablet]}>
               {copy.confirmation.reminderWillArriveAt(
                 toCompactDateLabel(reminderAt, settings.uiLanguage),
                 toArabicTimeLabel(reminderAt, settings.uiLanguage)
@@ -637,19 +695,21 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           </SectionCard>
 
           <SectionCard title={copy.confirmation.recurrence}>
-            <View style={styles.choiceRow}>
+            <View style={[styles.choiceRow, tabletLayout && styles.choiceRowTablet]}>
               {recurrenceOptions.map((value) => (
                 <Pressable
                   key={value}
                   onPress={() => setRecurrence(value)}
                   style={[
                     styles.choiceChip,
+                    tabletLayout && styles.choiceChipTablet,
                     value === recurrence && styles.choiceChipActive,
                   ]}
                 >
                   <Text
                     style={[
                       styles.choiceText,
+                      tabletLayout && styles.choiceTextTablet,
                       value === recurrence && styles.choiceTextActive,
                     ]}
                   >
@@ -664,19 +724,21 @@ export function ConfirmationScreen({ navigation, route }: Props) {
             title={copy.confirmation.taskCategory}
             subtitle={copy.confirmation.taskCategorySubtitle}
           >
-            <View style={styles.choiceRow}>
+            <View style={[styles.choiceRow, tabletLayout && styles.choiceRowTablet]}>
               {categoryOptions.map((value) => (
                 <Pressable
                   key={value}
                   onPress={() => setCategory(value)}
                   style={[
                     styles.choiceChip,
+                    tabletLayout && styles.choiceChipTablet,
                     value === category && styles.choiceChipActive,
                   ]}
                 >
                   <Text
                     style={[
                       styles.choiceText,
+                      tabletLayout && styles.choiceTextTablet,
                       value === category && styles.choiceTextActive,
                     ]}
                   >
@@ -688,8 +750,13 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           </SectionCard>
 
           {showAppleCalendarSyncHint ? (
-            <View style={styles.inlineCalendarHint}>
-              <Text style={styles.inlineCalendarHintText}>
+            <View style={[styles.inlineCalendarHint, tabletLayout && styles.inlineCalendarHintTablet]}>
+              <Text
+                style={[
+                  styles.inlineCalendarHintText,
+                  tabletLayout && styles.inlineCalendarHintTextTablet,
+                ]}
+              >
                 {copy.confirmation.iosCalendarHint}
               </Text>
             </View>
@@ -697,7 +764,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
 
           {showAndroidCalendarToggle ? (
             <SectionCard title={copy.confirmation.calendar} subtitle={calendarSubtitle}>
-              <View style={styles.calendarRow}>
+              <View style={[styles.calendarRow, tabletLayout && styles.calendarRowTablet]}>
                 <Pressable
                   onPress={() => setAddToCalendar((current) => !current)}
                   style={[
@@ -713,8 +780,12 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                   />
                 </Pressable>
                 <View style={styles.calendarText}>
-                  <Text style={styles.calendarTitle}>{copy.confirmation.addToCalendar}</Text>
-                  <Text style={styles.calendarHint}>{copy.confirmation.calendarHint}</Text>
+                  <Text style={[styles.calendarTitle, tabletLayout && styles.calendarTitleTablet]}>
+                    {copy.confirmation.addToCalendar}
+                  </Text>
+                  <Text style={[styles.calendarHint, tabletLayout && styles.calendarHintTablet]}>
+                    {copy.confirmation.calendarHint}
+                  </Text>
                 </View>
               </View>
             </SectionCard>
@@ -722,21 +793,30 @@ export function ConfirmationScreen({ navigation, route }: Props) {
         </>
       )}
 
-      {validationError ? <Text style={styles.errorText}>{validationError}</Text> : null}
+      {validationError ? (
+        <Text style={[styles.errorText, tabletLayout && styles.errorTextTablet]}>
+          {validationError}
+        </Text>
+      ) : null}
 
       {isManualCreate ? (
-        <View style={styles.manualFooter}>
+        <View style={[styles.manualFooter, tabletLayout && styles.manualFooterTablet]}>
           <GhostButton
             label={saving ? copy.confirmation.saving : copy.confirmation.saveReminder}
             onPress={handleSave}
             disabled={saving}
           />
-          <Pressable onPress={() => navigation.goBack()} style={styles.inlineBackAction}>
-            <Text style={styles.inlineBackText}>{copy.common.back}</Text>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={[styles.inlineBackAction, tabletLayout && styles.inlineBackActionTablet]}
+          >
+            <Text style={[styles.inlineBackText, tabletLayout && styles.inlineBackTextTablet]}>
+              {copy.common.back}
+            </Text>
           </Pressable>
         </View>
       ) : (
-        <View style={styles.footer}>
+        <View style={[styles.footer, tabletLayout && styles.footerTablet]}>
           <GhostButton
             label={
               saving
@@ -755,6 +835,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           />
         </View>
       )}
+      </View>
     </ScrollView>
   );
 }
@@ -766,14 +847,24 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    alignItems: 'center',
     gap: spacing.md,
     paddingBottom: 48,
+  },
+  contentInner: {
+    width: '100%',
+    gap: spacing.md,
   },
   title: {
     fontFamily: fonts.bold,
     fontSize: 20,
     color: colors.text,
     maxWidth: 260,
+  },
+  titleTablet: {
+    fontSize: 28,
+    lineHeight: 40,
+    maxWidth: 420,
   },
   subtitle: {
     fontFamily: fonts.medium,
@@ -783,12 +874,20 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     writingDirection: 'rtl',
   },
+  subtitleTablet: {
+    fontSize: 16,
+    lineHeight: 26,
+  },
   heroCard: {
     borderRadius: radii.lg,
   },
   heroCardContent: {
     padding: 18,
     gap: spacing.xs,
+  },
+  heroCardContentTablet: {
+    padding: spacing.xl,
+    gap: spacing.sm,
   },
   heroLabel: {
     alignSelf: 'flex-end',
@@ -802,12 +901,21 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  heroLabelTablet: {
+    fontSize: 15,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
   heroValue: {
     color: colors.text,
     fontFamily: fonts.bold,
     fontSize: 20,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  heroValueTablet: {
+    fontSize: 28,
+    lineHeight: 40,
   },
   heroCaption: {
     color: colors.textMuted,
@@ -817,12 +925,20 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     writingDirection: 'rtl',
   },
+  heroCaptionTablet: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
   compactCard: {
     borderRadius: radii.lg,
   },
   compactCardContent: {
     padding: spacing.md,
     gap: spacing.md,
+  },
+  compactCardContentTablet: {
+    padding: spacing.xl,
+    gap: spacing.lg,
   },
   compactBlock: {
     gap: spacing.xs,
@@ -834,6 +950,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  compactLabelTablet: {
+    fontSize: 16,
+    lineHeight: 26,
+  },
   compactSummary: {
     borderRadius: radii.md,
     backgroundColor: 'rgba(255,255,255,0.68)',
@@ -843,12 +963,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: 4,
   },
+  compactSummaryTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
+  },
   compactSummaryLabel: {
     fontFamily: fonts.medium,
     fontSize: 12,
     color: colors.textMuted,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  compactSummaryLabelTablet: {
+    fontSize: 15,
   },
   compactSummaryText: {
     fontFamily: fonts.semibold,
@@ -857,6 +985,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 20,
     writingDirection: 'rtl',
+  },
+  compactSummaryTextTablet: {
+    fontSize: 17,
+    lineHeight: 28,
   },
   moreOptionsToggle: {
     alignSelf: 'flex-end',
@@ -867,11 +999,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
+  moreOptionsToggleTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
   moreOptionsToggleText: {
     fontFamily: fonts.semibold,
     fontSize: 12,
     color: colors.primaryDark,
     writingDirection: 'rtl',
+  },
+  moreOptionsToggleTextTablet: {
+    fontSize: 15,
   },
   optionGroup: {
     gap: spacing.sm,
@@ -883,6 +1022,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  optionLabelTablet: {
+    fontSize: 16,
+    lineHeight: 26,
+  },
   bodyText: {
     fontFamily: fonts.regular,
     fontSize: 15,
@@ -890,6 +1033,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 22,
     writingDirection: 'rtl',
+  },
+  bodyTextTablet: {
+    fontSize: 17,
+    lineHeight: 28,
   },
   input: {
     backgroundColor: colors.white,
@@ -903,9 +1050,17 @@ const styles = StyleSheet.create({
     color: colors.text,
     writingDirection: 'rtl',
   },
+  inputTablet: {
+    minHeight: 68,
+    paddingHorizontal: spacing.lg,
+    fontSize: 19,
+  },
   row: {
     flexDirection: 'row-reverse',
     gap: spacing.sm,
+  },
+  rowTablet: {
+    gap: spacing.md,
   },
   fieldChip: {
     flex: 1,
@@ -915,12 +1070,18 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     padding: spacing.md,
   },
+  fieldChipTablet: {
+    padding: spacing.lg,
+  },
   fieldChipLabel: {
     fontFamily: fonts.medium,
     fontSize: 12,
     color: colors.textMuted,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  fieldChipLabelTablet: {
+    fontSize: 15,
   },
   fieldChipValue: {
     fontFamily: fonts.bold,
@@ -929,10 +1090,17 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  fieldChipValueTablet: {
+    fontSize: 19,
+    lineHeight: 30,
+  },
   choiceRow: {
     flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  choiceRowTablet: {
+    gap: spacing.md,
   },
   choiceChip: {
     paddingHorizontal: spacing.md,
@@ -941,6 +1109,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.white,
+  },
+  choiceChipTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   choiceChipActive: {
     backgroundColor: colors.primary,
@@ -955,6 +1127,9 @@ const styles = StyleSheet.create({
     color: colors.text,
     writingDirection: 'rtl',
   },
+  choiceTextTablet: {
+    fontSize: 16,
+  },
   choiceTextActive: {
     color: colors.white,
   },
@@ -964,11 +1139,18 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  errorTextTablet: {
+    fontSize: 16,
+    lineHeight: 26,
+  },
   calendarRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
+  },
+  calendarRowTablet: {
+    gap: spacing.lg,
   },
   calendarToggle: {
     width: 54,
@@ -1001,6 +1183,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  calendarTitleTablet: {
+    fontSize: 20,
+    lineHeight: 30,
+  },
   calendarHint: {
     fontFamily: fonts.regular,
     fontSize: 13,
@@ -1008,6 +1194,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 20,
     writingDirection: 'rtl',
+  },
+  calendarHintTablet: {
+    fontSize: 16,
+    lineHeight: 26,
   },
   inlineCalendarHint: {
     backgroundColor: '#F2F7F6',
@@ -1017,6 +1207,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D5E7E0',
   },
+  inlineCalendarHintTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
   inlineCalendarHintText: {
     fontFamily: fonts.medium,
     fontSize: 13,
@@ -1025,23 +1219,42 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     writingDirection: 'rtl',
   },
+  inlineCalendarHintTextTablet: {
+    fontSize: 16,
+    lineHeight: 26,
+  },
   footer: {
     gap: spacing.md,
+  },
+  footerTablet: {
+    gap: spacing.lg,
+    paddingTop: spacing.sm,
   },
   manualFooter: {
     gap: spacing.sm,
     paddingTop: spacing.xs,
     paddingBottom: spacing.md,
   },
+  manualFooterTablet: {
+    gap: spacing.md,
+    paddingTop: spacing.md,
+  },
   inlineBackAction: {
     alignSelf: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
+  },
+  inlineBackActionTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   inlineBackText: {
     fontFamily: fonts.semibold,
     fontSize: 13,
     color: colors.textMuted,
     writingDirection: 'rtl',
+  },
+  inlineBackTextTablet: {
+    fontSize: 16,
   },
 });

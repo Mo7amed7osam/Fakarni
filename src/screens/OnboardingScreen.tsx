@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GhostButton } from '../components/GhostButton';
@@ -6,12 +6,16 @@ import { getAppCopy } from '../content/appCopy';
 import { useGhost } from '../context/GhostContext';
 import { RootStackParamList } from '../types';
 import { colors, fonts, radii, spacing } from '../theme';
+import { getResponsiveContentWidth, isTabletWidth } from '../utils/layout';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
 export function OnboardingScreen({ navigation }: Props) {
   const { completeOnboarding, settings } = useGhost();
   const copy = getAppCopy(settings.uiLanguage);
+  const { width } = useWindowDimensions();
+  const tabletLayout = isTabletWidth(width);
+  const contentWidth = getResponsiveContentWidth(width, tabletLayout ? 900 : 560);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -19,45 +23,63 @@ export function OnboardingScreen({ navigation }: Props) {
         <View style={styles.backgroundGlow} />
         <View style={styles.backgroundGlowSoft} />
 
-        <View style={styles.topBlock}>
-          <Text style={styles.brand}>Fakarni</Text>
-          <Text style={styles.brandSubtitle}>{copy.home.brandSubtitle}</Text>
-        </View>
+        <View style={[styles.content, { maxWidth: contentWidth }]}>
+          <View style={styles.topBlock}>
+            <Text style={[styles.brand, tabletLayout && styles.brandTablet]}>Fakarni</Text>
+            <Text style={[styles.brandSubtitle, tabletLayout && styles.brandSubtitleTablet]}>
+              {copy.home.brandSubtitle}
+            </Text>
+          </View>
 
-        <View style={styles.heroCard}>
-          {copy.onboarding.eyebrow ? (
-            <Text style={styles.eyebrow}>{copy.onboarding.eyebrow}</Text>
-          ) : null}
-          <Text style={styles.title}>{copy.onboarding.title}</Text>
-          <Text style={styles.description}>{copy.onboarding.description}</Text>
+          <View style={[styles.heroCard, tabletLayout && styles.heroCardTablet]}>
+            {copy.onboarding.eyebrow ? (
+              <Text style={[styles.eyebrow, tabletLayout && styles.eyebrowTablet]}>
+                {copy.onboarding.eyebrow}
+              </Text>
+            ) : null}
+            <Text style={[styles.title, tabletLayout && styles.titleTablet]}>
+              {copy.onboarding.title}
+            </Text>
+            <Text style={[styles.description, tabletLayout && styles.descriptionTablet]}>
+              {copy.onboarding.description}
+            </Text>
 
-          <View style={styles.flowRow}>
-            {[copy.onboarding.flowSpeak, copy.onboarding.flowConfirm, copy.onboarding.flowRemember].map(
-              (step, index) => (
-                <View key={step} style={styles.flowItem}>
-                  <View style={styles.flowStep}>
-                    <Text style={styles.flowStepText}>{step}</Text>
+            <View style={[styles.flowRow, tabletLayout && styles.flowRowTablet]}>
+              {[copy.onboarding.flowSpeak, copy.onboarding.flowConfirm, copy.onboarding.flowRemember].map(
+                (step, index) => (
+                  <View key={step} style={styles.flowItem}>
+                    <View style={[styles.flowStep, tabletLayout && styles.flowStepTablet]}>
+                      <Text style={[styles.flowStepText, tabletLayout && styles.flowStepTextTablet]}>
+                        {step}
+                      </Text>
+                    </View>
+                    {index < 2 ? (
+                      <View style={[styles.flowConnector, tabletLayout && styles.flowConnectorTablet]} />
+                    ) : null}
                   </View>
-                  {index < 2 ? <View style={styles.flowConnector} /> : null}
-                </View>
-              )
-            )}
+                )
+              )}
+            </View>
+
+            <View style={[styles.exampleCard, tabletLayout && styles.exampleCardTablet]}>
+              <Text style={[styles.exampleLabel, tabletLayout && styles.exampleLabelTablet]}>
+                {copy.onboarding.exampleLabel}
+              </Text>
+              <Text style={[styles.exampleText, tabletLayout && styles.exampleTextTablet]}>
+                {copy.onboarding.exampleText}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.exampleCard}>
-            <Text style={styles.exampleLabel}>{copy.onboarding.exampleLabel}</Text>
-            <Text style={styles.exampleText}>{copy.onboarding.exampleText}</Text>
+          <View style={styles.footer}>
+            <GhostButton
+              label={copy.onboarding.cta}
+              onPress={() => {
+                completeOnboarding();
+                navigation.replace('Home');
+              }}
+            />
           </View>
-        </View>
-
-        <View style={styles.footer}>
-          <GhostButton
-            label={copy.onboarding.cta}
-            onPress={() => {
-              completeOnboarding();
-              navigation.replace('Home');
-            }}
-          />
         </View>
       </View>
     </SafeAreaView>
@@ -75,8 +97,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    alignItems: 'center',
     overflow: 'hidden',
+  },
+  content: {
+    width: '100%',
+    justifyContent: 'space-between',
+    flex: 1,
   },
   backgroundGlow: {
     position: 'absolute',
@@ -106,11 +134,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.text,
   },
+  brandTablet: {
+    fontSize: 34,
+    lineHeight: 44,
+  },
   brandSubtitle: {
     fontFamily: fonts.medium,
     fontSize: 13,
     color: colors.textMuted,
     writingDirection: 'rtl',
+  },
+  brandSubtitleTablet: {
+    fontSize: 17,
+    lineHeight: 26,
   },
   heroCard: {
     marginTop: spacing.xl,
@@ -126,6 +162,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
     elevation: 4,
   },
+  heroCardTablet: {
+    padding: spacing.xxl,
+    gap: spacing.lg,
+  },
   eyebrow: {
     alignSelf: 'flex-end',
     backgroundColor: 'rgba(108,92,231,0.10)',
@@ -138,6 +178,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     writingDirection: 'rtl',
   },
+  eyebrowTablet: {
+    fontSize: 15,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
   title: {
     fontFamily: fonts.bold,
     fontSize: 25,
@@ -145,6 +190,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 42,
     writingDirection: 'rtl',
+  },
+  titleTablet: {
+    fontSize: 38,
+    lineHeight: 56,
   },
   description: {
     fontFamily: fonts.medium,
@@ -154,12 +203,20 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     writingDirection: 'rtl',
   },
+  descriptionTablet: {
+    fontSize: 20,
+    lineHeight: 34,
+  },
   flowRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.xs,
     marginTop: spacing.sm,
+  },
+  flowRowTablet: {
+    gap: spacing.md,
+    marginTop: spacing.md,
   },
   flowItem: {
     flex: 1,
@@ -178,6 +235,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xs,
   },
+  flowStepTablet: {
+    minHeight: 72,
+    paddingHorizontal: spacing.md,
+  },
   flowStepText: {
     fontFamily: fonts.bold,
     fontSize: 14,
@@ -185,10 +246,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     writingDirection: 'rtl',
   },
+  flowStepTextTablet: {
+    fontSize: 18,
+    lineHeight: 28,
+  },
   flowConnector: {
     width: 12,
     height: 1,
     backgroundColor: colors.line,
+  },
+  flowConnectorTablet: {
+    width: 24,
   },
   exampleCard: {
     backgroundColor: 'rgba(247,247,251,0.95)',
@@ -199,12 +267,19 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.sm,
   },
+  exampleCardTablet: {
+    padding: spacing.xl,
+    gap: spacing.sm,
+  },
   exampleLabel: {
     fontFamily: fonts.semibold,
     fontSize: 12,
     color: colors.primaryDark,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  exampleLabelTablet: {
+    fontSize: 15,
   },
   exampleText: {
     fontFamily: fonts.bold,
@@ -213,6 +288,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 28,
     writingDirection: 'rtl',
+  },
+  exampleTextTablet: {
+    fontSize: 22,
+    lineHeight: 36,
   },
   footer: {
     paddingTop: spacing.lg,

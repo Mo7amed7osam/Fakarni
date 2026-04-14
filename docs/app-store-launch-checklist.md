@@ -11,6 +11,8 @@ Every `NO-GO` item must be cleared before submission.
 - `GO` The marketing landing page is no longer embedded in the Expo app shell. Any landing work now lives outside the app target in `landing/`.
 - `GO` Hidden founder diagnostics are removed from public navigation and settings entry points.
 - `GO` The app no longer ships Expo dev-client/dev-launcher configuration in the iOS target.
+- `GO` A draft metadata pack now exists in `docs/app-store-metadata-pack.md`.
+- `GO` Draft support and privacy pages now exist in `landing/support.html` and `landing/privacy-policy.html`.
 - `NO-GO` A real public privacy policy URL must exist in App Store Connect.
 - `NO-GO` Support URL and App Store metadata still need to be completed outside the repo.
 - `NO-GO` Final screenshots, app description, keywords, and review notes still need to be prepared outside the repo.
@@ -38,9 +40,11 @@ Every `NO-GO` item must be cleared before submission.
 - `GO` `npm run test:gateway`
 - `NO-GO` A full Release archive build must succeed on the final signing setup.
 - `NO-GO` Final App Store upload validation must be run from Xcode Organizer or Transporter.
+- `NO-GO` Current archive blocker: Xcode reports `Signing for "Fakarni" requires a development team`.
 
 ## Real Device Validation
 
+- `GO` A device validation runbook now exists in `docs/real-device-validation.md`.
 - `NO-GO` Test voice capture end-to-end on a real iPhone.
 - `NO-GO` Test reminder creation, edit, complete, snooze, and undo on a real iPhone.
 - `NO-GO` Test notification delivery, notification actions, and follow-up timing on a real iPhone.
@@ -54,6 +58,8 @@ Every `NO-GO` item must be cleared before submission.
 
 - `GO` The production-safe parsing path is gateway-only.
 - `GO` App config now includes explicit release identifiers: `version 1.0.0`, `ios.buildNumber 1`, `android.versionCode 1`.
+- `GO` A release environment contract now exists in `docs/release-environment-matrix.md`.
+- `GO` A release archive/upload runbook now exists in `docs/release-archive-upload.md`.
 - `NO-GO` `EXPO_PUBLIC_PARSE_GATEWAY_URL` must point to a live production gateway before release.
 - `NO-GO` Production analytics host/key configuration must be verified before release.
 - `NO-GO` Confirm there are no debug-only env vars or staging endpoints in the release build.

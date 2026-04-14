@@ -45,6 +45,7 @@ import {
 } from '../types';
 import { parseReminderText } from '../utils/parser';
 import { getReminderCategoryLabel } from '../utils/categorization';
+import { getResponsiveContentWidth, isTabletWidth } from '../utils/layout';
 import {
   toArabicDateLabel,
   toArabicTimeLabel,
@@ -117,23 +118,31 @@ function NavIconButton({
   onPress,
   variant,
   showLabel = true,
+  tabletLayout = false,
 }: {
   label: string;
   onPress: () => void;
   variant: 'settings' | 'reminders';
   showLabel?: boolean;
+  tabletLayout?: boolean;
 }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.navButton}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[styles.navButton, tabletLayout && styles.navButtonTablet]}
+    >
       <GlassSurface
-        style={styles.navIconShell}
+        style={[styles.navIconShell, tabletLayout && styles.navIconShellTablet]}
         intensity={36}
         overlayColor="rgba(255,255,255,0.26)"
         borderColor="rgba(255,255,255,0.54)"
       >
         {variant === 'settings' ? <SettingsGlyph /> : <RemindersGlyph />}
       </GlassSurface>
-      {showLabel ? <Text style={styles.navLabel}>{label}</Text> : null}
+      {showLabel ? (
+        <Text style={[styles.navLabel, tabletLayout && styles.navLabelTablet]}>{label}</Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -268,8 +277,10 @@ export function HomeScreen({ navigation, route }: Props) {
   const handledExternalLaunchRef = useRef<string | null>(null);
   const voiceEntrySourceRef = useRef<VoiceEntrySource>('home');
   const [quickCaptureMode, setQuickCaptureMode] = useState(false);
-  const { height } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   const compact = height < 780;
+  const tabletLayout = isTabletWidth(width);
+  const contentMaxWidth = getResponsiveContentWidth(width, tabletLayout ? 1120 : 820);
   const now = dayjs();
   const appleCalendarNeedsAttention =
     Platform.OS === 'ios' &&
@@ -1274,55 +1285,83 @@ export function HomeScreen({ navigation, route }: Props) {
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       <View pointerEvents="none" style={styles.backgroundOrbTop} />
       <View pointerEvents="none" style={styles.backgroundOrbBottom} />
-      <View style={styles.content}>
+      <View
+        style={[styles.content, tabletLayout && styles.contentTablet, { maxWidth: contentMaxWidth }]}
+      >
         {!isExternalQuickCapture ? (
-          <View style={styles.voiceTopBar}>
+          <View style={[styles.voiceTopBar, tabletLayout && styles.voiceTopBarTablet]}>
             <NavIconButton
               label={copy.common.settings}
               onPress={() => navigation.navigate('Settings')}
               variant="settings"
               showLabel={false}
+              tabletLayout={tabletLayout}
             />
             <View style={styles.voiceBrand}>
-              <Text style={styles.voiceBrandTitle}>Fakarni</Text>
-              <Text style={styles.voiceBrandSubtitle}>{copy.home.brandSubtitle}</Text>
+              <Text style={[styles.voiceBrandTitle, tabletLayout && styles.voiceBrandTitleTablet]}>
+                Fakarni
+              </Text>
+              <Text
+                style={[
+                  styles.voiceBrandSubtitle,
+                  tabletLayout && styles.voiceBrandSubtitleTablet,
+                ]}
+              >
+                {copy.home.brandSubtitle}
+              </Text>
             </View>
             <NavIconButton
               label={copy.common.reminders}
               onPress={() => navigation.navigate('ReminderList')}
               variant="reminders"
               showLabel={false}
+              tabletLayout={tabletLayout}
             />
           </View>
         ) : null}
 
         {!isExternalQuickCapture && permissionHealth ? (
           <GlassSurface
-            style={styles.trustStrip}
+            style={[styles.trustStrip, tabletLayout && styles.trustStripTablet]}
             intensity={42}
             overlayColor="rgba(255,255,255,0.24)"
             borderColor="rgba(255,255,255,0.5)"
           >
-            <View style={styles.trustStripCopy}>
-              <Text style={styles.trustStripTitle}>{permissionHealth.title}</Text>
-              <Text style={styles.trustStripBody}>{permissionHealth.body}</Text>
+            <View style={[styles.trustStripCopy, tabletLayout && styles.trustStripCopyTablet]}>
+              <Text style={[styles.trustStripTitle, tabletLayout && styles.trustStripTitleTablet]}>
+                {permissionHealth.title}
+              </Text>
+              <Text style={[styles.trustStripBody, tabletLayout && styles.trustStripBodyTablet]}>
+                {permissionHealth.body}
+              </Text>
             </View>
             <Pressable
               onPress={() => void permissionHealth.onPress()}
-              style={styles.trustStripAction}
+              style={[styles.trustStripAction, tabletLayout && styles.trustStripActionTablet]}
             >
-              <Text style={styles.trustStripActionText}>
+              <Text
+                style={[
+                  styles.trustStripActionText,
+                  tabletLayout && styles.trustStripActionTextTablet,
+                ]}
+              >
                 {permissionHealth.actionLabel}
               </Text>
             </Pressable>
           </GlassSurface>
         ) : null}
 
-        <View style={styles.voiceCenter}>
-          <Text style={styles.voiceTitle}>
+        <View style={[styles.voiceCenter, tabletLayout && styles.voiceCenterTablet]}>
+          <Text style={[styles.voiceTitle, tabletLayout && styles.voiceTitleTablet]}>
             {processing ? copy.home.voiceTitleProcessing : copy.home.voiceTitleIdle}
           </Text>
-          <Text style={styles.voiceSubtitle}>
+          <Text
+            style={[
+              styles.voiceSubtitle,
+              tabletLayout && styles.voiceSubtitleTablet,
+              { maxWidth: tabletLayout ? 540 : 248 },
+            ]}
+          >
             {isListening
               ? copy.home.voiceSubtitleListening
               : pendingParse
@@ -1331,16 +1370,32 @@ export function HomeScreen({ navigation, route }: Props) {
           </Text>
 
           {showVoiceStatePill ? (
-            <View style={[styles.voiceStatePill, busy && styles.voiceStatePillActive]}>
+            <View
+              style={[
+                styles.voiceStatePill,
+                busy && styles.voiceStatePillActive,
+                tabletLayout && styles.voiceStatePillTablet,
+              ]}
+            >
               <View style={styles.voiceStateDot} />
-              <Text style={styles.voiceStateText}>{voiceStateLabel}</Text>
+              <Text style={[styles.voiceStateText, tabletLayout && styles.voiceStateTextTablet]}>
+                {voiceStateLabel}
+              </Text>
             </View>
           ) : null}
 
-          <View style={[styles.micStage, compact && styles.micStageCompact, styles.voiceMicStage]}>
+          <View
+            style={[
+              styles.micStage,
+              compact && styles.micStageCompact,
+              styles.voiceMicStage,
+              tabletLayout && styles.micStageTablet,
+            ]}
+          >
             <Animated.View
               style={[
                 styles.micGlow,
+                tabletLayout && styles.micGlowTablet,
                 {
                   opacity: pulse.interpolate({
                     inputRange: [1, 1.08],
@@ -1358,14 +1413,30 @@ export function HomeScreen({ navigation, route }: Props) {
               ]}
             />
             <Animated.View style={{ transform: [{ scale: pulse }] }}>
-              <View style={[styles.micRingOuter, compact && styles.micRingOuterCompact]}>
-                <View style={[styles.micRingInner, compact && styles.micRingInnerCompact]}>
+              <View
+                style={[
+                  styles.micRingOuter,
+                  compact && styles.micRingOuterCompact,
+                  tabletLayout && styles.micRingOuterTablet,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.micRingInner,
+                    compact && styles.micRingInnerCompact,
+                    tabletLayout && styles.micRingInnerTablet,
+                  ]}
+                >
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => {
                       void toggleRecording();
                     }}
-                    style={[styles.micButton, compact && styles.micButtonCompact]}
+                    style={[
+                      styles.micButton,
+                      compact && styles.micButtonCompact,
+                      tabletLayout && styles.micButtonTablet,
+                    ]}
                   >
                     {isListening ? <View style={styles.stopSquare} /> : <MicGlyph />}
                   </Pressable>
@@ -1373,14 +1444,26 @@ export function HomeScreen({ navigation, route }: Props) {
               </View>
             </Animated.View>
 
-            <Text style={[styles.micHint, compact && styles.micHintCompact]}>
+            <Text
+              style={[
+                styles.micHint,
+                compact && styles.micHintCompact,
+                tabletLayout && styles.micHintTablet,
+              ]}
+            >
               {processing
                 ? copy.home.hintProcessing
                 : isListening
                   ? copy.home.hintListening
                   : copy.home.hintIdle}
             </Text>
-            <Text style={[styles.micSubhint, compact && styles.micSubhintCompact]}>
+            <Text
+              style={[
+                styles.micSubhint,
+                compact && styles.micSubhintCompact,
+                tabletLayout && styles.micSubhintTablet,
+              ]}
+            >
               {processing
                 ? copy.home.subhintProcessing
                 : isListening
@@ -1389,13 +1472,27 @@ export function HomeScreen({ navigation, route }: Props) {
             </Text>
             {!isListening && !processing ? (
               <GlassSurface
-                style={styles.examplePrompt}
+                style={[styles.examplePrompt, tabletLayout && styles.examplePromptTablet]}
                 intensity={44}
                 overlayColor="rgba(255,255,255,0.22)"
                 borderColor="rgba(255,255,255,0.5)"
               >
-                <Text style={styles.examplePromptLabel}>{copy.home.exampleLabel}</Text>
-                <Text style={styles.examplePromptText}>{activeExample}</Text>
+                <Text
+                  style={[
+                    styles.examplePromptLabel,
+                    tabletLayout && styles.examplePromptLabelTablet,
+                  ]}
+                >
+                  {copy.home.exampleLabel}
+                </Text>
+                <Text
+                  style={[
+                    styles.examplePromptText,
+                    tabletLayout && styles.examplePromptTextTablet,
+                  ]}
+                >
+                  {activeExample}
+                </Text>
               </GlassSurface>
             ) : null}
             {isListening ? <Waveform pulse={pulse} /> : null}
@@ -1406,30 +1503,54 @@ export function HomeScreen({ navigation, route }: Props) {
 
           {showTranscriptCard ? (
             <GlassSurface
-              style={styles.voiceTranscriptCard}
+              style={[
+                styles.voiceTranscriptCard,
+                { maxWidth: tabletLayout ? 420 : 320 },
+                tabletLayout && styles.voiceTranscriptCardTablet,
+              ]}
               contentStyle={styles.voiceTranscriptCardContent}
               intensity={52}
               overlayColor="rgba(255,255,255,0.28)"
               borderColor="rgba(255,255,255,0.5)"
             >
               {transcriptPreview ? (
-                <Text numberOfLines={2} style={styles.voiceTranscriptText}>
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    styles.voiceTranscriptText,
+                    tabletLayout && styles.voiceTranscriptTextTablet,
+                  ]}
+                >
                   {transcriptPreview}
                 </Text>
               ) : (
-                <Text style={styles.voiceTranscriptPlaceholder}>
+                <Text
+                  style={[
+                    styles.voiceTranscriptPlaceholder,
+                    tabletLayout && styles.voiceTranscriptPlaceholderTablet,
+                  ]}
+                >
                   {copy.home.transcriptPlaceholder}
                 </Text>
               )}
-              <Text style={styles.voiceTranscriptMeta}>
+              <Text style={[styles.voiceTranscriptMeta, tabletLayout && styles.voiceTranscriptMetaTablet]}>
                 {getSpeechLocaleLabel(speechLocale, settings.uiLanguage)}
               </Text>
             </GlassSurface>
           ) : null}
 
           {errorMessage ? (
-            <View style={styles.inlineErrorCard}>
-              <Text numberOfLines={2} style={styles.inlineErrorText}>
+            <View
+              style={[
+                styles.inlineErrorCard,
+                { maxWidth: tabletLayout ? 440 : 340 },
+                tabletLayout && styles.inlineErrorCardTablet,
+              ]}
+            >
+              <Text
+                numberOfLines={2}
+                style={[styles.inlineErrorText, tabletLayout && styles.inlineErrorTextTablet]}
+              >
                 {errorMessage}
               </Text>
               {!processing ? (
@@ -1438,9 +1559,16 @@ export function HomeScreen({ navigation, route }: Props) {
                     setErrorMessage('');
                     void toggleRecording(getExternalRetrySource());
                   }}
-                  style={styles.inlineErrorAction}
+                  style={[styles.inlineErrorAction, tabletLayout && styles.inlineErrorActionTablet]}
                 >
-                  <Text style={styles.inlineErrorActionText}>{copy.home.retryVoice}</Text>
+                  <Text
+                    style={[
+                      styles.inlineErrorActionText,
+                      tabletLayout && styles.inlineErrorActionTextTablet,
+                    ]}
+                  >
+                    {copy.home.retryVoice}
+                  </Text>
                 </Pressable>
               ) : null}
             </View>
@@ -1449,7 +1577,7 @@ export function HomeScreen({ navigation, route }: Props) {
 
         {!quickCaptureMode && urgentReminder && urgentReminderSnapshot ? (
           <GlassSurface
-            style={styles.urgentCard}
+            style={[styles.urgentCard, tabletLayout && styles.bottomCardTablet]}
             contentStyle={styles.urgentCardContent}
             intensity={50}
             overlayColor="rgba(255,255,255,0.26)"
@@ -1517,7 +1645,7 @@ export function HomeScreen({ navigation, route }: Props) {
             style={styles.latestReminderPressable}
           >
             <GlassSurface
-              style={styles.latestReminderCard}
+              style={[styles.latestReminderCard, tabletLayout && styles.bottomCardTablet]}
               contentStyle={styles.latestReminderCardContent}
               intensity={46}
               overlayColor="rgba(255,255,255,0.24)"
@@ -1568,6 +1696,7 @@ export function HomeScreen({ navigation, route }: Props) {
             <Animated.View
               style={[
                 styles.confirmCardFrame,
+                { maxWidth: tabletLayout ? 460 : 356 },
                 {
                   opacity: confirmOpacity,
                   transform: [{ scale: confirmScale }],
@@ -1829,16 +1958,27 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    width: '100%',
+    alignSelf: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: 4,
     paddingBottom: spacing.md,
     gap: 10,
+  },
+  contentTablet: {
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    gap: spacing.lg,
   },
   voiceTopBar: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: 40,
+  },
+  voiceTopBarTablet: {
+    minHeight: 64,
   },
   voiceBrand: {
     alignItems: 'center',
@@ -1849,11 +1989,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
+  voiceBrandTitleTablet: {
+    fontSize: 24,
+  },
   voiceBrandSubtitle: {
     fontFamily: fonts.medium,
     fontSize: 9,
     color: colors.textMuted,
     writingDirection: 'rtl',
+  },
+  voiceBrandSubtitleTablet: {
+    fontSize: 13,
   },
   trustStrip: {
     borderRadius: radii.md,
@@ -1863,10 +2009,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
+  trustStripTablet: {
+    minHeight: 128,
+  },
   trustStripCopy: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: 4,
+  },
+  trustStripCopyTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
   },
   trustStripTitle: {
     fontFamily: fonts.semibold,
@@ -1875,6 +2029,9 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  trustStripTitleTablet: {
+    fontSize: 20,
+  },
   trustStripBody: {
     fontFamily: fonts.medium,
     fontSize: 12,
@@ -1882,6 +2039,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 18,
     writingDirection: 'rtl',
+  },
+  trustStripBodyTablet: {
+    fontSize: 16,
+    lineHeight: 24,
   },
   trustStripAction: {
     alignSelf: 'flex-end',
@@ -1892,11 +2053,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
+  trustStripActionTablet: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
   trustStripActionText: {
     fontFamily: fonts.semibold,
     fontSize: 12,
     color: colors.primaryDark,
     writingDirection: 'rtl',
+  },
+  trustStripActionTextTablet: {
+    fontSize: 15,
   },
   voiceCenter: {
     flex: 1,
@@ -1905,12 +2075,20 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.sm,
   },
+  voiceCenterTablet: {
+    gap: spacing.lg,
+    paddingVertical: spacing.xxl,
+  },
   voiceTitle: {
     fontFamily: fonts.bold,
     fontSize: 28,
     color: colors.text,
     textAlign: 'center',
     writingDirection: 'rtl',
+  },
+  voiceTitleTablet: {
+    fontSize: 58,
+    lineHeight: 72,
   },
   voiceSubtitle: {
     fontFamily: fonts.medium,
@@ -1920,6 +2098,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     writingDirection: 'rtl',
     maxWidth: 248,
+  },
+  voiceSubtitleTablet: {
+    fontSize: 24,
+    lineHeight: 34,
   },
   voiceStatePill: {
     flexDirection: 'row-reverse',
@@ -1931,6 +2113,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderWidth: 1,
     borderColor: colors.line,
+  },
+  voiceStatePillTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
   },
   voiceStatePillActive: {
     borderColor: 'rgba(108,92,231,0.26)',
@@ -1947,6 +2134,9 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     writingDirection: 'rtl',
   },
+  voiceStateTextTablet: {
+    fontSize: 18,
+  },
   voiceMicStage: {
     marginTop: 0,
     gap: spacing.xs,
@@ -1962,6 +2152,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
+  voiceTranscriptCardTablet: {
+    minHeight: 96,
+  },
   voiceTranscriptCardContent: {
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
@@ -1975,6 +2168,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     writingDirection: 'rtl',
   },
+  voiceTranscriptTextTablet: {
+    fontSize: 21,
+    lineHeight: 30,
+  },
   voiceTranscriptPlaceholder: {
     fontFamily: fonts.medium,
     fontSize: 14,
@@ -1983,12 +2180,19 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     writingDirection: 'rtl',
   },
+  voiceTranscriptPlaceholderTablet: {
+    fontSize: 18,
+    lineHeight: 28,
+  },
   voiceTranscriptMeta: {
     fontFamily: fonts.medium,
     fontSize: 12,
     color: colors.primaryDark,
     textAlign: 'center',
     writingDirection: 'rtl',
+  },
+  voiceTranscriptMetaTablet: {
+    fontSize: 16,
   },
   inlineErrorCard: {
     width: '100%',
@@ -2001,6 +2205,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.xs,
   },
+  inlineErrorCardTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
   inlineErrorText: {
     fontFamily: fonts.medium,
     fontSize: 13,
@@ -2008,6 +2216,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     writingDirection: 'rtl',
+  },
+  inlineErrorTextTablet: {
+    fontSize: 16,
+    lineHeight: 24,
   },
   inlineErrorAction: {
     alignSelf: 'center',
@@ -2018,11 +2230,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F3D3CF',
   },
+  inlineErrorActionTablet: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
   inlineErrorActionText: {
     fontFamily: fonts.semibold,
     fontSize: 12,
     color: colors.danger,
     writingDirection: 'rtl',
+  },
+  inlineErrorActionTextTablet: {
+    fontSize: 15,
   },
   urgentCard: {
     borderRadius: radii.lg,
@@ -2031,6 +2250,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
+  },
+  bottomCardTablet: {
+    minHeight: 172,
   },
   urgentCardContent: {
     paddingHorizontal: spacing.md,
@@ -2278,6 +2500,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  navButtonTablet: {
+    gap: spacing.xs,
+  },
   navIconShell: {
     width: 38,
     height: 38,
@@ -2290,11 +2515,19 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
+  navIconShellTablet: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
   navLabel: {
     fontFamily: fonts.semibold,
     color: colors.primaryDark,
     fontSize: 10,
     writingDirection: 'rtl',
+  },
+  navLabelTablet: {
+    fontSize: 13,
   },
   heroCopy: {
     gap: spacing.xs,
@@ -2381,6 +2614,10 @@ const styles = StyleSheet.create({
     gap: 6,
     zIndex: 1,
   },
+  micStageTablet: {
+    gap: spacing.md,
+    marginTop: 0,
+  },
   micStageCompact: {
     marginTop: -20,
   },
@@ -2390,6 +2627,11 @@ const styles = StyleSheet.create({
     height: 188,
     borderRadius: 94,
     backgroundColor: 'rgba(0,229,168,0.22)',
+  },
+  micGlowTablet: {
+    width: 320,
+    height: 320,
+    borderRadius: 160,
   },
   micWrap: {
     alignItems: 'center',
@@ -2402,6 +2644,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(108,92,231,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  micRingOuterTablet: {
+    width: 228,
+    height: 228,
+    borderRadius: 114,
   },
   micRingOuterCompact: {
     width: 120,
@@ -2417,6 +2664,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(108,92,231,0.08)',
+  },
+  micRingInnerTablet: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
   },
   micRingInnerCompact: {
     width: 96,
@@ -2438,6 +2690,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
   },
+  micButtonTablet: {
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+  },
   micButtonCompact: {
     width: 78,
     height: 78,
@@ -2456,6 +2713,10 @@ const styles = StyleSheet.create({
     fontSize: 17,
     writingDirection: 'rtl',
   },
+  micHintTablet: {
+    fontSize: 34,
+    lineHeight: 42,
+  },
   micHintCompact: {
     fontSize: 15,
   },
@@ -2466,6 +2727,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     writingDirection: 'rtl',
+  },
+  micSubhintTablet: {
+    fontSize: 18,
+    lineHeight: 28,
+    maxWidth: 520,
   },
   micSubhintCompact: {
     fontSize: 11,
@@ -2479,17 +2745,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
+  examplePromptTablet: {
+    maxWidth: 560,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+  },
   examplePromptLabel: {
     color: colors.textMuted,
     fontFamily: fonts.semibold,
     fontSize: 11,
     writingDirection: 'rtl',
   },
+  examplePromptLabelTablet: {
+    fontSize: 16,
+  },
   examplePromptText: {
     color: colors.text,
     fontFamily: fonts.bold,
     fontSize: 13,
     writingDirection: 'rtl',
+  },
+  examplePromptTextTablet: {
+    fontSize: 22,
   },
   waveRow: {
     flexDirection: 'row',
