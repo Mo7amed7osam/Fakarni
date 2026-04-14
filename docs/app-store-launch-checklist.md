@@ -8,6 +8,7 @@ Every `NO-GO` item must be cleared before submission.
 ## Product And Review Surface
 
 - `GO` The public app flow is reminder-focused only: onboarding, home, confirmation, reminder list, settings, help, and speech failure screens.
+- `GO` The marketing landing page is no longer embedded in the Expo app shell. Any landing work now lives outside the app target in `landing/`.
 - `GO` Hidden founder diagnostics are removed from public navigation and settings entry points.
 - `GO` The app no longer ships Expo dev-client/dev-launcher configuration in the iOS target.
 - `NO-GO` A real public privacy policy URL must exist in App Store Connect.
@@ -52,6 +53,7 @@ Every `NO-GO` item must be cleared before submission.
 ## Release Configuration
 
 - `GO` The production-safe parsing path is gateway-only.
+- `GO` App config now includes explicit release identifiers: `version 1.0.0`, `ios.buildNumber 1`, `android.versionCode 1`.
 - `NO-GO` `EXPO_PUBLIC_PARSE_GATEWAY_URL` must point to a live production gateway before release.
 - `NO-GO` Production analytics host/key configuration must be verified before release.
 - `NO-GO` Confirm there are no debug-only env vars or staging endpoints in the release build.

@@ -42,7 +42,7 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - instrumentation لرحلة الصوت، الإنشاء، الصلاحيات، والتقويم
 
 ## Current State
-- يوجد الآن web landing page مخصص لـ Fakarni داخل نفس مشروع Expo: الويب يفتح صفحة إطلاق عربية حديثة تشرح قيمة المنتج وتعرض mockup ومزايا أساسية، مع CTA واضح يفتح التجربة التفاعلية الحالية عبر query flag بدل رمي المستخدم مباشرة داخل واجهة التطبيق الخام.
+- الويب لم يعد جزءًا من Expo app shell: أي landing page أصبحت الآن منفصلة في مجلد مستقل `landing/`، بينما `App.tsx` عاد يشغّل تجربة التطبيق نفسها فقط. هذا يبقي مشروع iOS أنظف قبل App Store submission ويمنع خلط التسويق مع target التطبيق.
 - تجربة home أصبحت voice-first وواضحة بصريًا.
 - يوجد الآن iPhone Home Screen widget صغير للمايك فقط، يفتح Fakarni عبر deep link إلى Home ويطلب بدء التسجيل تلقائيًا بدل إجبار المستخدم على فتح التطبيق ثم الوصول للمايك يدويًا.
 - واجهة الـ widget نفسها أصبحت mic-only tile: بدون أي نص داخلها، فقط مايك مركزي واضح حتى تبدو أقرب لـ launch affordance نظيفة لا mini card.
@@ -108,7 +108,8 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - ما زالت بعض الأسطح الداخلية تحمل نبرة developer-first أكثر من اللازم، لكنها ليست ضمن المسار الأساسي للمستخدم.
 
 ## Recent Decisions
-- 2026-04-14: فصل web entry عن app shell داخل نفس مشروع Expo، بحيث تصبح الويب صفحة إطلاق وتسويق حديثة لـ Fakarni بينما تظل واجهة التطبيق الحالية متاحة عند الطلب عبر `?app=1`، لأن دخول المستخدم على الويب مباشرة إلى app UI الخام لا يشرح قيمة المنتج ولا يصلح كلاندنج قبل الإطلاق.
+- 2026-04-14: فصل landing page تمامًا عن Expo app ووضعها داخل مجلد مستقل `landing/` مع placeholders بسيطة للشاشات الحقيقية، لأن الهدف الحالي هو إبقاء تطبيق Fakarni نفسه جاهزًا للتغليف وApp Store review بدون طبقة ويب أو marketing flow داخل target التطبيق.
+- 2026-04-14: إزالة `react-dom` و`react-native-web` وسكربت `web` من مشروع التطبيق نفسه، وإضافة `ios.buildNumber` و`android.versionCode` صراحة داخل `app.json` لتوضيح release identity بدل الاعتماد على إعدادات ناقصة قبل الإنتاج.
 - 2026-03-27: تحويل lifecycle scheduling للإشعارات إلى مسار serial locked مع system-level cancellation حسب `reminderId`، لأن resync المتكرر كان قادرًا على ترك scheduled notifications يتيمة لنفس التذكير فتظهر للمستخدم كنسخ مكررة.
 - 2026-03-27: إضافة feedback loop صغير بعد النجاح بدل survey كبير أو prompt عشوائي، لأن المطلوب startup signal سريع من غير تلويث core voice flow.
 - 2026-03-27: استخدام sentiment gate قبل review request، حتى لا يتحول المستخدم المحبط مباشرة إلى App Store review سلبي بدل أن يرسل pain point داخل التطبيق.
