@@ -24,6 +24,7 @@ import { flush, screen, track } from './src/services/analytics';
 import { consumePendingExternalLaunch } from './src/services/externalLaunch';
 import { configureNotifications } from './src/services/notifications';
 import { RootStackParamList } from './src/types';
+import { LandingPage } from './src/web/LandingPage';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -46,6 +47,19 @@ export default function App() {
     Cairo_600SemiBold,
     Cairo_700Bold,
   });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
+  if (shouldRenderMarketingLanding()) {
+    return <LandingPage onOpenApp={openWebAppExperience} />;
+  }
+
+  return <NativeAppShell />;
+}
+
+function NativeAppShell() {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const routeNameRef = useRef<string | undefined>(undefined);
   const pendingExternalLaunchRef = useRef<RootStackParamList['Home'] | null>(null);
@@ -180,10 +194,6 @@ export default function App() {
     };
   }, []);
 
-  if (!fontsLoaded) {
-    return null;
-  }
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -220,4 +230,23 @@ export default function App() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+function shouldRenderMarketingLanding() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return params.get('app') !== '1';
+}
+
+function openWebAppExperience() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.set('app', '1');
+  window.location.href = url.toString();
 }
