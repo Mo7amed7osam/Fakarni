@@ -96,6 +96,8 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - صفحة `landing/privacy-policy.html` أصبحت الآن محمّلة بالنص الفعلي للـ privacy policy المرسل من المؤسس، مع contact email `info@quantara.site` بدل draft policy generic داخل الريبو.
 - صفحات `landing/` أصبحت الآن تشحن favicon محليًا من داخل نفس المجلد، لذلك browser tab icon لم يعد يعتمد على default globe أو على asset خارج deployment scope.
 - landing deployment على Vercel أصبح الآن مهيأ كـ site واحدة بروابط داخلية نظيفة: `/support` و`/privacy` بدل الاعتماد على ملفات `.html` منفصلة أو دومينات/روابط placeholder خارجية.
+- تم إصلاح broken logo داخل landing surfaces بالاعتماد على `landing/favicon.png` بدل `../assets/icon.png`، لأن Vercel ينشر مجلد `landing/` وحده ولا يحمل أصول الجذر تلقائيًا.
+- يوجد الآن ملف `landing/privacy.html` فعلي بنفس محتوى policy حتى يعمل route `/privacy` طبيعيًا بدون rewrite خاص أو سلوك Vercel ملتبس.
 - يوجد الآن English parser test harness خفيف داخل المشروع للتحقق السريع من جودة parsing بدون إضافة test stack ثقيل.
 - يوجد الآن parser matrix بسيط للعربي والإنجليزي مع command واحد للتشغيل، ويغطي اليوم/الوقت/offset/recurrence وبعض حالات التصنيف.
 - parser tests الآن تغطي أيضًا مسار `hybrid` نفسه: fallback عند فشل الـ LLM، نجاح merge، وحالة low-confidence التي تبقي confirmation مطلوبًا.
@@ -124,6 +126,7 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - 2026-04-15: استبدال draft privacy copy داخل `landing/privacy-policy.html` بالـ policy الفعلية المقدمة من المؤسس، حتى تصبح صفحة الخصوصية جاهزة للنشر بدل بقاءها وثيقة تقريبية.
 - 2026-04-15: نسخ favicon إلى `landing/` نفسه وربطه في `index/support/privacy`، لأن نشر `landing/` منفصلًا على Vercel لا يحمل معه `../assets` من جذر الريبو، وبالتالي كان tab icon يقع إلى placeholder افتراضي.
 - 2026-04-15: إضافة `landing/vercel.json` مع clean routes وربط صفحات landing ببعضها داخليًا، لأن المطلوب أن تعيش `support/privacy` تحت نفس موقع الهبوط وعلى نفس subdomain بدل الظهور كملفات معزولة.
+- 2026-04-15: التراجع عن الاعتماد على rewrite لصفحة الخصوصية وإنشاء `privacy.html` نفسها، لأن `/privacy` كان يرجع 404 فعليًا على Vercel بينما `/support` كان يعمل طبيعيًا من clean HTML path.
 - 2026-04-14: إزالة `react-dom` و`react-native-web` وسكربت `web` من مشروع التطبيق نفسه، وإضافة `ios.buildNumber` و`android.versionCode` صراحة داخل `app.json` لتوضيح release identity بدل الاعتماد على إعدادات ناقصة قبل الإنتاج.
 - 2026-03-27: تحويل lifecycle scheduling للإشعارات إلى مسار serial locked مع system-level cancellation حسب `reminderId`، لأن resync المتكرر كان قادرًا على ترك scheduled notifications يتيمة لنفس التذكير فتظهر للمستخدم كنسخ مكررة.
 - 2026-03-27: إضافة feedback loop صغير بعد النجاح بدل survey كبير أو prompt عشوائي، لأن المطلوب startup signal سريع من غير تلويث core voice flow.
