@@ -94,6 +94,8 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - يوجد الآن docs إضافية للإطلاق: `app-store-privacy-answers.md` لإجابات App Privacy و`app-store-screenshot-runbook.md` لخطة screenshots، حتى لا تبقى هذه الخطوات معرفة شفهية فقط.
 - يوجد الآن draft screenshot subset داخل `docs/app-store-screenshots-draft/` مأخوذ من iPhone simulator للحالات الأساسية: home، reminder list، manual create، وsettings/trust؛ المتبقي فقط هو صقل الـ final 5-shot set بالحجم النهائي وإضافة لقطة Siri/widget أنظف.
 - صفحة `landing/privacy-policy.html` أصبحت الآن محمّلة بالنص الفعلي للـ privacy policy المرسل من المؤسس، مع contact email `info@quantara.site` بدل draft policy generic داخل الريبو.
+- صفحات `landing/` أصبحت الآن تشحن favicon محليًا من داخل نفس المجلد، لذلك browser tab icon لم يعد يعتمد على default globe أو على asset خارج deployment scope.
+- landing deployment على Vercel أصبح الآن مهيأ كـ site واحدة بروابط داخلية نظيفة: `/support` و`/privacy` بدل الاعتماد على ملفات `.html` منفصلة أو دومينات/روابط placeholder خارجية.
 - يوجد الآن English parser test harness خفيف داخل المشروع للتحقق السريع من جودة parsing بدون إضافة test stack ثقيل.
 - يوجد الآن parser matrix بسيط للعربي والإنجليزي مع command واحد للتشغيل، ويغطي اليوم/الوقت/offset/recurrence وبعض حالات التصنيف.
 - parser tests الآن تغطي أيضًا مسار `hybrid` نفسه: fallback عند فشل الـ LLM، نجاح merge، وحالة low-confidence التي تبقي confirmation مطلوبًا.
@@ -120,6 +122,8 @@ Fakarni هو تطبيق تذكيرات voice-first مبني للعربية، ه�
 - 2026-04-14: ترقية صفحات `support/privacy` من templates إلى draft publishable، وإضافة runbooks صريحة لـ App Privacy وApp Store screenshots، حتى ينكمش المتبقي قبل الإرسال إلى أعمال خارج الريبو فعلًا لا إلى نقص توثيق.
 - 2026-04-14: توليد draft screenshot subset فعلي من الـ simulator وحفظه داخل الريبو بدل ترك screenshots كعمل نظري بالكامل، حتى يصبح المتبقي إعادة تصدير/تنقيح لا اكتشافًا من الصفر.
 - 2026-04-15: استبدال draft privacy copy داخل `landing/privacy-policy.html` بالـ policy الفعلية المقدمة من المؤسس، حتى تصبح صفحة الخصوصية جاهزة للنشر بدل بقاءها وثيقة تقريبية.
+- 2026-04-15: نسخ favicon إلى `landing/` نفسه وربطه في `index/support/privacy`، لأن نشر `landing/` منفصلًا على Vercel لا يحمل معه `../assets` من جذر الريبو، وبالتالي كان tab icon يقع إلى placeholder افتراضي.
+- 2026-04-15: إضافة `landing/vercel.json` مع clean routes وربط صفحات landing ببعضها داخليًا، لأن المطلوب أن تعيش `support/privacy` تحت نفس موقع الهبوط وعلى نفس subdomain بدل الظهور كملفات معزولة.
 - 2026-04-14: إزالة `react-dom` و`react-native-web` وسكربت `web` من مشروع التطبيق نفسه، وإضافة `ios.buildNumber` و`android.versionCode` صراحة داخل `app.json` لتوضيح release identity بدل الاعتماد على إعدادات ناقصة قبل الإنتاج.
 - 2026-03-27: تحويل lifecycle scheduling للإشعارات إلى مسار serial locked مع system-level cancellation حسب `reminderId`، لأن resync المتكرر كان قادرًا على ترك scheduled notifications يتيمة لنفس التذكير فتظهر للمستخدم كنسخ مكررة.
 - 2026-03-27: إضافة feedback loop صغير بعد النجاح بدل survey كبير أو prompt عشوائي، لأن المطلوب startup signal سريع من غير تلويث core voice flow.
