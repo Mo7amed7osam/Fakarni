@@ -10,6 +10,11 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		47EE3B1C20FC52A8337381F7 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7918A86EAA1B2A9C63F21E8C /* ExpoModulesProvider.swift */; };
+		A1B2C3D42E10000100000001 /* FakarniPendingExternalLaunch.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D42E10000100000011 /* FakarniPendingExternalLaunch.swift */; };
+		A1B2C3D42E10000100000002 /* FakarniLaunchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D42E10000100000012 /* FakarniLaunchBridge.swift */; };
+		A1B2C3D42E10000100000003 /* VoiceGhostAppleCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D42E10000100000013 /* VoiceGhostAppleCalendar.swift */; };
+		A1B2C3D42E10000100000004 /* FakarniAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D42E10000100000014 /* FakarniAppShortcuts.swift */; };
+		A1B2C3D42E10000100000005 /* FakarniNativeModules.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D42E10000100000015 /* FakarniNativeModules.m */; };
 		B9BFAD999AD0A4F99711BD31 /* libPods-Fakarni.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1BF15231EB9E0AD723988BE1 /* libPods-Fakarni.a */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
@@ -25,6 +30,11 @@
 		5707707F9B4C23A7936B111A /* Pods-Fakarni.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Fakarni.release.xcconfig"; path = "Target Support Files/Pods-Fakarni/Pods-Fakarni.release.xcconfig"; sourceTree = "<group>"; };
 		64B53388AE074E11170A9B1F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Fakarni/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		7918A86EAA1B2A9C63F21E8C /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Fakarni/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		A1B2C3D42E10000100000011 /* FakarniPendingExternalLaunch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fakarni/FakarniPendingExternalLaunch.swift; sourceTree = "<group>"; };
+		A1B2C3D42E10000100000012 /* FakarniLaunchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fakarni/FakarniLaunchBridge.swift; sourceTree = "<group>"; };
+		A1B2C3D42E10000100000013 /* VoiceGhostAppleCalendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fakarni/VoiceGhostAppleCalendar.swift; sourceTree = "<group>"; };
+		A1B2C3D42E10000100000014 /* FakarniAppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Fakarni/FakarniAppShortcuts.swift; sourceTree = "<group>"; };
+		A1B2C3D42E10000100000015 /* FakarniNativeModules.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Fakarni/FakarniNativeModules.m; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Fakarni/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
@@ -44,17 +54,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		13B07FAE1A68108700A75B9A /* Fakarni */ = {
-			isa = PBXGroup;
-			children = (
-				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
-				F11748442D0722820044C1D9 /* Fakarni-Bridging-Header.h */,
-				BB2F792B24A3F905000567C9 /* Supporting */,
-				13B07FB51A68108700A75B9A /* Images.xcassets */,
-				13B07FB61A68108700A75B9A /* Info.plist */,
-				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				64B53388AE074E11170A9B1F /* PrivacyInfo.xcprivacy */,
-			);
+			13B07FAE1A68108700A75B9A /* Fakarni */ = {
+				isa = PBXGroup;
+				children = (
+					F11748412D0307B40044C1D9 /* AppDelegate.swift */,
+					A1B2C3D42E10000100000014 /* FakarniAppShortcuts.swift */,
+					F11748442D0722820044C1D9 /* Fakarni-Bridging-Header.h */,
+					A1B2C3D42E10000100000012 /* FakarniLaunchBridge.swift */,
+					A1B2C3D42E10000100000015 /* FakarniNativeModules.m */,
+					A1B2C3D42E10000100000011 /* FakarniPendingExternalLaunch.swift */,
+					BB2F792B24A3F905000567C9 /* Supporting */,
+					13B07FB51A68108700A75B9A /* Images.xcassets */,
+					13B07FB61A68108700A75B9A /* Info.plist */,
+					A1B2C3D42E10000100000013 /* VoiceGhostAppleCalendar.swift */,
+					AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
+					64B53388AE074E11170A9B1F /* PrivacyInfo.xcprivacy */,
+				);
 			name = Fakarni;
 			sourceTree = "<group>";
 		};
@@ -334,6 +349,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1B2C3D42E10000100000004 /* FakarniAppShortcuts.swift in Sources */,
+				A1B2C3D42E10000100000002 /* FakarniLaunchBridge.swift in Sources */,
+				A1B2C3D42E10000100000005 /* FakarniNativeModules.m in Sources */,
+				A1B2C3D42E10000100000001 /* FakarniPendingExternalLaunch.swift in Sources */,
+				A1B2C3D42E10000100000003 /* VoiceGhostAppleCalendar.swift in Sources */,
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				47EE3B1C20FC52A8337381F7 /* ExpoModulesProvider.swift in Sources */,
 			);

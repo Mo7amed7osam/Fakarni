@@ -48,8 +48,8 @@ These are the answers you are likely to need in App Store Connect.
 
 ### Contact Info
 
-- Developer contact email: your final support or privacy email
-- Privacy policy URL: your hosted `https://your-domain.com/privacy`
+- Developer contact email: `info@quantara.site`
+- Privacy policy URL: `https://fakarni.quantara.site/privacy`
 
 ### Tracking
 

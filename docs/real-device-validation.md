@@ -19,7 +19,7 @@ Do not treat simulator coverage as a substitute for this list.
 - No crash in onboarding, capture, confirm, save, edit, snooze, complete, or settings flows
 - Voice capture creates valid reminders in both English and Arabic smoke tests
 - Local notifications fire at the expected time
-- Siri shortcuts and widget entry points do not dead-end
+- Siri / Shortcuts entry does not dead-end
 - Optional calendar write flow works when enabled and fails cleanly when denied
 
 ## Validation Cases
@@ -88,15 +88,7 @@ Do not treat simulator coverage as a substitute for this list.
 - Result: `PASS / FAIL`
 - Notes: `TODO`
 
-### 8. Widget Entry
-
-- Add the widget to the home screen
-- Launch the app through the widget
-- Confirm the entry point is stable and useful
-- Result: `PASS / FAIL`
-- Notes: `TODO`
-
-### 9. Calendar Sync
+### 8. Calendar Sync
 
 - Enable calendar save
 - Save a reminder that should create a calendar event
@@ -105,7 +97,7 @@ Do not treat simulator coverage as a substitute for this list.
 - Result: `PASS / FAIL`
 - Notes: `TODO`
 
-### 10. Background / Resume Stability
+### 9. Background / Resume Stability
 
 - Create a reminder
 - Lock the phone

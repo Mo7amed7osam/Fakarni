@@ -27,7 +27,7 @@ This file turns the screenshot task into a repeatable workflow for the final App
    Show the trust pack or saved reminder state that signals reliability.
 
 5. `System entry point`
-   Show either the Siri shortcut path, widget path, or a clean settings/trust screen.
+   Show either the Siri shortcut path or a clean settings/trust screen.
 
 ## Caption Drafts
 
@@ -35,7 +35,7 @@ This file turns the screenshot task into a repeatable workflow for the final App
 2. `Speak once and confirm quickly`
 3. `Stay on top of today, upcoming, and overdue`
 4. `Keep reminders reliable with calm follow-through`
-5. `Launch from Siri, widget, and system surfaces`
+5. `Launch from Siri when you need it fast`
 
 ## Visual Rules
 
@@ -71,7 +71,7 @@ Export screenshots with stable names:
 - `02-confirmation.png`
 - `03-reminder-list.png`
 - `04-trust-pack.png`
-- `05-siri-or-widget.png`
+- `05-siri-or-settings.png`
 
 ## Current Status
 

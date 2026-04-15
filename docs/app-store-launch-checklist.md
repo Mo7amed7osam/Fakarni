@@ -13,10 +13,9 @@ Every `NO-GO` item must be cleared before submission.
 - `GO` The app no longer ships Expo dev-client/dev-launcher configuration in the iOS target.
 - `GO` Device scope is now aligned to iPhone-only in both Expo config and Xcode target settings.
 - `GO` A draft metadata pack now exists in `docs/app-store-metadata-pack.md`.
-- `GO` Publishable support and privacy page drafts now exist in `landing/support.html` and `landing/privacy-policy.html`.
-- `NO-GO` A real public privacy policy URL must exist in App Store Connect.
-- `NO-GO` Support URL and App Store metadata still need to be completed outside the repo.
-- `NO-GO` Final screenshots, app description, keywords, and review notes still need to be prepared outside the repo.
+- `GO` Publishable support and privacy pages now exist and are hosted at `https://fakarni.quantara.site/support` and `https://fakarni.quantara.site/privacy`.
+- `NO-GO` The hosted support/privacy URLs still need to be entered in App Store Connect alongside the rest of the final metadata.
+- `NO-GO` Final screenshots still need to be exported and the final metadata needs to be entered in App Store Connect.
 
 ## Security And Privacy
 
@@ -54,7 +53,6 @@ Every `NO-GO` item must be cleared before submission.
 - `NO-GO` Test notification delivery, notification actions, and follow-up timing on a real iPhone.
 - `NO-GO` Confirm duplicate notifications do not appear after repeated foreground/background cycles.
 - `NO-GO` Test Siri shortcuts on a real iPhone.
-- `NO-GO` Test the iPhone home-screen widget launch and fallback behavior on a real iPhone.
 - `NO-GO` Test Apple Calendar save flow and permission edge cases on a real iPhone.
 - `NO-GO` Run one Arabic smoke test and one English smoke test on a real iPhone.
 
@@ -73,4 +71,4 @@ Every `NO-GO` item must be cleared before submission.
 - `GO` means the repo-side implementation is in acceptable shape.
 - `NO-GO` means submission is still blocked until the manual or release-specific step is completed.
 
-Current decision: `NO-GO for App Store submission` until the remaining manual, real-device, and release-signing checks are completed.
+Current decision: `NO-GO for App Store submission` until the remaining manual, real-device, and release checks are completed.

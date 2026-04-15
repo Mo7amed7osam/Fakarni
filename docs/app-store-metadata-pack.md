@@ -62,13 +62,13 @@ Replace with the exact legal owner name you want shown on the product page.
 
 ### Promotional Text
 
-`Capture reminders by voice, confirm quickly, and stay on track with calm follow-ups, Siri shortcuts, widget entry, and optional calendar sync.`
+`Capture reminders by voice, confirm quickly, and stay on track with calm follow-ups, Siri shortcuts, and optional calendar sync.`
 
 Length: 141 / 170
 
 ### Keywords
 
-`voice,reminders,speech,productivity,calendar,notifications,arabic,english,siri,widget`
+`voice,reminders,speech,productivity,calendar,notifications,arabic,english,siri`
 
 Estimated length: 85 bytes
 
@@ -91,7 +91,6 @@ Fakarni is designed for real daily use:
 - Complete and Snooze actions
 - One smart follow-up nudge when needed
 - Siri shortcuts on iPhone
-- Home screen widget entry
 - Optional calendar saving
 
 The product is especially tuned for Arabic-first use cases while also supporting English flows.
@@ -123,7 +122,6 @@ Use this only if you decide to localize the App Store listing in Arabic.
 - إجراءات سريعة مثل تم وغفوة
 - نغزة متابعة واحدة بدل الإزعاج المتكرر
 - اختصارات Siri
-- ويدجت للمايك على الشاشة الرئيسية
 - حفظ اختياري في التقويم
 
 Fakarni مناسب للمستخدم الذي يريد تسجيل التذكير بسرعة وبطريقة واضحة وموثوقة.`
@@ -134,15 +132,13 @@ These pages now have near-final repo drafts in `landing/`:
 
 - Marketing URL candidate: host `landing/index.html`
 - Support URL candidate: host `landing/support.html`
-- Privacy Policy URL candidate: host `landing/privacy-policy.html`
+- Privacy Policy URL candidate: host `landing/privacy.html`
 
-Suggested final URL structure after hosting:
+Live URLs:
 
-- `https://your-domain.com/`
-- `https://your-domain.com/support`
-- `https://your-domain.com/privacy`
-
-Do not submit placeholder domains to Apple.
+- `https://fakarni.quantara.site/`
+- `https://fakarni.quantara.site/support`
+- `https://fakarni.quantara.site/privacy`
 
 ## App Review Information
 
@@ -151,7 +147,7 @@ Do not submit placeholder domains to Apple.
 Fill these with real values before submission:
 
 - Contact name: `TODO`
-- Contact email: `TODO`
+- Contact email: `info@quantara.site`
 - Contact phone: `TODO`
 
 ### Sign-In Required
@@ -166,7 +162,7 @@ Testing notes:
 - No account creation or sign-in is required.
 - The app requests microphone and speech recognition access only when the user starts voice capture.
 - The app uses local notifications for reminder delivery.
-- Siri shortcuts and the iPhone home-screen widget are optional entry points for voice capture.
+- A Siri / Shortcuts voice-capture entry point is available on iPhone.
 - Calendar access is optional and only used when the user enables calendar saving.
 - Smart parsing routes through a configured production parsing gateway.
 
@@ -202,7 +198,7 @@ Recommended screenshot sequence:
 2. Main home screen with primary mic action
 3. Confirmation flow after a parsed reminder
 4. Reminder list showing Today / Upcoming / Overdue
-5. Siri shortcut, widget, or settings/trust screen
+5. Siri shortcut or settings/trust screen
 
 Screenshot caption draft:
 
@@ -210,14 +206,12 @@ Screenshot caption draft:
 2. `Speak once and let Fakarni structure the reminder`
 3. `Confirm quickly when timing needs a review`
 4. `Stay on top of what is due today`
-5. `Launch from Siri, widget, and system surfaces`
+5. `Launch from Siri when you need it fast`
 
 ## Remaining Human Inputs Needed
 
 These are still required from you before this pack is truly submission-ready:
 
-- Real hosted domain for support and privacy pages
-- Real support email
 - Real support phone number or alternate support contact path
 - Final legal/copyright owner name
 - Final screenshot exports

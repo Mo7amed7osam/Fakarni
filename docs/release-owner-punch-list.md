@@ -18,7 +18,7 @@ This file contains only the remaining owner actions after the repo-side release 
    Use Xcode Organizer `Validate App`, then upload to App Store Connect.
 
 2. Host real public support and privacy pages.
-   Publish `landing/support.html` and `landing/privacy-policy.html` on a real HTTPS domain, replace the top-level contact/domain placeholders, and use those URLs in App Store Connect.
+   Confirm `https://fakarni.quantara.site/support` and `https://fakarni.quantara.site/privacy` stay live and use those URLs in App Store Connect.
 
 3. Complete App Store Connect metadata.
    Fill review contact, support URL, privacy URL, copyright owner, final description, keywords, subtitle, and review notes.
@@ -33,7 +33,7 @@ This file contains only the remaining owner actions after the repo-side release 
    Do this if any model/provider keys were ever used in client builds, commits, or screenshots.
 
 7. Run the physical iPhone validation pass.
-   Complete every case in `docs/real-device-validation.md`, especially notifications, Siri, widget launch, calendar write flow, and Arabic/English smoke coverage.
+   Complete every case in `docs/real-device-validation.md`, especially notifications, Siri / Shortcuts launch, calendar write flow, and Arabic/English smoke coverage.
 
 8. Confirm App Privacy answers in App Store Connect.
    Use `docs/app-store-privacy-answers.md` and match the shipped behavior: local reminder data, optional calendar sync, optional anonymous analytics, and optional remote parsing through the gateway.
