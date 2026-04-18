@@ -24,17 +24,15 @@ private struct StartVoiceReminderIntent: AppIntent {
 @available(iOS 16.0, *)
 struct FakarniAppShortcuts: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
-    [
-      AppShortcut(
-        intent: StartVoiceReminderIntent(),
-        phrases: [
-          "Create a reminder in \(.applicationName)",
-          "Start a reminder in \(.applicationName)",
-          "Record a reminder in \(.applicationName)",
-        ],
-        shortTitle: "Voice Reminder",
-        systemImageName: "mic.circle"
-      ),
-    ]
+    AppShortcut(
+      intent: StartVoiceReminderIntent(),
+      phrases: [
+        "Create a reminder in \(.applicationName)",
+        "Start a reminder in \(.applicationName)",
+        "Record a reminder in \(.applicationName)",
+      ],
+      shortTitle: "Voice Reminder",
+      systemImageName: "mic.circle"
+    )
   }
 }

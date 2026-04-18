@@ -154,17 +154,11 @@ final class VoiceGhostAppleCalendar: NSObject {
       return "denied"
     case .authorized:
       return "authorized"
+    case .fullAccess:
+      return "full_access"
+    case .writeOnly:
+      return "write_only"
     @unknown default:
-      if #available(iOS 17.0, *) {
-        if status == .writeOnly {
-          return "write_only"
-        }
-
-        if status == .fullAccess {
-          return "full_access"
-        }
-      }
-
       return "not_supported"
     }
   }
