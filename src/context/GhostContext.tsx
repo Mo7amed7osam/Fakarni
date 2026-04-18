@@ -61,6 +61,7 @@ import {
 import {
   getCalendarMode,
   initAnalytics,
+  isAnalyticsConfigured,
   reminderPropertiesFromReminder,
   track,
 } from '../services/analytics';
@@ -148,8 +149,8 @@ const defaultSettings: SettingsState = {
     connected: false,
   },
   analytics: {
-    enabled: true,
-    consentShown: false,
+    enabled: isAnalyticsConfigured(),
+    consentShown: !isAnalyticsConfigured(),
   },
   ads: {
     enabled: false,
@@ -214,6 +215,9 @@ function normalizeSettings(
     | SettingsState
     | (Partial<SettingsState> & Pick<SettingsState, 'ttsEnabled' | 'hasSeenOnboarding'>)
 ) {
+  const analyticsConfigured = isAnalyticsConfigured();
+  const nextAnalytics = settings.analytics ?? defaultSettings.analytics;
+
   return {
     ...defaultSettings,
     ...settings,
@@ -224,7 +228,10 @@ function normalizeSettings(
       settings.followUpDelayMinutes ?? defaultSettings.followUpDelayMinutes,
     appleCalendar: settings.appleCalendar ?? defaultSettings.appleCalendar,
     googleCalendar: settings.googleCalendar ?? defaultSettings.googleCalendar,
-    analytics: settings.analytics ?? defaultSettings.analytics,
+    analytics: {
+      enabled: analyticsConfigured ? nextAnalytics.enabled : false,
+      consentShown: analyticsConfigured ? nextAnalytics.consentShown : true,
+    },
     ads: settings.ads ?? defaultSettings.ads,
   };
 }
@@ -950,7 +957,7 @@ export function GhostProvider({ children }: PropsWithChildren) {
           normalizeSettings({
             ...current,
             analytics: {
-              enabled,
+              enabled: isAnalyticsConfigured() ? enabled : false,
               consentShown: true,
             },
           })

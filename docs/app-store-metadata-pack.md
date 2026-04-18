@@ -1,9 +1,17 @@
 # Fakarni App Store Metadata Pack
 
-Last prepared: 2026-04-14
+Last prepared: 2026-04-19
 
 This file is the working draft for App Store Connect.
 It is designed to be copied into App Store Connect with minimal editing.
+
+Release posture locked for 1.0:
+
+- English-only App Store listing
+- Support URL: `https://fakarni.quantara.site/support`
+- Privacy URL: `https://fakarni.quantara.site/privacy`
+- If the submitted build does not ship a production parsing gateway, remove gateway-specific wording from the final review notes
+- If the submitted build does not ship production analytics, answer App Privacy more narrowly and keep analytics disabled in the release build
 
 ## Apple Constraints
 
@@ -97,34 +105,10 @@ The product is especially tuned for Arabic-first use cases while also supporting
 
 Fakarni is built for people who want reminders to feel lighter, faster, and more reliable than traditional reminder apps.`
 
-## Optional Arabic Localization Draft
+## Arabic Localization
 
-Use this only if you decide to localize the App Store listing in Arabic.
-
-### Subtitle
-
-`تذكيرات صوتية بسرعة`
-
-### Promotional Text
-
-`سجّل التذكير بصوتك، راجعه بسرعة، وخليك متابع من غير خطوات كثيرة أو تنبيهات مزعجة.`
-
-### Description
-
-`Fakarni هو تطبيق تذكيرات بالصوت، هدفه أن يلتقط ما تريد بسرعة ثم يتكفل بالباقي.
-
-قل المهمة والوقت بطريقتك، وسيحوّلها التطبيق إلى تذكير واضح خلال ثوانٍ. وإذا كان هناك شيء غير واضح، يطلب منك مراجعة سريعة بدل أن يدخلك في شاشة طويلة ومعقدة.
-
-مميزات التجربة:
-- إدخال صوتي أولًا
-- مراجعة سريعة عند الحاجة
-- قوائم اليوم والقادم والمتأخر
-- إجراءات سريعة مثل تم وغفوة
-- نغزة متابعة واحدة بدل الإزعاج المتكرر
-- اختصارات Siri
-- حفظ اختياري في التقويم
-
-Fakarni مناسب للمستخدم الذي يريد تسجيل التذكير بسرعة وبطريقة واضحة وموثوقة.`
+Arabic App Store localization is intentionally deferred for 1.0.
+Keep the product page, screenshots, and review copy in English for this submission.
 
 ## Marketing URL, Support URL, Privacy Policy URL
 
@@ -164,7 +148,8 @@ Testing notes:
 - The app uses local notifications for reminder delivery.
 - A Siri / Shortcuts voice-capture entry point is available on iPhone.
 - Calendar access is optional and only used when the user enables calendar saving.
-- Smart parsing routes through a configured production parsing gateway.
+- If the submitted build includes a production parsing gateway, smart parsing routes through that gateway.
+- If the submitted build does not include a production parsing gateway, reminder parsing stays on the local rules-first path and asks for confirmation when needed.
 
 Recommended review path:
 1. Launch the app and complete onboarding.
@@ -215,4 +200,4 @@ These are still required from you before this pack is truly submission-ready:
 - Real support phone number or alternate support contact path
 - Final legal/copyright owner name
 - Final screenshot exports
-- Final decision on English-only vs localized Arabic App Store listing
+- Final App Review contact name and phone number

@@ -1,6 +1,6 @@
 # Fakarni Release Archive And Upload Runbook
 
-Last reviewed: 2026-04-14
+Last reviewed: 2026-04-19
 
 This runbook covers the final release path for App Store delivery.
 It assumes the metadata pack and real-device validation have already been completed.
@@ -19,6 +19,7 @@ It assumes the metadata pack and real-device validation have already been comple
 
 - confirm `app.json` version and build number are final
 - confirm release env uses production values only
+- run `npm run release:env-check`
 - confirm no debug banners, dev launchers, or preview URLs remain
 
 ## 2. Open The Workspace

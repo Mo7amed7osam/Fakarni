@@ -22,6 +22,7 @@ import {
   getGoogleCalendarScope,
   isGoogleCalendarConfigured,
 } from '../services/calendar';
+import { isAnalyticsConfigured } from '../services/analytics';
 import { colors, fonts, radii, spacing } from '../theme';
 import { RootStackParamList } from '../types';
 import { getResponsiveContentWidth, isTabletWidth } from '../utils/layout';
@@ -54,6 +55,7 @@ export function SettingsScreen({ navigation }: Props) {
       ? copy.settings.notificationActionBlocked
       : copy.settings.notificationActionAsk;
   const googleCalendarConfigured = isGoogleCalendarConfigured();
+  const analyticsConfigured = isAnalyticsConfigured();
   const googleClientId =
     Platform.OS === 'ios'
       ? getGoogleCalendarAuthConfig().iosClientId
@@ -490,7 +492,7 @@ export function SettingsScreen({ navigation }: Props) {
             onValueChange={(value) => {
               void handleAnalyticsToggle(value);
             }}
-            disabled={analyticsBusy}
+            disabled={analyticsBusy || !analyticsConfigured}
             trackColor={{ false: '#D9D2C5', true: colors.primary }}
           />
           <View style={styles.rowText}>
@@ -500,8 +502,12 @@ export function SettingsScreen({ navigation }: Props) {
         </View>
 
         <View style={[styles.analyticsCard, tabletLayout && styles.infoCardTablet]}>
-          <Text style={[styles.analyticsCardTitle, tabletLayout && styles.infoCardTitleTablet]}>
-            {settings.analytics.enabled
+            <Text style={[styles.analyticsCardTitle, tabletLayout && styles.infoCardTitleTablet]}>
+            {!analyticsConfigured
+              ? settings.uiLanguage === 'en'
+                ? 'Analytics unavailable in this build'
+                : 'التحليلات غير متاحة في هذه النسخة'
+              : settings.analytics.enabled
               ? settings.uiLanguage === 'en'
                 ? 'Analytics enabled'
                 : 'التحليلات مفعّلة'
@@ -510,7 +516,11 @@ export function SettingsScreen({ navigation }: Props) {
                 : 'التحليلات متوقفة'}
           </Text>
           <Text style={[styles.analyticsCardText, tabletLayout && styles.infoCardTextTablet]}>
-            {settings.uiLanguage === 'en'
+            {!analyticsConfigured
+              ? settings.uiLanguage === 'en'
+                ? 'This release build is not configured to send anonymous analytics.'
+                : 'هذه النسخة غير مهيأة لإرسال تحليلات مجهولة.'
+              : settings.uiLanguage === 'en'
               ? 'Raw speech text and reminder titles are not sent. You can turn analytics off here at any time.'
               : 'لا يتم إرسال النص الخام أو اسم التذكير. ويمكنك إيقاف التحليلات في أي وقت من هنا.'}
           </Text>

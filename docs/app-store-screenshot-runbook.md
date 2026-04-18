@@ -1,8 +1,10 @@
 # Fakarni App Store Screenshot Runbook
 
-Last prepared: 2026-04-14
+Last prepared: 2026-04-19
 
 This file turns the screenshot task into a repeatable workflow for the final App Store listing.
+
+Listing posture for 1.0: English-only screenshots.
 
 ## Target
 

@@ -1,6 +1,6 @@
 # Fakarni Release Owner Punch List
 
-Last prepared: 2026-04-14
+Last prepared: 2026-04-19
 
 This file contains only the remaining owner actions after the repo-side release fixes already applied in code and Xcode config.
 
@@ -10,7 +10,7 @@ This file contains only the remaining owner actions after the repo-side release 
 - Xcode target `Fakarni` now has a configured development team and automatic signing enabled.
 - Release versioning is aligned at `1.0.0 (1)`.
 - Release docs, metadata draft, privacy manifest, privacy answer sheet, screenshot runbook, and real-device validation runbook are in place.
-- Production parsing remains gateway-only on the client.
+- Production parsing stays optional on the client and safely falls back to the local rules-first path when no release gateway is configured.
 
 ## Remaining Owner Actions
 
@@ -27,7 +27,7 @@ This file contains only the remaining owner actions after the repo-side release 
    Start from the draft captures in `docs/app-store-screenshots-draft/`, then finish the final 5-shot set defined in `docs/app-store-screenshot-runbook.md` and upload it to App Store Connect.
 
 5. Set production release environment values.
-   Provide a live `EXPO_PUBLIC_PARSE_GATEWAY_URL` and confirm the intended PostHog production host/key, or disable analytics for release.
+   Provide a live `EXPO_PUBLIC_PARSE_GATEWAY_URL` only if you want remote parsing in the submitted build, confirm the intended PostHog production host/key only if analytics will be shipped, and run `npm run release:env-check` before archiving.
 
 6. Rotate any previously exposed provider secrets.
    Do this if any model/provider keys were ever used in client builds, commits, or screenshots.

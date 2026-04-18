@@ -176,6 +176,10 @@ let debugState: AnalyticsDebugState = {
 
 const listeners = new Set<() => void>();
 
+export function isAnalyticsConfigured() {
+  return Boolean(posthogApiKey);
+}
+
 function notifyListeners() {
   listeners.forEach((listener) => listener());
 }

@@ -1,9 +1,15 @@
 # Fakarni App Privacy Answers
 
-Last prepared: 2026-04-14
+Last prepared: 2026-04-19
 
 This file is a working draft for the App Privacy section in App Store Connect.
 Use it to answer Apple consistently with the actual shipped behavior.
+
+Fastest-submit default for 1.0:
+
+- Ship with analytics disabled unless verified production PostHog env is present in the submitted build.
+- Ship with remote parsing disabled unless a verified production parsing gateway is present in the submitted build.
+- If either optional service is absent, answer App Privacy narrowly for the build you actually upload.
 
 ## What The App Does
 
@@ -35,6 +41,16 @@ Use this as the starting point in App Store Connect, then verify it against the 
 
 3. `Calendar data`
    Only when the user explicitly enables calendar sync and grants access.
+
+### Narrowest Safe Submission Position
+
+If the submitted build does not include production analytics and does not include a production parsing gateway:
+
+- `User Content`: `No`
+- `Identifiers`: `No`
+- `Usage Data`: `No`
+- `Diagnostics`: `No`
+- Calendar-related answers still depend on whether Apple interprets optional on-device calendar write access as collected data for your exact submission; verify in App Store Connect before finalizing.
 
 ### Data Not Collected For Analytics Based On Current App Behavior
 

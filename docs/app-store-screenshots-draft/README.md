@@ -1,6 +1,6 @@
 # Fakarni Draft App Store Screenshots
 
-Last prepared: 2026-04-14
+Last prepared: 2026-04-19
 
 This folder contains draft simulator captures for the App Store listing.
 
@@ -15,7 +15,7 @@ This folder contains draft simulator captures for the App Store listing.
 
 - Recapture the final set at the exact App Store target size you choose.
 - Add one more polished fifth image, ideally a Siri or widget entry-point shot.
-- Decide whether the final listing will stay Arabic-first or switch to English-only screenshots.
+- Keep the final screenshot set English-only for the 1.0 submission.
 - Remove any screenshot whose copy, date, or reminder example does not match the final release narrative.
 
 ## Source

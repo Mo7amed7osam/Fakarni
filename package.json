@@ -10,6 +10,7 @@
     "run:ios": "expo run:ios",
     "assets:brand": "swift scripts/generate_brand_assets.swift",
     "gateway:parse": "node gateway/server.cjs",
+    "release:env-check": "node scripts/release-env-check.cjs",
     "test:parser": "node -r ./tests/register-ts.cjs --test tests/parser.arabic.test.cjs tests/parser.english.test.cjs tests/parser.hybrid.test.cjs",
     "test:gateway": "node --test tests/parsing-gateway.test.cjs",
     "test:parser:arabic": "node -r ./tests/register-ts.cjs --test tests/parser.arabic.test.cjs",

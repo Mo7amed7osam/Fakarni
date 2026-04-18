@@ -14,6 +14,7 @@ import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
 import { SectionCard } from '../components/SectionCard';
 import { useGhost } from '../context/GhostContext';
+import { isAnalyticsConfigured } from '../services/analytics';
 import { openSystemSettings } from '../services/notifications';
 import { isLLMConfigured } from '../services/llm';
 import { colors, fonts, radii, spacing } from '../theme';
@@ -86,6 +87,7 @@ export function HelpFaqScreen({ navigation, route }: Props) {
   const contentMaxWidth = getResponsiveContentWidth(width, 980);
   const faq = settings.uiLanguage === 'en' ? faqEnglish : faqArabic;
   const llmEnabled = isLLMConfigured();
+  const analyticsConfigured = isAnalyticsConfigured();
   const notificationActionLabel =
     notificationPermission === 'blocked'
       ? copy.settings.notificationActionBlocked
@@ -158,10 +160,10 @@ export function HelpFaqScreen({ navigation, route }: Props) {
             {settings.uiLanguage === 'en'
               ? llmEnabled
                 ? 'Smart parsing is enabled and routes through the configured Fakarni parsing gateway.'
-                : 'Smart parsing is not enabled in this build.'
+                : 'Remote smart parsing is not enabled in this build. Reminder parsing stays on the local rules-first path.'
               : llmEnabled
                 ? 'التحليل الذكي مفعّل ويمر عبر بوابة التحليل الخاصة بـ Fakarni.'
-                : 'التحليل الذكي غير مفعّل في هذه النسخة.'}
+                : 'التحليل الذكي عن بُعد غير مفعّل في هذه النسخة، وسيبقى التحليل المحلي المعتمد على القواعد هو المسار الأساسي.'}
           </Text>
           <Text style={[styles.answer, tabletLayout && styles.answerTablet]}>
             {settings.uiLanguage === 'en'
@@ -170,8 +172,12 @@ export function HelpFaqScreen({ navigation, route }: Props) {
           </Text>
           <Text style={[styles.answer, tabletLayout && styles.answerTablet]}>
             {settings.uiLanguage === 'en'
-              ? `Anonymous analytics: ${settings.analytics.enabled ? 'enabled' : 'disabled'}, and raw transcripts or reminder titles are not sent.`
-              : `التحليلات المجهولة: ${settings.analytics.enabled ? 'مفعّلة' : 'متوقفة'}، ولا ترسل transcript الخام أو أسماء التذكيرات.`}
+              ? analyticsConfigured
+                ? `Anonymous analytics: ${settings.analytics.enabled ? 'enabled' : 'disabled'}, and raw transcripts or reminder titles are not sent.`
+                : 'Anonymous analytics are not configured in this build.'
+              : analyticsConfigured
+                ? `التحليلات المجهولة: ${settings.analytics.enabled ? 'مفعّلة' : 'متوقفة'}، ولا ترسل transcript الخام أو أسماء التذكيرات.`
+                : 'التحليلات المجهولة غير مهيأة في هذه النسخة.'}
           </Text>
         </View>
       </SectionCard>
