@@ -105,7 +105,7 @@ export function ReminderListScreen({ navigation }: Props) {
   }
 
   const filters: Array<{ id: ReminderListFilter; label: string }> = [
-    { id: 'today', label: copy.common.today },
+    { id: 'today', label: copy.reminderList.activeFilter },
     { id: 'overdue', label: copy.common.overdue },
   ];
 
