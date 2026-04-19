@@ -18,7 +18,6 @@ import {
 interface ReminderCardProps {
   reminder: Reminder;
   onPress?: () => void;
-  onShare?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onComplete?: () => void;
@@ -26,11 +25,14 @@ interface ReminderCardProps {
   onSnooze1h?: () => void;
 }
 
-function PencilGlyph() {
+function EditGlyph() {
   return (
-    <View style={styles.pencilWrap}>
-      <View style={styles.pencilBody} />
-      <View style={styles.pencilTip} />
+    <View style={styles.editGlyphWrap}>
+      <View style={styles.editGlyphCard} />
+      <View style={styles.editGlyphLineTop} />
+      <View style={styles.editGlyphLineBottom} />
+      <View style={styles.editGlyphPencilBody} />
+      <View style={styles.editGlyphPencilTip} />
     </View>
   );
 }
@@ -96,7 +98,6 @@ function getStateLabelForLanguage(reminder: Reminder, language: 'ar-EG' | 'en') 
 export function ReminderCard({
   reminder,
   onPress,
-  onShare,
   onEdit,
   onDelete,
   onComplete,
@@ -116,10 +117,11 @@ export function ReminderCard({
         ? 'Snoozed reminder'
         : 'الجرس المؤجل'
       : settings.uiLanguage === 'en'
-        ? 'Next reminder'
-        : 'التذكير القادم';
+        ? 'Reminder'
+        : 'التذكير';
   const showTriggeredMeta =
     reminder.lastTriggeredAt && dayjs(reminder.lastTriggeredAt).isValid();
+  const showStateBadge = snapshot.bucket !== 'upcoming';
 
   return (
     <Pressable onPress={onPress} style={[styles.card, tabletLayout && styles.cardTablet]}>
@@ -135,30 +137,32 @@ export function ReminderCard({
               {getRecurrenceLabel(reminder.recurrence, settings.uiLanguage)}
             </Text>
           </View>
-          <View
-            style={[
-              styles.stateBadge,
-              snapshot.bucket === 'overdue'
-                ? styles.stateBadgeOverdue
-                : snapshot.bucket === 'done'
-                  ? styles.stateBadgeDone
-                  : styles.stateBadgeToday,
-            ]}
-          >
-            <Text
+          {showStateBadge ? (
+            <View
               style={[
-                styles.stateBadgeText,
-                tabletLayout && styles.badgeTextTablet,
+                styles.stateBadge,
                 snapshot.bucket === 'overdue'
-                  ? styles.stateBadgeTextOverdue
+                  ? styles.stateBadgeOverdue
                   : snapshot.bucket === 'done'
-                    ? styles.stateBadgeTextDone
-                    : styles.stateBadgeTextToday,
+                    ? styles.stateBadgeDone
+                    : styles.stateBadgeToday,
               ]}
             >
-              {getStateLabelForLanguage(reminder, settings.uiLanguage)}
-            </Text>
-          </View>
+              <Text
+                style={[
+                  styles.stateBadgeText,
+                  tabletLayout && styles.badgeTextTablet,
+                  snapshot.bucket === 'overdue'
+                    ? styles.stateBadgeTextOverdue
+                    : snapshot.bucket === 'done'
+                      ? styles.stateBadgeTextDone
+                      : styles.stateBadgeTextToday,
+                ]}
+              >
+                {getStateLabelForLanguage(reminder, settings.uiLanguage)}
+              </Text>
+            </View>
+          ) : null}
           {reminder.notificationStatus === 'permission_required' ? (
             <View style={[styles.warningBadge, tabletLayout && styles.badgeTablet]}>
               <Text style={[styles.warningBadgeText, tabletLayout && styles.badgeTextTablet]}>
@@ -168,14 +172,9 @@ export function ReminderCard({
           ) : null}
         </View>
         <View style={styles.actionsRow}>
-          {onShare ? (
-            <Pressable onPress={onShare} style={[styles.shareChip, tabletLayout && styles.iconChipTablet]}>
-              <Text style={[styles.shareText, tabletLayout && styles.shareTextTablet]}>{copy.common.share}</Text>
-            </Pressable>
-          ) : null}
           {onEdit ? (
             <Pressable onPress={onEdit} style={[styles.editChip, tabletLayout && styles.iconChipTablet]}>
-              <PencilGlyph />
+              <EditGlyph />
             </Pressable>
           ) : null}
           {onDelete ? (
@@ -363,55 +362,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shareChip: {
-    minWidth: 56,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: colors.accentSoft,
-    borderWidth: 1,
-    borderColor: 'rgba(0,229,168,0.24)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  shareText: {
-    color: '#0F766E',
-    fontFamily: fonts.bold,
-    fontSize: 12,
-    writingDirection: 'rtl',
-  },
-  shareTextTablet: {
-    fontSize: 15,
-  },
   iconChipTablet: {
     minWidth: 44,
     height: 44,
     borderRadius: 22,
   },
-  pencilWrap: {
-    width: 14,
-    height: 14,
-    transform: [{ rotate: '-35deg' }],
+  editGlyphWrap: {
+    width: 16,
+    height: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pencilBody: {
-    width: 11,
-    height: 4,
-    borderRadius: 2,
+  editGlyphCard: {
+    width: 12,
+    height: 14,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(108,92,231,0.08)',
+  },
+  editGlyphLineTop: {
+    position: 'absolute',
+    top: 4,
+    width: 5,
+    height: 1.5,
+    borderRadius: 999,
     backgroundColor: colors.primary,
   },
-  pencilTip: {
+  editGlyphLineBottom: {
     position: 'absolute',
+    top: 7,
+    width: 4,
+    height: 1.5,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+  },
+  editGlyphPencilBody: {
+    position: 'absolute',
+    width: 7,
+    height: 2.5,
+    borderRadius: 999,
+    backgroundColor: colors.primaryDark,
+    transform: [{ rotate: '-42deg' }],
     right: -1,
+    bottom: 2,
+  },
+  editGlyphPencilTip: {
+    position: 'absolute',
+    right: 3,
+    bottom: 1,
     width: 0,
     height: 0,
-    borderTopWidth: 3,
-    borderBottomWidth: 3,
-    borderLeftWidth: 4,
+    borderTopWidth: 2.5,
+    borderBottomWidth: 2.5,
+    borderLeftWidth: 3,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
     borderLeftColor: colors.primaryDark,
+    transform: [{ rotate: '-42deg' }],
   },
   deleteChip: {
     width: 34,

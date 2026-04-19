@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   View,
@@ -20,14 +19,13 @@ import { useGhost } from '../context/GhostContext';
 import { colors, fonts, radii, spacing } from '../theme';
 import { RootStackParamList } from '../types';
 import { getResponsiveContentWidth, isTabletWidth } from '../utils/layout';
-import { buildShareMessage } from '../utils/ghostPersonality';
 import {
   buildManualReminderDraft,
   getReminderTimelineSnapshot,
 } from '../utils/reminders';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReminderList'>;
-type ReminderListFilter = 'today' | 'upcoming' | 'overdue';
+type ReminderListFilter = 'today' | 'overdue';
 
 export function ReminderListScreen({ navigation }: Props) {
   const {
@@ -53,10 +51,10 @@ export function ReminderListScreen({ navigation }: Props) {
   const counts = useMemo(
     () => ({
       today: reminders.filter(
-        (reminder) => getReminderTimelineSnapshot(reminder).bucket === 'today'
-      ).length,
-      upcoming: reminders.filter(
-        (reminder) => getReminderTimelineSnapshot(reminder).bucket === 'upcoming'
+        (reminder) => {
+          const bucket = getReminderTimelineSnapshot(reminder).bucket;
+          return bucket === 'today' || bucket === 'upcoming';
+        }
       ).length,
       overdue: reminders.filter(
         (reminder) => getReminderTimelineSnapshot(reminder).bucket === 'overdue'
@@ -72,7 +70,9 @@ export function ReminderListScreen({ navigation }: Props) {
     () =>
       reminders.filter((reminder) => {
         const bucket = getReminderTimelineSnapshot(reminder).bucket;
-        return bucket === activeFilter;
+        return activeFilter === 'today'
+          ? bucket === 'today' || bucket === 'upcoming'
+          : bucket === 'overdue';
       }),
     [activeFilter, reminders]
   );
@@ -106,7 +106,6 @@ export function ReminderListScreen({ navigation }: Props) {
 
   const filters: Array<{ id: ReminderListFilter; label: string }> = [
     { id: 'today', label: copy.common.today },
-    { id: 'upcoming', label: copy.common.upcoming },
     { id: 'overdue', label: copy.common.overdue },
   ];
 
@@ -198,23 +197,13 @@ export function ReminderListScreen({ navigation }: Props) {
             subtitle={
               activeFilter === 'today'
                 ? copy.reminderList.filterQuietToday
-                : activeFilter === 'upcoming'
-                  ? copy.reminderList.filterQuietUpcoming
-                  : copy.reminderList.filterQuietOverdue
+                : copy.reminderList.filterQuietOverdue
             }
           >
             <GhostButton
               label={copy.reminderList.switchFilter}
               variant="secondary"
-              onPress={() =>
-                setActiveFilter(
-                  activeFilter === 'today'
-                    ? 'upcoming'
-                    : activeFilter === 'upcoming'
-                      ? 'overdue'
-                      : 'today'
-                )
-              }
+              onPress={() => setActiveFilter(activeFilter === 'today' ? 'overdue' : 'today')}
             />
           </SectionCard>
         ) : (
@@ -222,11 +211,6 @@ export function ReminderListScreen({ navigation }: Props) {
             <ReminderCard
               key={reminder.id}
               reminder={reminder}
-              onShare={() => {
-                void Share.share({
-                  message: buildShareMessage(reminder, settings.ghostMode, settings.uiLanguage),
-                });
-              }}
               onEdit={() =>
                 navigation.navigate('Confirmation', {
                   mode: 'edit',
@@ -301,6 +285,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    paddingTop: spacing.xl,
     alignItems: 'center',
     gap: spacing.md,
     paddingBottom: 52,

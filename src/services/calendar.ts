@@ -3,8 +3,9 @@ import * as Calendar from 'expo-calendar';
 import * as SecureStore from 'expo-secure-store';
 import dayjs from 'dayjs';
 import { Platform } from 'react-native';
-import { saveToAppleCalendar } from './appleCalendar';
+import { deleteFromAppleCalendar, saveToAppleCalendar } from './appleCalendar';
 import {
+  CalendarDeleteResult,
   CalendarEventResult,
   CalendarProvider,
   GoogleCalendarConnection,
@@ -35,6 +36,13 @@ export interface CalendarEventInput {
   date: string;
   endDate?: string;
   reminderOffset: number;
+  platform?: 'ios' | 'android';
+  googleCalendar?: GoogleCalendarConnection;
+}
+
+export interface CalendarDeleteInput {
+  eventId: string;
+  provider?: CalendarProvider;
   platform?: 'ios' | 'android';
   googleCalendar?: GoogleCalendarConnection;
 }
@@ -362,4 +370,106 @@ export async function createCalendarEvent(
     });
   }
   return result;
+}
+
+async function deleteDeviceCalendarEvent(
+  input: CalendarDeleteInput
+): Promise<CalendarDeleteResult> {
+  const platform = input.platform ?? (Platform.OS === 'ios' ? 'ios' : 'android');
+  if (platform === 'ios') {
+    return deleteFromAppleCalendar(input.eventId);
+  }
+
+  try {
+    const existingPermission = await Calendar.getCalendarPermissionsAsync();
+    if (!existingPermission.granted) {
+      return {
+        status: 'skipped',
+        provider: 'device',
+      };
+    }
+
+    await Calendar.deleteEventAsync(input.eventId);
+    return {
+      status: 'deleted',
+      provider: 'device',
+    };
+  } catch {
+    return {
+      status: 'failed',
+      provider: 'device',
+    };
+  }
+}
+
+async function deleteGoogleCalendarEvent(
+  input: CalendarDeleteInput
+): Promise<CalendarDeleteResult> {
+  const platform = input.platform ?? (Platform.OS === 'ios' ? 'ios' : 'android');
+  const accessToken = await getValidGoogleAccessToken(platform);
+  if (!accessToken) {
+    return {
+      status: 'skipped',
+      provider: 'google',
+    };
+  }
+
+  try {
+    const response = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(
+        input.eventId
+      )}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (response.status === 404 || response.status === 410) {
+      return {
+        status: 'skipped',
+        provider: 'google',
+      };
+    }
+
+    if (!response.ok) {
+      return {
+        status: 'failed',
+        provider: 'google',
+      };
+    }
+
+    return {
+      status: 'deleted',
+      provider: 'google',
+    };
+  } catch {
+    return {
+      status: 'failed',
+      provider: 'google',
+    };
+  }
+}
+
+export async function deleteCalendarEvent(
+  input: CalendarDeleteInput
+): Promise<CalendarDeleteResult> {
+  if (!input.eventId.trim()) {
+    return {
+      status: 'skipped',
+      provider: input.provider,
+    };
+  }
+
+  if (input.provider === 'apple') {
+    return deleteFromAppleCalendar(input.eventId);
+  }
+
+  if (input.provider === 'google') {
+    return deleteGoogleCalendarEvent(input);
+  }
+
+  return deleteDeviceCalendarEvent(input);
 }

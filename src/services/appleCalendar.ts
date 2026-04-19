@@ -1,5 +1,9 @@
 import { NativeModules, Platform } from 'react-native';
-import { AppleCalendarPermissionStatus, CalendarEventResult } from '../types';
+import {
+  AppleCalendarPermissionStatus,
+  CalendarDeleteResult,
+  CalendarEventResult,
+} from '../types';
 
 interface NativePermissionResponse {
   granted: boolean;
@@ -17,6 +21,16 @@ interface NativeSaveResponse {
   authorizationStatus?: AppleCalendarPermissionStatus;
 }
 
+interface NativeDeleteResponse {
+  status:
+    | 'deleted'
+    | 'not_authorized'
+    | 'not_found'
+    | 'invalid_input'
+    | 'failed';
+  authorizationStatus?: AppleCalendarPermissionStatus;
+}
+
 interface NativeAppleCalendarModule {
   getAuthorizationStatus(): Promise<AppleCalendarPermissionStatus>;
   requestWriteAccess(): Promise<NativePermissionResponse>;
@@ -26,6 +40,7 @@ interface NativeAppleCalendarModule {
     endDate?: string;
     reminderOffsetMinutes: number;
   }): Promise<NativeSaveResponse>;
+  deleteEvent(eventId: string): Promise<NativeDeleteResponse>;
 }
 
 const nativeAppleCalendar = NativeModules.VoiceGhostAppleCalendar as
@@ -118,6 +133,52 @@ export async function saveToAppleCalendar(
   } catch (error) {
     if (__DEV__) {
       console.warn('Apple Calendar save failed', error);
+    }
+
+    return {
+      status: 'failed',
+      provider: 'apple',
+    };
+  }
+}
+
+export async function deleteFromAppleCalendar(
+  eventId: string
+): Promise<CalendarDeleteResult> {
+  if (!isAppleCalendarAvailable() || !nativeAppleCalendar || !eventId.trim()) {
+    return {
+      status: 'skipped',
+      provider: 'apple',
+    };
+  }
+
+  try {
+    const result = await nativeAppleCalendar.deleteEvent(eventId);
+    if (result.status === 'deleted') {
+      return {
+        status: 'deleted',
+        provider: 'apple',
+      };
+    }
+
+    if (
+      result.status === 'not_authorized' ||
+      result.status === 'not_found' ||
+      result.status === 'invalid_input'
+    ) {
+      return {
+        status: 'skipped',
+        provider: 'apple',
+      };
+    }
+
+    return {
+      status: 'failed',
+      provider: 'apple',
+    };
+  } catch (error) {
+    if (__DEV__) {
+      console.warn('Apple Calendar delete failed', error);
     }
 
     return {

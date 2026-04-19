@@ -48,6 +48,7 @@ export type ReminderNotificationStatus = 'scheduled' | 'permission_required';
 export type NotificationPermissionState = 'granted' | 'undetermined' | 'blocked';
 export type CalendarProvider = 'apple' | 'google' | 'device';
 export type CalendarSyncStatus = 'none' | 'pending' | 'synced' | 'failed' | 'skipped';
+export type CalendarDeleteStatus = 'deleted' | 'failed' | 'skipped';
 export type AdsProvider = 'none' | 'admob';
 export interface AnalyticsSettingsState {
   enabled: boolean;
@@ -118,6 +119,11 @@ export interface CalendarEventResult {
   provider?: CalendarProvider;
   eventId?: string;
   alertConfigured?: boolean;
+}
+
+export interface CalendarDeleteResult {
+  status: CalendarDeleteStatus;
+  provider?: CalendarProvider;
 }
 
 export interface ParseResult {

@@ -40,6 +40,7 @@ They must never contain provider secrets.
 
 These values belong only on the parsing gateway server.
 They must never be present in Expo public env, app config, or client code.
+For local and production server setup, the repo now provides `gateway/.env.example`, and `npm run gateway:parse` auto-loads `gateway/.env`, `gateway/.env.local`, `.env.gateway`, or `.env.gateway.local` when present.
 
 - `PARSE_GATEWAY_BASE_URL`
 - `PARSE_GATEWAY_API_KEY`

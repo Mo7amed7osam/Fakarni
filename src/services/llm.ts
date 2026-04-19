@@ -8,6 +8,7 @@ import {
   ReminderCategory,
 } from '../types';
 import { normalizeArabicText } from '../utils/arabic';
+import { normalizeArabicReminderTitle } from '../utils/reminderTitle';
 
 const validCategories: ReminderCategory[] = [
   'study',
@@ -128,6 +129,7 @@ function buildNormalizedParseResult(
     cacheHit: boolean;
     parsePath: ParsePath;
     llmReason?: ParseLLMReason;
+    locale: string;
   }
 ): ParseResult {
   const eventAt = normalizeEventAt(parsed.eventAt, baseParse.eventAt);
@@ -139,7 +141,9 @@ function buildNormalizedParseResult(
   return {
     title:
       typeof parsed.title === 'string' && parsed.title.trim()
-        ? parsed.title.trim()
+        ? locale.startsWith('ar')
+          ? normalizeArabicReminderTitle(parsed.title.trim())
+          : parsed.title.trim()
         : baseParse.title,
     eventAt,
     remindAt: eventAt
@@ -256,6 +260,7 @@ export async function refineParseWithLLM(
     return null;
   }
 
+  const locale = detectPromptLocale(transcript);
   const cacheKey = buildCacheKey(transcript, llmReason);
   const cached = readParseCache(cacheKey);
   if (cached) {
@@ -278,6 +283,7 @@ export async function refineParseWithLLM(
         cacheHit: Boolean(gatewayPayload.cacheHit),
         parsePath: normalizeParsePath(gatewayPayload.parsePath, 'mini_model'),
         llmReason,
+        locale,
       });
     }
   } catch {

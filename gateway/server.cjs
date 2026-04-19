@@ -1,5 +1,7 @@
+const { loadGatewayEnv } = require('./load-env.cjs');
 const { createHttpServer, createParseGateway } = require('./parse-gateway.cjs');
 
+const { loadedFiles } = loadGatewayEnv();
 const port = Number(process.env.PARSE_GATEWAY_PORT || 8787);
 const host = process.env.PARSE_GATEWAY_HOST || '0.0.0.0';
 
@@ -23,6 +25,9 @@ server.on('error', (error) => {
 
 server.listen(port, host, () => {
   const publicHost = host === '0.0.0.0' ? 'localhost' : host;
+  if (loadedFiles.length) {
+    console.log(`[parse-gateway] loaded env files: ${loadedFiles.join(', ')}`);
+  }
   console.log(`[parse-gateway] listening on http://${publicHost}:${port}/parse`);
   console.log(`[parse-gateway] healthcheck http://${publicHost}:${port}/health`);
   console.log(

@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
     justifyContent: 'center',
     alignItems: 'center',
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   topBlock: {
     alignItems: 'center',
     gap: 4,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
   brand: {
     fontFamily: fonts.bold,

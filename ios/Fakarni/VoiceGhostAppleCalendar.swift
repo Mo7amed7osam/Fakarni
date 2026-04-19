@@ -118,6 +118,49 @@ final class VoiceGhostAppleCalendar: NSObject {
     }
   }
 
+  @objc(deleteEvent:resolver:rejecter:)
+  func deleteEvent(
+    _ eventId: NSString,
+    resolver resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    let authorizationStatus = EKEventStore.authorizationStatus(for: .event)
+    guard Self.canWriteEvents(with: authorizationStatus) else {
+      resolve([
+        "status": "not_authorized",
+        "authorizationStatus": Self.statusString(for: authorizationStatus),
+      ])
+      return
+    }
+
+    let normalizedEventId = String(eventId).trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalizedEventId.isEmpty else {
+      resolve([
+        "status": "invalid_input",
+        "authorizationStatus": Self.statusString(for: authorizationStatus),
+      ])
+      return
+    }
+
+    guard let event = eventStore.event(withIdentifier: normalizedEventId) else {
+      resolve([
+        "status": "not_found",
+        "authorizationStatus": Self.statusString(for: authorizationStatus),
+      ])
+      return
+    }
+
+    do {
+      try eventStore.remove(event, span: .thisEvent)
+      resolve([
+        "status": "deleted",
+        "authorizationStatus": Self.statusString(for: authorizationStatus),
+      ])
+    } catch {
+      reject("calendar_delete_failed", error.localizedDescription, error)
+    }
+  }
+
   @objc
   static func requiresMainQueueSetup() -> Bool {
     false

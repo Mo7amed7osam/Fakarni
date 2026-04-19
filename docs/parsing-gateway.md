@@ -21,6 +21,16 @@ The repo now ships a small Node gateway at:
 
 - `gateway/server.cjs`
 - `gateway/parse-gateway.cjs`
+- `gateway/load-env.cjs`
+
+The server now auto-loads gateway-only env files in this order when you run `npm run gateway:parse`:
+
+- `.env.gateway`
+- `.env.gateway.local`
+- `gateway/.env`
+- `gateway/.env.local`
+
+Shell-exported env vars still win over file values.
 
 Run it locally with:
 
@@ -42,6 +52,7 @@ POST /parse
 
 ## Gateway Environment Variables
 
+- These belong on the server only. Do not put them in the mobile app env.
 - `PARSE_GATEWAY_PORT`
   - optional
   - default `8787`
@@ -59,6 +70,10 @@ POST /parse
 - `PARSE_GATEWAY_STRONG_MODEL`
   - optional
   - stronger fallback model used only when the mini result is still weak
+
+You can start from:
+
+- `gateway/.env.example`
 
 ## Expected Gateway Request
 
@@ -101,6 +116,7 @@ POST /parse
 ## Notes
 
 - The client keeps the existing parse contract and only adds internal observability metadata.
+- The mobile app remains App-Store-safe because it only knows `EXPO_PUBLIC_PARSE_GATEWAY_URL`; provider base URLs, models, and keys stay on the server.
 - The gateway should own:
   - server-side cache
   - mini vs strong model routing
@@ -112,4 +128,5 @@ POST /parse
   - mini vs strong model routing
   - `/health` status route
   - OpenAI-compatible `/chat/completions` provider integration
+  - clear JSON errors for invalid requests and provider failures
 - If the gateway provider env is missing, `/parse` returns `503 provider_not_configured` and the mobile client falls back to local review mode.

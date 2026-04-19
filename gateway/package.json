@@ -1,0 +1,11 @@
+{
+  "name": "fakarni-parse-gateway",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.20"
+  }
+}

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as AuthSession from 'expo-auth-session';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
 import { SectionCard } from '../components/SectionCard';
@@ -243,8 +244,9 @@ export function SettingsScreen({ navigation }: Props) {
   }, [calendarNotice]);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={[styles.contentInner, { maxWidth: contentMaxWidth }]}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+        <View style={[styles.contentInner, { maxWidth: contentMaxWidth }]}>
       <View style={styles.titleWrap}>
         <Text style={[styles.title, tabletLayout && styles.titleTablet]}>{copy.settings.title}</Text>
         <Text style={[styles.subtitle, tabletLayout && styles.subtitleTablet]}>{copy.settings.subtitle}</Text>
@@ -561,18 +563,24 @@ export function SettingsScreen({ navigation }: Props) {
           Quantara Tech
         </Text>
       </View>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   screen: {
     flex: 1,
     backgroundColor: colors.background,
   },
   content: {
     padding: spacing.lg,
+    paddingTop: spacing.xl,
     alignItems: 'center',
     gap: spacing.md,
     paddingBottom: 48,

@@ -50,6 +50,7 @@ import {
 import {
   clearGoogleCalendarCredentials,
   createCalendarEvent,
+  deleteCalendarEvent,
   GoogleCalendarCredentials,
   saveGoogleCalendarCredentials,
 } from '../services/calendar';
@@ -1534,7 +1535,29 @@ export function GhostProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        await withNotificationLifecycleLock(() => cancelAllReminderNotifications(target));
+        const [calendarDeleteResult] = await Promise.all([
+          target.calendarEventId
+            ? deleteCalendarEvent({
+                eventId: target.calendarEventId,
+                provider: target.calendarProvider,
+                platform: Platform.OS === 'ios' ? 'ios' : 'android',
+                googleCalendar: settings.googleCalendar,
+              }).catch(() => ({
+                status: 'failed' as const,
+                provider: target.calendarProvider,
+              }))
+            : Promise.resolve(null),
+          withNotificationLifecycleLock(() => cancelAllReminderNotifications(target)),
+        ]);
+
+        if (__DEV__ && calendarDeleteResult?.status === 'failed') {
+          console.warn('Calendar delete failed for reminder', {
+            reminderId: target.id,
+            provider: target.calendarProvider,
+            eventId: target.calendarEventId,
+          });
+        }
+
         track('reminder deleted', {
           entry_point: 'edit',
           notification_permission_state: target.notificationStatus,

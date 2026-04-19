@@ -15,6 +15,7 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import dayjs from 'dayjs';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassSurface } from '../components/GlassSurface';
 import { GhostButton } from '../components/GhostButton';
 import { getAppCopy } from '../content/appCopy';
@@ -61,6 +62,10 @@ export function ConfirmationScreen({ navigation, route }: Props) {
   const { draft, transcript, confidence, missingFields, mode, reminderId } = route.params;
   const isEdit = mode === 'edit';
   const isManualCreate = !isEdit && !transcript.trim();
+  const useCompactLayout =
+    isEdit ||
+    isManualCreate ||
+    (Boolean(transcript.trim()) && (confidence < 0.9 || missingFields.length > 0));
   const entryPoint = isEdit
     ? 'edit'
     : isManualCreate
@@ -177,6 +182,10 @@ export function ConfirmationScreen({ navigation, route }: Props) {
     if (Platform.OS !== 'ios') {
       setShowMode(null);
     }
+  }
+
+  function dismissPicker() {
+    setShowMode(null);
   }
 
   async function handleSave() {
@@ -326,12 +335,13 @@ export function ConfirmationScreen({ navigation, route }: Props) {
   }
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={[styles.contentInner, { maxWidth: contentMaxWidth }]}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={[styles.contentInner, { maxWidth: contentMaxWidth }]}>
       <Text style={[styles.title, tabletLayout && styles.titleTablet]}>
         {isEdit
           ? copy.confirmation.titleEdit
@@ -377,7 +387,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
         </SectionCard>
       ) : null}
 
-      {isManualCreate ? (
+      {useCompactLayout ? (
         <>
           <GlassSurface
             style={styles.compactCard}
@@ -482,13 +492,27 @@ export function ConfirmationScreen({ navigation, route }: Props) {
             </View>
 
             {showMode ? (
-              <DateTimePicker
-                mode={showMode}
-                value={eventDate}
-                is24Hour={false}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleDateTimeChange}
-              />
+              <View style={styles.pickerWrap}>
+                {Platform.OS === 'ios' ? (
+                  <View style={styles.pickerHeader}>
+                    <Text style={[styles.pickerHeaderTitle, tabletLayout && styles.pickerHeaderTitleTablet]}>
+                      {showMode === 'date' ? copy.common.chooseDate : copy.common.chooseTime}
+                    </Text>
+                    <Pressable onPress={dismissPicker} style={styles.pickerDoneChip}>
+                      <Text style={[styles.pickerDoneText, tabletLayout && styles.pickerDoneTextTablet]}>
+                        {copy.common.save}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                <DateTimePicker
+                  mode={showMode}
+                  value={eventDate}
+                  is24Hour={false}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleDateTimeChange}
+                />
+              </View>
             ) : null}
           </GlassSurface>
 
@@ -652,13 +676,27 @@ export function ConfirmationScreen({ navigation, route }: Props) {
             </View>
 
             {showMode ? (
-              <DateTimePicker
-                mode={showMode}
-                value={eventDate}
-                is24Hour={false}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleDateTimeChange}
-              />
+              <View style={styles.pickerWrap}>
+                {Platform.OS === 'ios' ? (
+                  <View style={styles.pickerHeader}>
+                    <Text style={[styles.pickerHeaderTitle, tabletLayout && styles.pickerHeaderTitleTablet]}>
+                      {showMode === 'date' ? copy.common.chooseDate : copy.common.chooseTime}
+                    </Text>
+                    <Pressable onPress={dismissPicker} style={styles.pickerDoneChip}>
+                      <Text style={[styles.pickerDoneText, tabletLayout && styles.pickerDoneTextTablet]}>
+                        {copy.common.save}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                <DateTimePicker
+                  mode={showMode}
+                  value={eventDate}
+                  is24Hour={false}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleDateTimeChange}
+                />
+              </View>
             ) : null}
           </SectionCard>
 
@@ -799,7 +837,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
         </Text>
       ) : null}
 
-      {isManualCreate ? (
+      {useCompactLayout ? (
         <View style={[styles.manualFooter, tabletLayout && styles.manualFooterTablet]}>
           <GhostButton
             label={saving ? copy.confirmation.saving : copy.confirmation.saveReminder}
@@ -835,18 +873,24 @@ export function ConfirmationScreen({ navigation, route }: Props) {
           />
         </View>
       )}
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   screen: {
     flex: 1,
     backgroundColor: colors.background,
   },
   content: {
     padding: spacing.lg,
+    paddingTop: spacing.xl,
     alignItems: 'center',
     gap: spacing.md,
     paddingBottom: 48,
@@ -1054,6 +1098,48 @@ const styles = StyleSheet.create({
     minHeight: 68,
     paddingHorizontal: spacing.lg,
     fontSize: 19,
+  },
+  pickerWrap: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+  },
+  pickerHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  pickerHeaderTitle: {
+    flex: 1,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    color: colors.text,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  pickerHeaderTitleTablet: {
+    fontSize: 16,
+    lineHeight: 26,
+  },
+  pickerDoneChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(108,92,231,0.10)',
+  },
+  pickerDoneText: {
+    fontFamily: fonts.bold,
+    fontSize: 12,
+    color: colors.primaryDark,
+    writingDirection: 'rtl',
+  },
+  pickerDoneTextTablet: {
+    fontSize: 15,
   },
   row: {
     flexDirection: 'row-reverse',

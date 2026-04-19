@@ -7,8 +7,16 @@ import {
 import { normalizeArabicText } from './arabic';
 import { classifyReminderCategory } from './categorization';
 import { isLLMConfigured, refineParseWithLLM } from '../services/llm';
+import { normalizeArabicReminderTitle } from './reminderTitle';
 
 type RuleLanguage = 'ar' | 'en';
+
+type ParsedTimeParts = {
+  hour: number;
+  minute: number;
+  inferred: boolean;
+  coarse: boolean;
+};
 
 const weekdayMap: Record<string, number> = {
   الاحد: 0,
@@ -34,13 +42,6 @@ const englishWeekdayMap: Record<string, number> = {
   friday: 5,
   saturday: 6,
 };
-
-const arabicTaskTitleNormalizers: Array<[RegExp, string]> = [
-  [/^كلم(?=\s|$)/, 'اكلم'],
-  [/^روح(?=\s|$)/, 'اروح'],
-  [/^راجع(?=\s|$)/, 'اراجع'],
-  [/^ذاكر(?=\s|$)/, 'اذاكر'],
-];
 
 function detectRuleLanguage(value: string): RuleLanguage {
   const englishMatches = value.match(/[A-Za-z]/g)?.length ?? 0;
@@ -263,14 +264,14 @@ function parseDayBase(value: string, language: RuleLanguage) {
   return null;
 }
 
-function parseTimeParts(value: string, language: RuleLanguage) {
+function parseTimeParts(value: string, language: RuleLanguage): ParsedTimeParts | null {
   if (language === 'en') {
     if (/\bnoon\b/.test(value)) {
-      return { hour: 12, minute: 0, inferred: false };
+      return { hour: 12, minute: 0, inferred: false, coarse: false };
     }
 
     if (/\bmidnight\b/.test(value)) {
-      return { hour: 0, minute: 0, inferred: false };
+      return { hour: 0, minute: 0, inferred: false, coarse: false };
     }
 
     const patterns = [
@@ -296,27 +297,155 @@ function parseTimeParts(value: string, language: RuleLanguage) {
         hour = 0;
       }
 
-      return { hour, minute, inferred: !meridiem };
+      return { hour, minute, inferred: !meridiem, coarse: false };
     }
 
     if (/\bmorning\b/.test(value)) {
-      return { hour: 9, minute: 0, inferred: true };
+      return { hour: 9, minute: 0, inferred: true, coarse: true };
     }
 
     if (/\bafternoon\b/.test(value)) {
-      return { hour: 15, minute: 0, inferred: true };
+      return { hour: 15, minute: 0, inferred: true, coarse: true };
     }
 
     if (/\bevening\b|\btonight\b/.test(value)) {
-      return { hour: 20, minute: 0, inferred: true };
+      return { hour: 20, minute: 0, inferred: true, coarse: true };
     }
 
     return null;
   }
 
+  const arabicTimeOfDayPatterns = {
+    dawn: /(?:^|\s)(?:الفجر)(?:\s|$)/,
+    morning: /(?:^|\s)(?:الصبح|الصباح|صباحا|صباحًا)(?:\s|$)/,
+    noon: /(?:^|\s)(?:الضهر|الظهر|النهار)(?:\s|$)/,
+    afternoon: /(?:^|\s)(?:العصر)(?:\s|$)/,
+    sunset: /(?:^|\s)(?:المغرب)(?:\s|$)/,
+    evening: /(?:^|\s)(?:المساء|مساء)(?:\s|$)/,
+    dinner: /(?:^|\s)(?:العشا|العشاء)(?:\s|$)/,
+    night: /(?:^|\s)(?:بالليل|بليل|الليل|ليل)(?:\s|$)/,
+  } as const;
+  const arabicHourWordMap: Record<string, number> = {
+    الواحده: 1,
+    واحده: 1,
+    واحد: 1,
+    الاتنين: 2,
+    اتنين: 2,
+    اثنين: 2,
+    التلاته: 3,
+    تلاته: 3,
+    الثلاثه: 3,
+    ثلاثه: 3,
+    الاربعه: 4,
+    اربعه: 4,
+    الاربعة: 4,
+    اربعة: 4,
+    الخمسه: 5,
+    خمسه: 5,
+    السته: 6,
+    سته: 6,
+    السبعه: 7,
+    سبعه: 7,
+    التمانيه: 8,
+    تمانيه: 8,
+    الثمانيه: 8,
+    ثمانيه: 8,
+    التسعه: 9,
+    تسعه: 9,
+    العشره: 10,
+    عشره: 10,
+    الحداشر: 11,
+    حداشر: 11,
+    الاحداشر: 11,
+    احداشر: 11,
+    الاتناشر: 12,
+    اتناشر: 12,
+    الاثناشر: 12,
+    اثناشر: 12,
+  };
+
+  function normalizeArabicHourFromPartOfDay(hour: number, partOfDay: string) {
+    if (
+      arabicTimeOfDayPatterns.noon.test(partOfDay) ||
+      arabicTimeOfDayPatterns.afternoon.test(partOfDay) ||
+      arabicTimeOfDayPatterns.sunset.test(partOfDay) ||
+      arabicTimeOfDayPatterns.evening.test(partOfDay) ||
+      arabicTimeOfDayPatterns.dinner.test(partOfDay)
+    ) {
+      if (hour < 12) {
+        return hour + 12;
+      }
+
+      return hour;
+    }
+
+    if (arabicTimeOfDayPatterns.night.test(partOfDay)) {
+      if (hour === 12) {
+        return 0;
+      }
+
+      return hour <= 5 ? hour : hour < 12 ? hour + 12 : hour;
+    }
+
+    if (
+      arabicTimeOfDayPatterns.dawn.test(partOfDay) ||
+      arabicTimeOfDayPatterns.morning.test(partOfDay)
+    ) {
+      return hour === 12 ? 0 : hour;
+    }
+
+    return hour;
+  }
+
+  function inferArabicTimeFromPartOfDay(
+    partOfDay: string,
+    modifier?: 'before' | 'after'
+  ): ParsedTimeParts | null {
+    let anchorHour = 9;
+    let anchorMinute = 0;
+
+    if (arabicTimeOfDayPatterns.dawn.test(partOfDay)) {
+      anchorHour = 5;
+    } else if (arabicTimeOfDayPatterns.morning.test(partOfDay)) {
+      anchorHour = 8;
+    } else if (arabicTimeOfDayPatterns.noon.test(partOfDay)) {
+      anchorHour = 13;
+    } else if (arabicTimeOfDayPatterns.afternoon.test(partOfDay)) {
+      anchorHour = 17;
+    } else if (arabicTimeOfDayPatterns.sunset.test(partOfDay)) {
+      anchorHour = 18;
+      anchorMinute = 30;
+    } else if (arabicTimeOfDayPatterns.evening.test(partOfDay)) {
+      anchorHour = 19;
+    } else if (arabicTimeOfDayPatterns.dinner.test(partOfDay)) {
+      anchorHour = 20;
+    } else if (arabicTimeOfDayPatterns.night.test(partOfDay)) {
+      anchorHour = 21;
+    } else {
+      return null;
+    }
+
+    if (modifier === 'before') {
+      anchorHour -= 1;
+      anchorMinute = 0;
+    }
+
+    if (modifier === 'after') {
+      anchorHour += 1;
+      anchorMinute = 0;
+    }
+
+    return {
+      hour: anchorHour,
+      minute: anchorMinute,
+      inferred: true,
+      coarse: true,
+    };
+  }
+
   const patterns = [
-    /الساعه\s*(\d{1,2})(?::|\.|٫)?(\d{2})?\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)?/,
-    /(\d{1,2})(?::|\.|٫)?(\d{2})?\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)/,
+    /الساعه\s*(\d{1,2})(?::|\.|٫)?(\d{2})?\s*(الفجر|الصبح|الصباح|صباحا|صباحًا|الضهر|الظهر|النهار|العصر|المغرب|المساء|مساء|العشا|العشاء|بالليل|بليل|الليل|ليل)?/,
+    /(\d{1,2})(?::|\.|٫)?(\d{2})?\s*(الفجر|الصبح|الصباح|صباحا|صباحًا|الضهر|الظهر|النهار|العصر|المغرب|المساء|مساء|العشا|العشاء|بالليل|بليل|الليل|ليل)/,
     /\b([1-9]|1[0-2])(?::|\.|٫)?(\d{2})?\b(?!\s*(?:دقيقه|دقائق|ساعه|ساعتين|ساعات))/,
   ];
 
@@ -330,17 +459,55 @@ function parseTimeParts(value: string, language: RuleLanguage) {
     const minute = Number(match[2] ?? '0');
     const partOfDay = match[3] ?? '';
 
-    if (/العصر|المغرب|المساء|مساء|بالليل|ليل/.test(partOfDay) && hour < 12) {
-      hour += 12;
-    }
-
-    if (/الصبح|صباحا/.test(partOfDay) && hour === 12) {
-      hour = 0;
+    if (partOfDay) {
+      hour = normalizeArabicHourFromPartOfDay(hour, partOfDay);
     }
 
     const inferred = !partOfDay;
 
-    return { hour, minute, inferred };
+    return { hour, minute, inferred, coarse: false };
+  }
+
+  const explicitWordHourPattern =
+    /(?:الساعه\s*)?(الواحده|واحده|واحد|الاتنين|اتنين|اثنين|التلاته|تلاته|الثلاثه|ثلاثه|الاربعه|اربعه|الاربعة|اربعة|الخمسه|خمسه|السته|سته|السبعه|سبعه|التمانيه|تمانيه|الثمانيه|ثمانيه|التسعه|تسعه|العشره|عشره|الحداشر|حداشر|الاحداشر|احداشر|الاتناشر|اتناشر|الاثناشر|اثناشر)\s*(الفجر|الصبح|الصباح|صباحا|صباحًا|الضهر|الظهر|النهار|العصر|المغرب|المساء|مساء|العشا|العشاء|بالليل|بليل|الليل|ليل)/;
+  const explicitWordHourMatch = value.match(explicitWordHourPattern);
+  if (explicitWordHourMatch) {
+    const mappedHour = arabicHourWordMap[explicitWordHourMatch[1]];
+    if (mappedHour) {
+      return {
+        hour: normalizeArabicHourFromPartOfDay(mappedHour, explicitWordHourMatch[2]),
+        minute: 0,
+        inferred: false,
+        coarse: false,
+      };
+    }
+  }
+
+  const relativePartOfDayPatterns: Array<[RegExp, 'before' | 'after']> = [
+    [/(?:^|\s)بعد\s+(الفجر|الصبح|الصباح|صباحا|صباحًا|الضهر|الظهر|النهار|العصر|المغرب|المساء|مساء|العشا|العشاء|بالليل|بليل|الليل|ليل)(?:\s|$)/, 'after'],
+    [/(?:^|\s)قبل\s+(الفجر|الصبح|الصباح|صباحا|صباحًا|الضهر|الظهر|النهار|العصر|المغرب|المساء|مساء|العشا|العشاء|بالليل|بليل|الليل|ليل)(?:\s|$)/, 'before'],
+  ];
+
+  for (const [pattern, modifier] of relativePartOfDayPatterns) {
+    const match = value.match(pattern);
+    if (!match) {
+      continue;
+    }
+
+    const inferredTime = inferArabicTimeFromPartOfDay(match[1], modifier);
+    if (inferredTime) {
+      return inferredTime;
+    }
+  }
+
+  const standalonePartOfDayPattern =
+    /(?:^|\s)(الفجر|الصبح|الصباح|صباحا|صباحًا|الضهر|الظهر|النهار|العصر|المغرب|المساء|مساء|العشا|العشاء|بالليل|بليل|الليل|ليل)(?:\s|$)/;
+  const standaloneMatch = value.match(standalonePartOfDayPattern);
+  if (standaloneMatch) {
+    const inferredTime = inferArabicTimeFromPartOfDay(standaloneMatch[1]);
+    if (inferredTime) {
+      return inferredTime;
+    }
   }
 
   return null;
@@ -378,8 +545,11 @@ function stripMetaFromTitle(value: string, language: RuleLanguage) {
     .replace(/فكرني|ذكرني|افتكرني|عايزك تفكرني|من فضلك/g, '')
     .replace(/بعد بكره|بكره|غدا|النهارده|اليوم|دلوقتي/g, '')
     .replace(/الاحد|الأحد|الاتنين|الاثنين|الثلاثاء|الاربعاء|الأربعاء|الخميس|الجمعه|الجمعة|السبت/g, '')
-    .replace(/الساعه\s*\d{1,2}(?::|\.|٫)?\d{0,2}\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)?/g, '')
-    .replace(/\d{1,2}(?::|\.|٫)?\d{0,2}\s*(الصبح|صباحا|العصر|المغرب|المساء|مساء|بالليل|ليل)/g, '')
+    .replace(/الساعه\s*\d{1,2}(?::|\.|٫)?\d{0,2}\s*(الفجر|الصبح|الصباح|صباحا|صباحًا|الضهر|الظهر|النهار|العصر|المغرب|المساء|مساء|العشا|العشاء|بالليل|بليل|الليل|ليل)?/g, '')
+    .replace(/\d{1,2}(?::|\.|٫)?\d{0,2}\s*(الفجر|الصبح|الصباح|صباحا|صباحًا|الضهر|الظهر|النهار|العصر|المغرب|المساء|مساء|العشا|العشاء|بالليل|بليل|الليل|ليل)/g, '')
+    .replace(/(?:الساعه\s*)?(الواحده|واحده|واحد|الاتنين|اتنين|اثنين|التلاته|تلاته|الثلاثه|ثلاثه|الاربعه|اربعه|الاربعة|اربعة|الخمسه|خمسه|السته|سته|السبعه|سبعه|التمانيه|تمانيه|الثمانيه|ثمانيه|التسعه|تسعه|العشره|عشره|الحداشر|حداشر|الاحداشر|احداشر|الاتناشر|اتناشر|الاثناشر|اثناشر)\s*(الفجر|الصبح|الصباح|صباحا|صباحًا|الضهر|الظهر|النهار|العصر|المغرب|المساء|مساء|العشا|العشاء|بالليل|بليل|الليل|ليل)/g, '')
+    .replace(/(?:بعد|قبل)\s*(الفجر|الصبح|الصباح|صباحا|صباحًا|الضهر|الظهر|النهار|العصر|المغرب|المساء|مساء|العشا|العشاء|بالليل|بليل|الليل|ليل)/g, '')
+    .replace(/(?:الفجر|الصبح|الصباح|صباحا|صباحًا|الضهر|الظهر|النهار|العصر|المغرب|المساء|مساء|العشا|العشاء|بالليل|بليل|الليل|ليل)/g, '')
     .replace(/(?:بعد|كمان)\s*(?:دقيقه|دقيقتين|ساعه|ساعتين|\d{1,3}\s*(?:دقيقه|دقايق|دقائق)|\d{1,2}\s*(?:ساعه|ساعات))/g, '')
     .replace(/(?:قبل|ب)\s*(نص ساعه|نصف ساعه|ربع ساعه|ساعه|ساعتين|\d{1,3}\s*دقيقه|\d{1,2}\s*ساع(?:ه|ات))/g, '')
     .replace(
@@ -387,23 +557,6 @@ function stripMetaFromTitle(value: string, language: RuleLanguage) {
       ''
     )
     .replace(/\b([1-9]|1[0-2])(?::|\.|٫)?(\d{2})?\b(?!\s*(?:دقيقه|دقائق|ساعه|ساعتين|ساعات))/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function normalizeArabicTaskTitle(value: string) {
-  let normalized = value.trim();
-
-  for (const [pattern, replacement] of arabicTaskTitleNormalizers) {
-    if (pattern.test(normalized)) {
-      normalized = normalized.replace(pattern, replacement);
-      break;
-    }
-  }
-
-  return normalized
-    .replace(/\bايميل\b/g, 'الايميل')
-    .replace(/\bايجار\b/g, 'الايجار')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -450,7 +603,10 @@ export function parseReminderRules(transcript: string): ParseResult {
     if (timeParts) {
       hour = timeParts.hour;
       minute = timeParts.minute;
-      confidence += timeParts.inferred ? 0.15 : 0.25;
+      confidence += timeParts.coarse ? 0.08 : timeParts.inferred ? 0.15 : 0.25;
+      if (timeParts.coarse) {
+        missingFields.push('time');
+      }
     } else {
       missingFields.push('time');
     }
@@ -467,7 +623,7 @@ export function parseReminderRules(transcript: string): ParseResult {
 
   const rawTitle = stripMetaFromTitle(normalized, language);
   const title =
-    language === 'ar' ? normalizeArabicTaskTitle(rawTitle) : rawTitle;
+    language === 'ar' ? normalizeArabicReminderTitle(rawTitle) : rawTitle;
   const categorySuggestion = classifyReminderCategory(title || normalized);
 
   if (!title) {

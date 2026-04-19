@@ -106,7 +106,7 @@ test('parseReminderText keeps colloquial Arabic rule parsing usable when LLM is 
   const result = await parseReminderText('كلم احمد بكرة 5');
 
   assert.equal(result.source, 'rules');
-  assert.equal(result.title, 'اكلم احمد');
+  assert.equal(result.title, 'كلم احمد');
   assert.ok(!result.missingFields.includes('date'));
   assert.ok(!result.missingFields.includes('time'));
 });
@@ -121,7 +121,7 @@ test('parseReminderText accepts colloquial Arabic normalization from LLM refinem
   const result = await parseReminderText('كلم احمد بكرة 5');
 
   assert.equal(result.source, 'rules');
-  assert.equal(result.title, 'اكلم احمد');
+  assert.equal(result.title, 'كلم احمد');
   assert.equal(result.parsePath, 'rules_only');
   assert.equal(llmCallCount, 0);
   assert.equal(result.needsConfirmation, false);
@@ -135,7 +135,7 @@ test('parseReminderText keeps relative-future rule parsing usable when LLM is un
   const result = await parseReminderText('اكلم احمد كمان دقيقتين');
 
   assert.equal(result.source, 'rules');
-  assert.equal(result.title, 'اكلم احمد');
+  assert.equal(result.title, 'كلم احمد');
   assert.equal(result.offsetMinutes, 0);
   assert.deepEqual(result.missingFields, []);
 });
@@ -150,7 +150,7 @@ test('parseReminderText preserves relative-future event semantics when LLM refin
   const result = await parseReminderText('اكلم احمد كمان دقيقتين');
 
   assert.equal(result.source, 'rules');
-  assert.equal(result.title, 'اكلم احمد');
+  assert.equal(result.title, 'كلم احمد');
   assert.equal(result.offsetMinutes, 0);
   assert.deepEqual(result.missingFields, []);
   assert.equal(result.parsePath, 'rules_only');

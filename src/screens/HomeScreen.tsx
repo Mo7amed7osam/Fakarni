@@ -879,6 +879,10 @@ export function HomeScreen({ navigation, route }: Props) {
     setConfirmNeedsReview(true);
   }
 
+  function dismissInlinePicker() {
+    setShowPickerMode(null);
+  }
+
   function pauseAutoConfirm() {
     if (!pendingParse || confirmPaused || !isHighConfidenceCard) {
       return;
@@ -1813,16 +1817,38 @@ export function HomeScreen({ navigation, route }: Props) {
 
                   {showPickerMode ? (
                     <View style={styles.confirmPickerWrap}>
-                      <Text
-                        style={[
-                          styles.confirmPickerLabel,
-                          showPickerMode === 'date' && styles.confirmPickerLabelDate,
-                        ]}
-                      >
-                        {showPickerMode === 'date'
-                          ? copy.home.pickerDateTitle
-                          : copy.home.pickerTimeTitle}
-                      </Text>
+                      {Platform.OS === 'ios' ? (
+                        <View style={styles.confirmPickerHeader}>
+                          <Text
+                            style={[
+                              styles.confirmPickerLabel,
+                              styles.confirmPickerLabelHeader,
+                              showPickerMode === 'date' && styles.confirmPickerLabelDate,
+                            ]}
+                          >
+                            {showPickerMode === 'date'
+                              ? copy.home.pickerDateTitle
+                              : copy.home.pickerTimeTitle}
+                          </Text>
+                          <Pressable
+                            onPress={dismissInlinePicker}
+                            style={styles.confirmPickerDoneChip}
+                          >
+                            <Text style={styles.confirmPickerDoneText}>{copy.common.save}</Text>
+                          </Pressable>
+                        </View>
+                      ) : (
+                        <Text
+                          style={[
+                            styles.confirmPickerLabel,
+                            showPickerMode === 'date' && styles.confirmPickerLabelDate,
+                          ]}
+                        >
+                          {showPickerMode === 'date'
+                            ? copy.home.pickerDateTitle
+                            : copy.home.pickerTimeTitle}
+                        </Text>
+                      )}
 
                       <DateTimePicker
                         mode={showPickerMode}
@@ -3172,6 +3198,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     overflow: 'hidden',
   },
+  confirmPickerHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
+  },
   confirmPickerLabel: {
     color: colors.text,
     fontFamily: fonts.semibold,
@@ -3181,8 +3215,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },
+  confirmPickerLabelHeader: {
+    flex: 1,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+  },
   confirmPickerLabelDate: {
     paddingBottom: spacing.xs,
+  },
+  confirmPickerDoneChip: {
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(108,92,231,0.10)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  confirmPickerDoneText: {
+    color: colors.primaryDark,
+    fontFamily: fonts.bold,
+    fontSize: 12,
+    writingDirection: 'rtl',
   },
   confirmActions: {
     flexDirection: 'row-reverse',
