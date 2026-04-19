@@ -32,7 +32,13 @@ interface FeedbackSheetProps {
     source: FeedbackTriggerSource;
     reason: FeedbackReason;
     note?: string;
-  }) => Promise<void> | void;
+  }) => Promise<
+    | { ok: true }
+    | {
+        ok: false;
+        code: 'note_required' | 'submit_failed';
+      }
+  >;
   onRequestReview: (source: FeedbackTriggerSource) => Promise<boolean> | boolean;
   onShareSuggested: (source: FeedbackTriggerSource) => void;
 }
@@ -115,11 +121,21 @@ export function FeedbackSheet({
     setSubmitting(true);
 
     try {
-      await onSubmit({
+      const result = await onSubmit({
         source: activeSource,
         reason: selectedReason,
         note: note.trim() || undefined,
       });
+      if (!result.ok) {
+        if (result.code === 'note_required') {
+          Alert.alert(copy.feedback.noteRequiredTitle, copy.feedback.noteRequiredBody);
+          return;
+        }
+
+        Alert.alert(copy.feedback.submitFailedTitle, copy.feedback.submitFailedBody);
+        onClose();
+        return;
+      }
       Alert.alert(copy.feedback.thanksTitle, copy.feedback.thanksBody);
     } finally {
       setSubmitting(false);

@@ -62,9 +62,15 @@ import {
   getCalendarMode,
   initAnalytics,
   isAnalyticsConfigured,
+  getRuntimeMetadata,
   reminderPropertiesFromReminder,
   track,
 } from '../services/analytics';
+import {
+  FeedbackSubmissionError,
+  submitFeedbackToGoogleForm,
+  validateFeedbackSubmissionPayload,
+} from '../services/feedback';
 import { requestInAppReview } from '../services/review';
 import { toDayKey } from '../utils/arabic';
 import {
@@ -117,7 +123,13 @@ interface GhostContextValue {
     source: FeedbackTriggerSource;
     reason: FeedbackReason;
     note?: string;
-  }) => Promise<void>;
+  }) => Promise<
+    | { ok: true }
+    | {
+        ok: false;
+        code: 'note_required' | 'submit_failed';
+      }
+  >;
   requestFeedbackReview: (source: FeedbackTriggerSource) => Promise<boolean>;
   trackFeedbackShareSuggested: (source: FeedbackTriggerSource) => void;
 }
@@ -1014,10 +1026,52 @@ export function GhostProvider({ children }: PropsWithChildren) {
         });
       },
       submitFeedback: async ({ source, reason, note }) => {
+        let normalizedNote: string | undefined;
+        try {
+          normalizedNote = validateFeedbackSubmissionPayload({
+            reason,
+            note,
+          }).note;
+        } catch (error) {
+          if (
+            error instanceof FeedbackSubmissionError &&
+            error.code === 'note_required'
+          ) {
+            return {
+              ok: false,
+              code: 'note_required',
+            };
+          }
+
+          return {
+            ok: false,
+            code: 'submit_failed',
+          };
+        }
+
+        const runtimeMetadata = getRuntimeMetadata();
+        try {
+          await submitFeedbackToGoogleForm({
+            source,
+            reason,
+            note: normalizedNote,
+            timestamp: new Date().toISOString(),
+            appVersion: runtimeMetadata.appVersion,
+            appBuild: runtimeMetadata.appBuild,
+            platform: Platform.OS === 'android' ? 'android' : 'ios',
+            locale: runtimeMetadata.locale,
+          });
+        } catch {
+          return {
+            ok: false,
+            code: 'submit_failed',
+          };
+        }
+
         track('feedback submitted', {
           feedback_reason: reason,
-          has_note: Boolean(note?.trim()),
-          note_length: note?.trim().length,
+          has_note: Boolean(normalizedNote),
+          note_length: normalizedNote?.length,
           ...buildFeedbackProperties(source),
         });
 
@@ -1031,6 +1085,9 @@ export function GhostProvider({ children }: PropsWithChildren) {
         usageStateRef.current = nextUsage;
         setUsageState(nextUsage);
         setFeedbackPrompt(null);
+        return {
+          ok: true,
+        };
       },
       requestFeedbackReview: async (source) => {
         const requested = await requestInAppReview();

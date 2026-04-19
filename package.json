@@ -13,6 +13,7 @@
     "release:env-check": "node scripts/release-env-check.cjs",
     "test:parser": "node -r ./tests/register-ts.cjs --test tests/parser.arabic.test.cjs tests/parser.english.test.cjs tests/parser.hybrid.test.cjs",
     "test:gateway": "node --test tests/parsing-gateway.test.cjs",
+    "test:feedback": "node -r ./tests/register-ts.cjs --test tests/feedback-submission.test.cjs",
     "test:parser:arabic": "node -r ./tests/register-ts.cjs --test tests/parser.arabic.test.cjs",
     "test:parser:english": "node -r ./tests/register-ts.cjs --test tests/parser.english.test.cjs",
     "test:parser:hybrid": "node -r ./tests/register-ts.cjs --test tests/parser.hybrid.test.cjs",
@@ -42,13 +43,14 @@
     "expo-speech-recognition": "^3.1.1",
     "expo-status-bar": "~55.0.4",
     "expo-store-review": "~55.0.9",
-    "expo-web-browser": "~55.0.10",
+    "expo-web-browser": "~55.0.14",
     "posthog-react-native": "^4.37.6",
     "react": "19.2.0",
-    "react-native": "0.83.2",
-    "react-native-gesture-handler": "^2.30.0",
+    "react-native": "0.83.4",
+    "react-native-gesture-handler": "~2.30.0",
     "react-native-safe-area-context": "~5.6.2",
-    "react-native-screens": "~4.23.0"
+    "react-native-screens": "~4.23.0",
+    "react-native-svg": "15.15.3"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

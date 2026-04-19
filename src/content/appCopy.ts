@@ -286,6 +286,10 @@ const appCopy = {
       dismiss: 'مش دلوقتي',
       thanksTitle: 'شكرًا',
       thanksBody: 'وصلنا رأيك وسنستخدمه لتحسين Fakarni.',
+      noteRequiredTitle: 'محتاجين تفاصيل أكتر',
+      noteRequiredBody: 'لو اخترت "حاجة تانية"، اكتب ملاحظة قصيرة قبل الإرسال.',
+      submitFailedTitle: 'تعذر إرسال رأيك',
+      submitFailedBody: 'حصلت مشكلة أثناء الإرسال. حاول مرة تانية لاحقًا.',
       reviewUnavailableTitle: 'التقييم مش متاح دلوقتي',
       reviewUnavailableBody: 'تقدر تجربه لاحقًا من App Store.',
       shareMessage:
@@ -576,6 +580,10 @@ const appCopy = {
       dismiss: 'Not now',
       thanksTitle: 'Thanks',
       thanksBody: 'We got your feedback and will use it to improve Fakarni.',
+      noteRequiredTitle: 'More detail is needed',
+      noteRequiredBody: 'If you pick "Something else", add a short note before sending.',
+      submitFailedTitle: 'Feedback could not be sent',
+      submitFailedBody: 'Something went wrong while sending. Please try again later.',
       reviewUnavailableTitle: 'Review is not available right now',
       reviewUnavailableBody: 'You can try again later from the App Store.',
       shareMessage:

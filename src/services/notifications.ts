@@ -89,7 +89,7 @@ function buildNotificationContent(
           : 'متابعة من Fakarni'
         : isEnglish
           ? 'Fakarni reminder'
-          : 'تذكير من Fakarni',
+          : 'فكرني بيفكّرك',
     body:
       kind === 'follow_up'
         ? isEnglish
@@ -137,7 +137,7 @@ export async function configureNotifications(language: UiLanguage = 'ar-EG') {
       },
     ],
     {
-      previewPlaceholder: isEnglish ? 'Fakarni reminder' : 'تذكير من Fakarni',
+      previewPlaceholder: isEnglish ? 'Fakarni reminder' : 'فكرني بيفكّرك',
       intentIdentifiers: [],
       categorySummaryFormat: isEnglish ? 'Reminder' : 'تذكير',
     }

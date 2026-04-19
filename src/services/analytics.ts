@@ -107,6 +107,13 @@ export interface AnalyticsDebugState {
   recentEvents: AnalyticsDebugEvent[];
 }
 
+export interface RuntimeMetadata {
+  appVersion: string;
+  appBuild: string;
+  platform: string;
+  locale: string;
+}
+
 interface BuildReminderAnalyticsInput {
   draft: Pick<ReminderDraft, 'category' | 'eventAt' | 'offsetMinutes' | 'recurrence'>;
   entryPoint: ReminderEntryPoint;
@@ -231,6 +238,15 @@ function getBaseProperties(): AnalyticsEventProperties {
     locale: getLocaleTag(),
     build_channel: __DEV__ ? 'dev' : 'release',
   });
+}
+
+export function getRuntimeMetadata(): RuntimeMetadata {
+  return {
+    appVersion: getAppVersion(),
+    appBuild: getAppBuild(),
+    platform: Platform.OS,
+    locale: getLocaleTag(),
+  };
 }
 
 function pushDebugEvent(name: string, properties: AnalyticsEventProperties) {
