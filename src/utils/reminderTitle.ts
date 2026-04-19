@@ -10,6 +10,7 @@ const arabicFirstPersonTaskStarters: Array<[RegExp, string]> = [
 
 export function normalizeArabicReminderTitle(value: string) {
   let normalized = normalizeArabicText(value).trim();
+  normalized = normalized.replace(/[\u064b-\u065f\u0670]/g, '');
 
   for (const [pattern, replacement] of arabicFirstPersonTaskStarters) {
     if (pattern.test(normalized)) {

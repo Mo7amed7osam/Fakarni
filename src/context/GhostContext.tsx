@@ -1367,6 +1367,14 @@ export function GhostProvider({ children }: PropsWithChildren) {
             googleCalendar: settings.googleCalendar,
           })
             .then((calendarResult) => {
+              if (__DEV__) {
+                console.info('Reminder calendar sync result', {
+                  reminderId: reminder.id,
+                  calendarStatus: calendarResult.status,
+                  calendarProvider: calendarResult.provider ?? null,
+                  calendarEventId: calendarResult.eventId ?? null,
+                });
+              }
               if (calendarResult.status === 'synced' || calendarResult.status === 'failed') {
                 track(
                   calendarResult.status === 'synced'
@@ -1535,6 +1543,15 @@ export function GhostProvider({ children }: PropsWithChildren) {
           return;
         }
 
+        if (__DEV__) {
+          console.info('removeReminder start', {
+            reminderId: target.id,
+            calendarProvider: target.calendarProvider ?? null,
+            calendarEventId: target.calendarEventId ?? null,
+            calendarSyncStatus: target.calendarSyncStatus,
+          });
+        }
+
         const [calendarDeleteResult] = await Promise.all([
           target.calendarEventId
             ? deleteCalendarEvent({
@@ -1549,6 +1566,15 @@ export function GhostProvider({ children }: PropsWithChildren) {
             : Promise.resolve(null),
           withNotificationLifecycleLock(() => cancelAllReminderNotifications(target)),
         ]);
+
+        if (__DEV__) {
+          console.info('removeReminder calendar delete result', {
+            reminderId: target.id,
+            calendarProvider: target.calendarProvider ?? null,
+            calendarEventId: target.calendarEventId ?? null,
+            result: calendarDeleteResult ?? null,
+          });
+        }
 
         if (__DEV__ && calendarDeleteResult?.status === 'failed') {
           console.warn('Calendar delete failed for reminder', {

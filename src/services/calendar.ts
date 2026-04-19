@@ -456,6 +456,14 @@ async function deleteGoogleCalendarEvent(
 export async function deleteCalendarEvent(
   input: CalendarDeleteInput
 ): Promise<CalendarDeleteResult> {
+  if (__DEV__) {
+    console.info('deleteCalendarEvent called', {
+      eventId: input.eventId,
+      provider: input.provider ?? null,
+      platform: input.platform ?? null,
+    });
+  }
+
   if (!input.eventId.trim()) {
     return {
       status: 'skipped',

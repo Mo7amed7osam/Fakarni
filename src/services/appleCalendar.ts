@@ -106,6 +106,15 @@ export async function saveToAppleCalendar(
 
   try {
     const result = await nativeAppleCalendar.saveEvent(input);
+    if (__DEV__) {
+      console.info('Apple Calendar save result', {
+        title: input.title,
+        startDate: input.startDate,
+        status: result.status,
+        eventId: result.eventId ?? null,
+        authorizationStatus: result.authorizationStatus ?? null,
+      });
+    }
     if (result.status === 'saved') {
       return {
         status: 'synced',
@@ -146,6 +155,13 @@ export async function deleteFromAppleCalendar(
   eventId: string
 ): Promise<CalendarDeleteResult> {
   if (!isAppleCalendarAvailable() || !nativeAppleCalendar || !eventId.trim()) {
+    if (__DEV__) {
+      console.info('Apple Calendar delete skipped before native call', {
+        available: isAppleCalendarAvailable(),
+        hasModule: Boolean(nativeAppleCalendar),
+        eventId,
+      });
+    }
     return {
       status: 'skipped',
       provider: 'apple',
@@ -153,7 +169,19 @@ export async function deleteFromAppleCalendar(
   }
 
   try {
+    if (__DEV__) {
+      console.info('Apple Calendar delete invoking native bridge', {
+        eventId,
+      });
+    }
     const result = await nativeAppleCalendar.deleteEvent(eventId);
+    if (__DEV__) {
+      console.info('Apple Calendar delete native result', {
+        eventId,
+        status: result.status,
+        authorizationStatus: result.authorizationStatus ?? null,
+      });
+    }
     if (result.status === 'deleted') {
       return {
         status: 'deleted',

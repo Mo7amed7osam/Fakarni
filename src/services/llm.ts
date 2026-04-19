@@ -124,6 +124,7 @@ function buildNormalizedParseResult(
     cacheHit,
     parsePath,
     llmReason,
+    locale,
   }: {
     modelTier: ParseModelTier;
     cacheHit: boolean;
