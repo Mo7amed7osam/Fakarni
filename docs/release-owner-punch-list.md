@@ -33,7 +33,7 @@ This file contains only the remaining owner actions after the repo-side release 
    Do this if any model/provider keys were ever used in client builds, commits, or screenshots.
 
 7. Run the physical iPhone validation pass.
-   Complete every case in `docs/real-device-validation.md`, especially notifications, Siri / Shortcuts launch, calendar write flow, and Arabic/English smoke coverage.
+   Complete every case in `docs/real-device-validation.md`, especially notifications, settings-based permission recovery, calendar write flow, and Arabic/English smoke coverage.
 
 8. Confirm App Privacy answers in App Store Connect.
    Use `docs/app-store-privacy-answers.md` and match the shipped behavior: local reminder data, optional calendar sync, optional anonymous analytics, and optional remote parsing through the gateway.

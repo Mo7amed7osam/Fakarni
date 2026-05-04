@@ -13,6 +13,14 @@ export const REMINDER_NOTIFICATION_CATEGORY_ID = 'voiceghost-reminder-actions';
 export const REMINDER_NOTIFICATION_ACTION_DONE = 'done';
 export const REMINDER_NOTIFICATION_ACTION_SNOOZE_10M = 'snooze_10m';
 export const REMINDER_NOTIFICATION_ACTION_SNOOZE_1H = 'snooze_1h';
+const REMINDER_NOTIFICATION_SOUND = 'default';
+const IOS_NOTIFICATION_PERMISSION_OPTIONS = {
+  ios: {
+    allowAlert: true,
+    allowBadge: false,
+    allowSound: true,
+  },
+};
 
 export type ReminderNotificationKind = 'primary' | 'follow_up' | 'snooze';
 
@@ -105,7 +113,7 @@ function buildNotificationContent(
       kind,
     },
     categoryIdentifier: REMINDER_NOTIFICATION_CATEGORY_ID,
-    sound: 'default',
+    sound: REMINDER_NOTIFICATION_SOUND,
   };
 }
 
@@ -152,7 +160,9 @@ export async function ensureNotificationPermissions() {
     return true;
   }
 
-  const requested = await Notifications.requestPermissionsAsync();
+  const requested = await Notifications.requestPermissionsAsync(
+    IOS_NOTIFICATION_PERMISSION_OPTIONS
+  );
   return requested.granted;
 }
 
@@ -175,7 +185,9 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
     return 'blocked';
   }
 
-  const requested = await Notifications.requestPermissionsAsync();
+  const requested = await Notifications.requestPermissionsAsync(
+    IOS_NOTIFICATION_PERMISSION_OPTIONS
+  );
   if (requested.granted) {
     return 'granted';
   }
@@ -195,7 +207,7 @@ export async function configureAndroidChannel() {
   await Notifications.setNotificationChannelAsync('voiceghost-reminders', {
     name: 'Fakarni Reminders',
     importance: Notifications.AndroidImportance.MAX,
-    sound: 'default',
+    sound: REMINDER_NOTIFICATION_SOUND,
     vibrationPattern: [0, 250, 250, 250],
   });
 }

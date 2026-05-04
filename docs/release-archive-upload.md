@@ -8,7 +8,7 @@ It assumes the metadata pack and real-device validation have already been comple
 ## Prerequisites
 
 - Apple Developer signing is configured in Xcode for the final team
-- bundle identifier stays `com.mohamedhosam.voiceghostapp`
+- bundle identifier stays `com.fakarni.app`
 - version is `1.0.0`
 - build number is `1` or the next unused value
 - production public env values are loaded for the release build

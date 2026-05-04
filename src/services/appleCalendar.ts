@@ -85,11 +85,17 @@ export async function requestAppleCalendarWriteAccess() {
   }
 
   try {
-    return await nativeAppleCalendar.requestWriteAccess();
-  } catch {
+    await nativeAppleCalendar.requestWriteAccess();
+    const freshStatus = await getAppleCalendarAuthorizationStatus();
     return {
-      granted: false,
-      status: await getAppleCalendarAuthorizationStatus(),
+      granted: canAutoSyncToAppleCalendar(freshStatus),
+      status: freshStatus,
+    };
+  } catch {
+    const freshStatus = await getAppleCalendarAuthorizationStatus();
+    return {
+      granted: canAutoSyncToAppleCalendar(freshStatus),
+      status: freshStatus,
     };
   }
 }

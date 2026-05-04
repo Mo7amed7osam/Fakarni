@@ -28,13 +28,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>voiceghost</string>
-				<string>com.mohamedhosam.voiceghostapp</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>exp+voiceghost</string>
+				<string>com.fakarni.app</string>
 			</array>
 		</dict>
 	</array>
@@ -48,6 +42,8 @@
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
 	</dict>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>يسمح Fakarni بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.</string>
@@ -55,6 +51,8 @@
 	<string>يسمح Fakarni بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
 	<string>يسمح Fakarni بحفظ تذكيراتك في التقويم دون الوصول الكامل إلى أحداثك.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>اسمح لـ Fakarni باستخدام الميكروفون.</string>
 	<key>NSRemindersFullAccessUsageDescription</key>

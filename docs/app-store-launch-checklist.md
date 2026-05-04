@@ -53,7 +53,7 @@ Every `NO-GO` item must be cleared before submission.
 - `NO-GO` Test reminder creation, edit, complete, snooze, and undo on a real iPhone.
 - `NO-GO` Test notification delivery, notification actions, and follow-up timing on a real iPhone.
 - `NO-GO` Confirm duplicate notifications do not appear after repeated foreground/background cycles.
-- `NO-GO` Test Siri shortcuts on a real iPhone.
+- `NO-GO` Test settings-based permission recovery on a real iPhone.
 - `NO-GO` Test Apple Calendar save flow and permission edge cases on a real iPhone.
 - `NO-GO` Run one Arabic smoke test and one English smoke test on a real iPhone.
 

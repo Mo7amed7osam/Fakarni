@@ -19,8 +19,8 @@ Do not treat simulator coverage as a substitute for this list.
 - No crash in onboarding, capture, confirm, save, edit, snooze, complete, or settings flows
 - Voice capture creates valid reminders in both English and Arabic smoke tests
 - Local notifications fire at the expected time
-- Siri / Shortcuts entry does not dead-end
 - Optional calendar write flow works when enabled and fails cleanly when denied
+- Settings-based permission recovery works without leaving the app in a broken state
 
 ## Validation Cases
 
@@ -80,11 +80,11 @@ Do not treat simulator coverage as a substitute for this list.
 - Result: `PASS / FAIL`
 - Notes: `TODO`
 
-### 7. Siri Shortcuts
+### 7. Settings / Permission Recovery
 
-- Add or invoke the Siri/App Shortcut path
-- Launch reminder capture from Siri or Shortcuts
-- Confirm the handoff lands in a valid app state
+- Deny one relevant permission once
+- Open the app settings from the in-app recovery path
+- Return to the app and confirm state, messaging, and next actions are still valid
 - Result: `PASS / FAIL`
 - Notes: `TODO`
 

@@ -70,10 +70,11 @@ final class VoiceGhostAppleCalendar: NSObject {
       return
     }
 
-    guard let title = (payload["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
-          !title.isEmpty,
-          let startDateString = payload["startDate"] as? String,
-          let startDate = Self.parseISODate(startDateString)
+    guard
+      let title = (payload["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+      !title.isEmpty,
+      let startDateString = payload["startDate"] as? String,
+      let startDate = Self.parseISODate(startDateString)
     else {
       resolve([
         "status": "invalid_input",
@@ -108,7 +109,6 @@ final class VoiceGhostAppleCalendar: NSObject {
 
     do {
       try eventStore.save(event, span: .thisEvent)
-      NSLog("[VoiceGhostAppleCalendar] saveEvent saved id=%@", event.eventIdentifier ?? "nil")
       resolve([
         "status": "saved",
         "eventId": event.eventIdentifier as Any,
@@ -126,11 +126,6 @@ final class VoiceGhostAppleCalendar: NSObject {
     rejecter reject: @escaping RCTPromiseRejectBlock
   ) {
     let authorizationStatus = EKEventStore.authorizationStatus(for: .event)
-    NSLog(
-      "[VoiceGhostAppleCalendar] deleteEvent called id=%@ status=%@",
-      String(eventId),
-      Self.statusString(for: authorizationStatus)
-    )
 
     if #available(iOS 17.0, *), authorizationStatus == .writeOnly {
       eventStore.requestFullAccessToEvents { [weak self] granted, error in
@@ -145,17 +140,22 @@ final class VoiceGhostAppleCalendar: NSObject {
         }
 
         let nextStatus = EKEventStore.authorizationStatus(for: .event)
-        NSLog(
-          "[VoiceGhostAppleCalendar] deleteEvent upgraded permission granted=%@ status=%@",
-          granted ? "true" : "false",
-          Self.statusString(for: nextStatus)
+        self.performDeleteEvent(
+          eventId,
+          authorizationStatus: nextStatus,
+          resolver: resolve,
+          rejecter: reject
         )
-        self.performDeleteEvent(eventId, authorizationStatus: nextStatus, resolver: resolve, rejecter: reject)
       }
       return
     }
 
-    performDeleteEvent(eventId, authorizationStatus: authorizationStatus, resolver: resolve, rejecter: reject)
+    performDeleteEvent(
+      eventId,
+      authorizationStatus: authorizationStatus,
+      resolver: resolve,
+      rejecter: reject
+    )
   }
 
   private func performDeleteEvent(
@@ -182,7 +182,6 @@ final class VoiceGhostAppleCalendar: NSObject {
     }
 
     guard let event = eventStore.event(withIdentifier: normalizedEventId) else {
-      NSLog("[VoiceGhostAppleCalendar] deleteEvent not_found id=%@", normalizedEventId)
       resolve([
         "status": "not_found",
         "authorizationStatus": Self.statusString(for: authorizationStatus),
@@ -192,7 +191,6 @@ final class VoiceGhostAppleCalendar: NSObject {
 
     do {
       try eventStore.remove(event, span: .thisEvent)
-      NSLog("[VoiceGhostAppleCalendar] deleteEvent deleted id=%@", normalizedEventId)
       resolve([
         "status": "deleted",
         "authorizationStatus": Self.statusString(for: authorizationStatus),

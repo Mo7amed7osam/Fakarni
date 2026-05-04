@@ -13,7 +13,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "bundleIdentifier": "com.mohamedhosam.voiceghostapp",
+      "bundleIdentifier": "com.fakarni.app",
       "buildNumber": "1",
       "supportsTablet": false,
       "infoPlist": {
@@ -22,8 +22,8 @@
         "NSCalendarsWriteOnlyAccessUsageDescription": "يسمح Fakarni بحفظ تذكيراتك في التقويم دون الوصول الكامل إلى أحداثك.",
         "NSRemindersUsageDescription": "يسمح Fakarni بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.",
         "NSRemindersFullAccessUsageDescription": "يسمح Fakarni بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.",
-        "NSMicrophoneUsageDescription": "يسمح Fakarni بتسجيل صوتك لتحويل كلامك إلى تذكيرات.",
-        "NSSpeechRecognitionUsageDescription": "يسمح Fakarni بتحويل الكلام العربي إلى نص لإنشاء التذكيرات بسرعة."
+        "NSMicrophoneUsageDescription": "اسمح لـ Fakarni باستخدام الميكروفون.",
+        "NSSpeechRecognitionUsageDescription": "اسمح لـ Fakarni بالتعرف على الكلام."
       }
     },
     "android": {
@@ -66,6 +66,11 @@
       ],
       "expo-secure-store",
       "expo-localization"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a7147117-53b0-4a6b-83c5-3ae871d9f42d"
+      }
+    }
   }
 }

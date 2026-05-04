@@ -14,7 +14,7 @@ This folder contains draft simulator captures for the App Store listing.
 ## What Still Needs Final Export
 
 - Recapture the final set at the exact App Store target size you choose.
-- Add one more polished fifth image, ideally a Siri or widget entry-point shot.
+- Add one more polished fifth image, ideally a clean settings or trust screen.
 - Keep the final screenshot set English-only for the 1.0 submission.
 - Remove any screenshot whose copy, date, or reminder example does not match the final release narrative.
 

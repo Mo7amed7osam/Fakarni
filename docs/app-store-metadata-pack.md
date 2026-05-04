@@ -13,6 +13,13 @@ Release posture locked for 1.0:
 - If the submitted build does not ship a production parsing gateway, remove gateway-specific wording from the final review notes
 - If the submitted build does not ship production analytics, answer App Privacy more narrowly and keep analytics disabled in the release build
 
+## App Store Connect General Information
+
+- Bundle ID: `com.fakarni.app`
+- SKU: `fakarni-app-v1`
+- Apple ID: `6762661399`
+- Primary language: `English (U.S.)`
+
 ## Apple Constraints
 
 These limits come from Apple’s App Store Connect Help:
@@ -70,13 +77,13 @@ Replace with the exact legal owner name you want shown on the product page.
 
 ### Promotional Text
 
-`Capture reminders by voice, confirm quickly, and stay on track with calm follow-ups, Siri shortcuts, and optional calendar sync.`
+`Capture reminders by voice, confirm quickly, and stay on track with calm follow-ups and optional calendar sync.`
 
 Length: 141 / 170
 
 ### Keywords
 
-`voice,reminders,speech,productivity,calendar,notifications,arabic,english,siri`
+`voice,reminders,speech,productivity,calendar,notifications,arabic,english,tasks`
 
 Estimated length: 85 bytes
 
@@ -98,7 +105,6 @@ Fakarni is designed for real daily use:
 - Today, Upcoming, and Overdue views
 - Complete and Snooze actions
 - One smart follow-up nudge when needed
-- Siri shortcuts on iPhone
 - Optional calendar saving
 
 The product is especially tuned for Arabic-first use cases while also supporting English flows.
@@ -146,7 +152,6 @@ Testing notes:
 - No account creation or sign-in is required.
 - The app requests microphone and speech recognition access only when the user starts voice capture.
 - The app uses local notifications for reminder delivery.
-- A Siri / Shortcuts voice-capture entry point is available on iPhone.
 - Calendar access is optional and only used when the user enables calendar saving.
 - If the submitted build includes a production parsing gateway, smart parsing routes through that gateway.
 - If the submitted build does not include a production parsing gateway, reminder parsing stays on the local rules-first path and asks for confirmation when needed.
@@ -183,7 +188,7 @@ Recommended screenshot sequence:
 2. Main home screen with primary mic action
 3. Confirmation flow after a parsed reminder
 4. Reminder list showing Today / Upcoming / Overdue
-5. Siri shortcut or settings/trust screen
+5. Settings or trust screen
 
 Screenshot caption draft:
 
@@ -191,7 +196,7 @@ Screenshot caption draft:
 2. `Speak once and let Fakarni structure the reminder`
 3. `Confirm quickly when timing needs a review`
 4. `Stay on top of what is due today`
-5. `Launch from Siri when you need it fast`
+5. `Keep controls and permissions clear`
 
 ## Remaining Human Inputs Needed
 

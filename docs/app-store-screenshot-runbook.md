@@ -28,8 +28,8 @@ Listing posture for 1.0: English-only screenshots.
 4. `Quick trust / notification state`
    Show the trust pack or saved reminder state that signals reliability.
 
-5. `System entry point`
-   Show either the Siri shortcut path or a clean settings/trust screen.
+5. `Settings / trust screen`
+   Show a clean settings or trust screen with the release-state controls visible.
 
 ## Caption Drafts
 
@@ -37,7 +37,7 @@ Listing posture for 1.0: English-only screenshots.
 2. `Speak once and confirm quickly`
 3. `Stay on top of today, upcoming, and overdue`
 4. `Keep reminders reliable with calm follow-through`
-5. `Launch from Siri when you need it fast`
+5. `Keep controls and permissions clear`
 
 ## Visual Rules
 
@@ -73,7 +73,7 @@ Export screenshots with stable names:
 - `02-confirmation.png`
 - `03-reminder-list.png`
 - `04-trust-pack.png`
-- `05-siri-or-settings.png`
+- `05-settings-trust.png`
 
 ## Current Status
 

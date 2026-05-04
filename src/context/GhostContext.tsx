@@ -1179,22 +1179,22 @@ export function GhostProvider({ children }: PropsWithChildren) {
           };
         }
 
-        const accessResult = await requestAppleCalendarWriteAccess();
-        const nextEnabled =
-          accessResult.granted && canAutoSyncToAppleCalendar(accessResult.status);
+        await requestAppleCalendarWriteAccess();
+        const freshStatus = await getAppleCalendarAuthorizationStatus();
+        const nextEnabled = canAutoSyncToAppleCalendar(freshStatus);
         setSettings((current) =>
           normalizeSettings({
             ...current,
             appleCalendar: {
               autoSyncEnabled: nextEnabled,
-              permissionStatus: accessResult.status,
+              permissionStatus: freshStatus,
             },
           })
         );
         track('apple calendar auto-sync toggled', {
           requested_enabled: true,
           enabled: nextEnabled,
-          permission_status: accessResult.status,
+          permission_status: freshStatus,
         });
 
         if (nextEnabled) {
@@ -1204,11 +1204,11 @@ export function GhostProvider({ children }: PropsWithChildren) {
         }
 
         const message =
-          accessResult.status === 'restricted'
+          freshStatus === 'restricted'
             ? settings.uiLanguage === 'en'
               ? 'Calendar access is restricted on this device.'
               : 'الوصول إلى التقويم مقيّد على هذا الجهاز.'
-            : accessResult.status === 'denied'
+            : freshStatus === 'denied'
               ? settings.uiLanguage === 'en'
                 ? 'Calendar access is disabled. Allow it in system settings if you want sync.'
                 : 'تم إيقاف الوصول إلى التقويم. اسمح به من إعدادات النظام إذا أردت المزامنة.'
