@@ -1,0 +1,12 @@
+.DS_Store
+.expo
+.tmp_appstore_assets
+node_modules
+out
+.env
+.env.local
+.env.*.local
+.env.gateway
+.env.gateway.local
+gateway/.env
+gateway/.env.local
