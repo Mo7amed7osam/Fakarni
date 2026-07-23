@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Fakarni",
+    "name": "Fakarni App",
     "slug": "voiceghost",
     "scheme": "voiceghost",
     "version": "1.0.0",
@@ -13,8 +13,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "bundleIdentifier": "com.fakarni.app",
-      "buildNumber": "1",
+      "bundleIdentifier": "com.mohammed.fakarni",
+      "buildNumber": "2",
       "supportsTablet": false,
       "infoPlist": {
         "NSCalendarsUsageDescription": "يسمح Fakarni بإضافة تذكيراتك إلى التقويم عند اختيارك لذلك.",
@@ -23,7 +23,8 @@
         "NSRemindersUsageDescription": "يسمح Fakarni بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.",
         "NSRemindersFullAccessUsageDescription": "يسمح Fakarni بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.",
         "NSMicrophoneUsageDescription": "اسمح لـ Fakarni باستخدام الميكروفون.",
-        "NSSpeechRecognitionUsageDescription": "اسمح لـ Fakarni بالتعرف على الكلام."
+        "NSSpeechRecognitionUsageDescription": "اسمح لـ Fakarni بالتعرف على الكلام.",
+        "NSPhotoLibraryUsageDescription": "يسمح Fakarni بالوصول إلى مكتبة الصور إذا احتجت لإرفاق صورة."
       }
     },
     "android": {

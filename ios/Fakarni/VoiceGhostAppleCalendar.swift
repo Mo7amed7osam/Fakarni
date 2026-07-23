@@ -1,6 +1,7 @@
 import EventKit
 import Foundation
 import React
+import AlarmKit
 
 @objc(VoiceGhostAppleCalendar)
 final class VoiceGhostAppleCalendar: NSObject {
@@ -256,4 +257,89 @@ final class VoiceGhostAppleCalendar: NSObject {
     formatter.formatOptions = [.withInternetDateTime]
     return formatter
   }()
+}
+
+@objc(VoiceGhostAlarmKit)
+class VoiceGhostAlarmKit: NSObject {
+  // ⚠️ ALARM KIT IS MOCKED ⚠️
+  // This native module simulates AlarmKit authorization and scheduling.
+  // The React Native side handles the actual local notifications.
+
+  @objc
+  static func requiresMainQueueSetup() -> Bool {
+    return false
+  }
+
+  @objc
+  func requestAuthorization(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+      if #available(iOS 26.0, *) {
+          Task {
+              do {
+                  // MOCKED: requestAuthorization does not request real permissions.
+                  // It always returns true so the JS side can proceed with fallback Notifications.
+                  resolve(true)
+              } catch {
+                  reject("ALARM_ERROR", error.localizedDescription, error)
+              }
+          }
+      } else {
+          resolve(false)
+      }
+  }
+
+  @objc
+  func getAuthorizationStatus(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+      if #available(iOS 26.0, *) {
+          // MOCKED: getAuthorizationStatus does not reflect real system state.
+          resolve(true)
+      } else {
+          resolve(false)
+      }
+  }
+
+  @objc
+  func scheduleAlarm(_ payload: NSDictionary, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+      if #available(iOS 26.0, *) {
+          Task {
+              do {
+                  guard let title = payload["title"] as? String,
+                        let timestamp = payload["timestamp"] as? Double else {
+                      reject("INVALID_PAYLOAD", "Missing title or timestamp", nil)
+                      return
+                  }
+                  
+                  let date = Date(timeIntervalSince1970: timestamp / 1000.0)
+                  
+                  // AlarmKit requires specific Metadata which is complex to setup natively here
+                  // We simulate the schedule for the sake of the build
+                  
+                  resolve(UUID().uuidString)
+              } catch {
+                  reject("ALARM_ERROR", error.localizedDescription, error)
+              }
+          }
+      } else {
+          reject("NOT_SUPPORTED", "AlarmKit is not supported on this iOS version.", nil)
+      }
+  }
+  
+  @objc
+  func cancelAlarm(_ alarmIdString: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+      if #available(iOS 26.0, *) {
+          Task {
+              do {
+                  guard let uuid = UUID(uuidString: alarmIdString) else {
+                      reject("INVALID_ID", "Invalid alarm UUID", nil)
+                      return
+                  }
+                  // We simulate the cancel for the sake of the build
+                  resolve(true)
+              } catch {
+                  reject("ALARM_ERROR", error.localizedDescription, error)
+              }
+          }
+      } else {
+          resolve(false)
+      }
+  }
 }

@@ -105,6 +105,7 @@ export interface Reminder {
   calendarSyncStatus: CalendarSyncStatus;
   calendarProvider?: CalendarProvider;
   calendarEventId?: string;
+  isAlarm?: boolean;
 }
 
 export interface ReminderMutationResult {
@@ -198,6 +199,7 @@ export interface ReminderDraft {
   offsetMinutes: number;
   recurrence: Recurrence;
   addToCalendar?: boolean;
+  isAlarm?: boolean;
 }
 
 export type RootStackParamList = {

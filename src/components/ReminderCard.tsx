@@ -14,6 +14,7 @@ import {
   getRecurrenceLabel,
   getReminderTimelineSnapshot,
 } from '../utils/reminders';
+import Svg, { Path } from 'react-native-svg';
 
 interface ReminderCardProps {
   reminder: Reminder;
@@ -28,11 +29,10 @@ interface ReminderCardProps {
 function EditGlyph() {
   return (
     <View style={styles.editGlyphWrap}>
-      <View style={styles.editGlyphCard} />
-      <View style={styles.editGlyphLineTop} />
-      <View style={styles.editGlyphLineBottom} />
-      <View style={styles.editGlyphPencilBody} />
-      <View style={styles.editGlyphPencilTip} />
+      <Svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <Path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+        <Path d="m15 5 4 4" />
+      </Svg>
     </View>
   );
 }
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   badge: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: 'rgba(75, 63, 207, 0.12)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.pill,
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   badgeText: {
-    color: colors.accent,
+    color: colors.primary,
     fontFamily: fonts.semibold,
     fontSize: 12,
     writingDirection: 'rtl',

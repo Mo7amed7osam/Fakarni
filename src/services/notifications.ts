@@ -8,6 +8,7 @@ import {
   ReminderNotificationStatus,
   UiLanguage,
 } from '../types';
+import * as AlarmKit from './alarmKit';
 
 export const REMINDER_NOTIFICATION_CATEGORY_ID = 'voiceghost-reminder-actions';
 export const REMINDER_NOTIFICATION_ACTION_DONE = 'done';
@@ -234,6 +235,33 @@ export async function scheduleReminderNotification(
       })
     )
   );
+
+  if (reminder.isAlarm) {
+    const isAlarmAuthorized = await AlarmKit.getAuthorizationStatus();
+    if (!isAlarmAuthorized) {
+      await AlarmKit.requestAuthorization();
+    }
+    const alarmDate = new Date(reminder.remindAt);
+    await AlarmKit.scheduleAlarm(reminder.title, alarmDate);
+
+    // Schedule a 5-minute pre-alarm notification instead of Native Live Activity
+    const preAlarmDate = new Date(alarmDate.getTime() - 5 * 60 * 1000);
+    if (preAlarmDate.getTime() > Date.now()) {
+      const preAlarmNotificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: language === 'en' ? 'Alarm starting soon' : 'المنبه هيرن كمان 5 دقايق',
+          body: reminder.title,
+          data: { reminderId: reminder.id, kind: 'pre_alarm' },
+          sound: REMINDER_NOTIFICATION_SOUND,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: preAlarmDate,
+        },
+      });
+      notificationIds.push(preAlarmNotificationId);
+    }
+  }
 
   return {
     notificationId: notificationIds[0],

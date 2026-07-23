@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Fakarni</string>
+	<string>Fakarni App</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -33,11 +33,13 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>2</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>12.0</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>يحتاج التطبيق لاستخدام نظام المنبه لضمان تنبيهك في الوقت المحدد.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -55,14 +57,35 @@
 	<string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>اسمح لـ Fakarni باستخدام الميكروفون.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>يسمح Fakarni بالوصول إلى مكتبة الصور إذا احتجت لإرفاق صورة.</string>
 	<key>NSRemindersFullAccessUsageDescription</key>
 	<string>يسمح Fakarni بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.</string>
 	<key>NSRemindersUsageDescription</key>
 	<string>يسمح Fakarni بالوصول إلى التذكيرات إذا احتاجت مكتبة التقويم ذلك داخل النظام.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>اسمح لـ Fakarni بالتعرف على الكلام.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>RCTNewArchEnabled</key>
 	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

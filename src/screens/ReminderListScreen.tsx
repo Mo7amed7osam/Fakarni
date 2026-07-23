@@ -17,15 +17,16 @@ import { ReminderCard } from '../components/ReminderCard';
 import { SectionCard } from '../components/SectionCard';
 import { useGhost } from '../context/GhostContext';
 import { colors, fonts, radii, spacing } from '../theme';
-import { RootStackParamList } from '../types';
+import { RootStackParamList, ReminderCategory } from '../types';
 import { getResponsiveContentWidth, isTabletWidth } from '../utils/layout';
+import { getReminderCategoryLabel } from '../utils/categorization';
 import {
   buildManualReminderDraft,
   getReminderTimelineSnapshot,
 } from '../utils/reminders';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ReminderList'>;
-type ReminderListFilter = 'today' | 'overdue';
+type ReminderListFilter = 'today' | 'overdue' | ReminderCategory;
 
 export function ReminderListScreen({ navigation }: Props) {
   const {
@@ -66,13 +67,19 @@ export function ReminderListScreen({ navigation }: Props) {
     [reminders]
   );
 
+  const activeCategories = useMemo(() => {
+    const cats = new Set<ReminderCategory>();
+    reminders.forEach((r) => cats.add(r.category));
+    return Array.from(cats);
+  }, [reminders]);
+
   const visibleReminders = useMemo(
     () =>
       reminders.filter((reminder) => {
         const bucket = getReminderTimelineSnapshot(reminder).bucket;
-        return activeFilter === 'today'
-          ? bucket === 'today' || bucket === 'upcoming'
-          : bucket === 'overdue';
+        if (activeFilter === 'today') return bucket === 'today' || bucket === 'upcoming';
+        if (activeFilter === 'overdue') return bucket === 'overdue';
+        return reminder.category === activeFilter;
       }),
     [activeFilter, reminders]
   );
@@ -104,9 +111,14 @@ export function ReminderListScreen({ navigation }: Props) {
     navigation.navigate('Home');
   }
 
-  const filters: Array<{ id: ReminderListFilter; label: string }> = [
-    { id: 'today', label: copy.reminderList.activeFilter },
-    { id: 'overdue', label: copy.common.overdue },
+  const filters: Array<{ id: ReminderListFilter; label: string; count?: number }> = [
+    { id: 'today', label: copy.reminderList.activeFilter, count: counts.today },
+    { id: 'overdue', label: copy.common.overdue, count: counts.overdue },
+    ...activeCategories.map((cat) => ({
+      id: cat,
+      label: getReminderCategoryLabel(cat, settings.uiLanguage),
+      count: reminders.filter((r) => r.category === cat).length,
+    }))
   ];
 
   return (
@@ -161,10 +173,10 @@ export function ReminderListScreen({ navigation }: Props) {
           </View>
         </GlassSurface>
 
-        <View style={styles.filterRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {filters.map((filter) => {
             const isActive = filter.id === activeFilter;
-            const count = counts[filter.id];
+            const count = filter.count;
             return (
               <Pressable
                 key={filter.id}
@@ -180,7 +192,7 @@ export function ReminderListScreen({ navigation }: Props) {
               </Pressable>
             );
           })}
-        </View>
+        </ScrollView>
 
         {reminders.length === 0 ? (
           <SectionCard title={copy.reminderList.emptyTitle} subtitle={copy.reminderList.emptySubtitle}>
@@ -438,15 +450,16 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   filterChip: {
-    flex: 1,
-    borderRadius: radii.md,
+    flexDirection: 'row-reverse',
+    borderRadius: radii.pill,
     backgroundColor: 'rgba(255,255,255,0.78)',
     borderWidth: 1,
     borderColor: colors.line,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: 8,
   },
   filterChipActive: {
     backgroundColor: colors.primary,
@@ -470,14 +483,20 @@ const styles = StyleSheet.create({
   },
   filterChipCount: {
     color: colors.textMuted,
-    fontFamily: fonts.bold,
-    fontSize: 15,
+    fontFamily: fonts.semibold,
+    fontSize: 13,
+    backgroundColor: colors.background,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radii.sm,
+    overflow: 'hidden',
   },
   filterChipCountTablet: {
     fontSize: 18,
   },
   filterChipCountActive: {
-    color: colors.white,
+    color: colors.primaryDark,
+    backgroundColor: 'rgba(255,255,255,0.3)',
   },
   doneSummary: {
     color: colors.textMuted,

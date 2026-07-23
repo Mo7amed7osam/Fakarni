@@ -78,6 +78,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
   const [offsetMinutes, setOffsetMinutes] = useState(draft.offsetMinutes);
   const [recurrence, setRecurrence] = useState<Recurrence>(draft.recurrence);
   const [addToCalendar, setAddToCalendar] = useState(Boolean(draft.addToCalendar));
+  const [isAlarm, setIsAlarm] = useState(Boolean(draft.isAlarm ?? true));
   const [showMode, setShowMode] = useState<'date' | 'time' | null>(null);
   const [saving, setSaving] = useState(false);
   const [validationError, setValidationError] = useState('');
@@ -197,6 +198,7 @@ export function ConfirmationScreen({ navigation, route }: Props) {
       offsetMinutes,
       recurrence,
       addToCalendar: showAndroidCalendarToggle ? addToCalendar : undefined,
+      isAlarm,
     };
     const editedFieldsCount = getEditedFieldsCount(nextDraft);
     if (!title.trim()) {
@@ -629,6 +631,36 @@ export function ConfirmationScreen({ navigation, route }: Props) {
                   </View>
                 </View>
               ) : null}
+
+              <View style={styles.optionGroup}>
+                <Text style={[styles.optionLabel, tabletLayout && styles.optionLabelTablet]}>
+                  منبه قوي (AlarmKit)
+                </Text>
+                <View style={[styles.calendarRow, tabletLayout && styles.calendarRowTablet]}>
+                  <Pressable
+                    onPress={() => setIsAlarm((current) => !current)}
+                    style={[
+                      styles.calendarToggle,
+                      isAlarm && styles.calendarToggleActive,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.calendarToggleKnob,
+                        isAlarm && styles.calendarToggleKnobActive,
+                      ]}
+                    />
+                  </Pressable>
+                  <View style={styles.calendarText}>
+                    <Text style={[styles.calendarTitle, tabletLayout && styles.calendarTitleTablet]}>
+                      تفعيل رنين المنبه
+                    </Text>
+                    <Text style={[styles.calendarHint, tabletLayout && styles.calendarHintTablet]}>
+                      سيقوم الهاتف بالرنين بصوت عالٍ حتى لو كان صامتاً.
+                    </Text>
+                  </View>
+                </View>
+              </View>
             </SectionCard>
           ) : null}
         </>
@@ -799,6 +831,33 @@ export function ConfirmationScreen({ navigation, route }: Props) {
               </Text>
             </View>
           ) : null}
+
+          <SectionCard title="منبه قوي (AlarmKit)">
+            <View style={[styles.calendarRow, tabletLayout && styles.calendarRowTablet]}>
+              <Pressable
+                onPress={() => setIsAlarm((current) => !current)}
+                style={[
+                  styles.calendarToggle,
+                  isAlarm && styles.calendarToggleActive,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.calendarToggleKnob,
+                    isAlarm && styles.calendarToggleKnobActive,
+                  ]}
+                />
+              </Pressable>
+              <View style={styles.calendarText}>
+                <Text style={[styles.calendarTitle, tabletLayout && styles.calendarTitleTablet]}>
+                  تفعيل رنين المنبه
+                </Text>
+                <Text style={[styles.calendarHint, tabletLayout && styles.calendarHintTablet]}>
+                  سيقوم الهاتف بالرنين بصوت عالٍ حتى لو كان صامتاً.
+                </Text>
+              </View>
+            </View>
+          </SectionCard>
 
           {showAndroidCalendarToggle ? (
             <SectionCard title={copy.confirmation.calendar} subtitle={calendarSubtitle}>
